@@ -162,6 +162,18 @@ export class Player {
 
     this.breathTimer += deltaTime * 3;
 
+    // Passive Mana Regeneration (mencegah pemain kehabisan mana permanen)
+    if (this.mp < this.maxMp) {
+      const regenRate = (this.role === 'HEALER' || this.role === 'MAGICIAN') ? 4.5 : 2.5;
+      this.mp = Math.min(this.maxMp, this.mp + regenRate * deltaTime);
+    }
+
+    // Passive Gentle Health Regeneration
+    if (this.hp < this.maxHp) {
+      const hpRegenRate = this.role === 'HEALER' ? 2.5 : 1.0;
+      this.hp = Math.min(this.maxHp, this.hp + hpRegenRate * deltaTime);
+    }
+
     if (isAction && this.attackTimer <= 0) {
       this.attackTimer = 0.25;
       if (this.isStealthed) {
@@ -236,6 +248,12 @@ export class Player {
       if (!collides(nextBoxY)) {
         this.y += moveY;
       }
+
+      // Boundary safety clamping (mencegah karakter keluar batas atau NaN)
+      const worldMaxX = CONSTANTS.MAP_WIDTH * CONSTANTS.TILE_SIZE - this.width - 32;
+      const worldMaxY = CONSTANTS.MAP_HEIGHT * CONSTANTS.TILE_SIZE - this.height - 32;
+      if (isNaN(this.x) || this.x < 32 || this.x > worldMaxX) this.x = 50 * CONSTANTS.TILE_SIZE;
+      if (isNaN(this.y) || this.y < 32 || this.y > worldMaxY) this.y = 50 * CONSTANTS.TILE_SIZE;
     } else {
       this.animTimer = 0;
     }

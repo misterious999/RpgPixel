@@ -4,6 +4,7 @@ import { Chest } from '../world/Chest.ts';
 import { FloatingTextManager } from './FloatingText.ts';
 import { RoleType } from '../types/GameTypes.ts';
 import { PwaService } from '../services/PwaService.ts';
+import { NotificationModal } from './NotificationModal.ts';
 
 export class AuthUI {
   private player: Player;
@@ -143,9 +144,17 @@ export class AuthUI {
         touchY >= bindBtnY &&
         touchY <= bindBtnY + bindBtnH
       ) {
-        if (confirm('Hubungkan dengan Google untuk menyimpan progres game ke Cloud?')) {
-          SupabaseService.loginWithGoogle();
-        }
+        NotificationModal.confirm({
+          title: 'HUBUNGKAN DENGAN GOOGLE',
+          message: 'Hubungkan petualangan Anda dengan akun Google sekarang agar progres level, role, dan inventori tersimpan abadi di Cloud?',
+          icon: '☁️',
+          confirmText: 'Hubungkan Google',
+          cancelText: 'Nanti Saja',
+          variant: 'primary',
+          onConfirm: () => {
+            SupabaseService.loginWithGoogle();
+          }
+        });
         return true;
       }
       return false;
@@ -181,10 +190,18 @@ export class AuthUI {
         touchY >= logoutBtnY &&
         touchY <= logoutBtnY + logoutBtnH
       ) {
-        if (confirm('Apakah Anda yakin ingin logout? Progres lokal akan ditutup.')) {
-          SupabaseService.logout();
-          window.location.reload();
-        }
+        NotificationModal.confirm({
+          title: 'KONFIRMASI KELUAR',
+          message: 'Apakah Anda yakin ingin logout? Data tersimpan terakhir di Cloud akan tetap aman.',
+          icon: '🚪',
+          confirmText: 'Ya, Keluar',
+          cancelText: 'Tetap Main',
+          variant: 'danger',
+          onConfirm: () => {
+            SupabaseService.logout();
+            window.location.reload();
+          }
+        });
         return true;
       }
     }

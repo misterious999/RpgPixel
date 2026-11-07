@@ -15,6 +15,7 @@ import { ControlSettingsModal } from '../ui/ControlSettingsModal.ts';
 import { ControlSettingsManager } from './ControlSettings.ts';
 import { SupabaseService } from '../services/SupabaseService.ts';
 import { PwaService } from '../services/PwaService.ts';
+import { NotificationModal } from '../ui/NotificationModal.ts';
 import { ITEM_DEFINITIONS } from '../items/ItemTypes.ts';
 import { ROLE_INFO } from '../data/RolesData.ts';
 
@@ -91,6 +92,11 @@ export class Game {
     // Connect touch interceptor for all UI layers
     this.input.setTouchInterceptor((touchX, touchY) => {
       if (this.onboardingUI.state !== 'PLAYING') return true;
+
+      // -1. Premium In-Game Notification / Confirm Modal (Top Priority)
+      if (NotificationModal.handleTouch(touchX, touchY, this.canvas.width, this.canvas.height)) {
+        return true;
+      }
 
       // 0. Control Settings Modal
       if (this.controlSettingsModal.handleTouch(touchX, touchY, this.canvas.width, this.canvas.height)) {
@@ -303,8 +309,8 @@ export class Game {
       return false;
     };
 
-    // Freeze player if inventory, guild dialog, or control settings is open
-    const activeInput = (this.inventoryUI.isOpen || this.guildNPC.isAppraisalOpen || this.controlSettingsModal.isOpen)
+    // Freeze player if inventory, guild dialog, control settings, or notification modal is open
+    const activeInput = (this.inventoryUI.isOpen || this.guildNPC.isAppraisalOpen || this.controlSettingsModal.isOpen || NotificationModal.isOpen)
       ? { axisX: 0, axisY: 0, isAction: false, isSprint: false }
       : this.input.state;
 
@@ -499,6 +505,9 @@ export class Game {
         ctx.fillText('📲 Pasang App', instX + instW / 2, instY + instH / 2);
       }
       ctx.restore();
+
+      // 14. Topmost Modal: Premium In-Game Notification / Confirm Dialog
+      NotificationModal.render(ctx, screenWidth, screenHeight);
     }
   }
 }

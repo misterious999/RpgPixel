@@ -1,5 +1,6 @@
 import { ControlSettingsManager, DEFAULT_CONTROL_CONFIG } from '../core/ControlSettings.ts';
 import { PwaService } from '../services/PwaService.ts';
+import { NotificationModal } from './NotificationModal.ts';
 
 export class ControlSettingsModal {
   public isOpen: boolean = false;
@@ -154,8 +155,18 @@ export class ControlSettingsModal {
       touchY >= resetBtnY &&
       touchY <= resetBtnY + resetBtnH
     ) {
-      ControlSettingsManager.reset();
-      if (this.onConfigChange) this.onConfigChange();
+      NotificationModal.confirm({
+        title: 'RESET KONTROL DEFAULT',
+        message: 'Kembalikan seluruh ukuran tombol, jarak kamera, dan transparansi ke pengaturan awal?',
+        icon: '↺',
+        confirmText: 'Ya, Reset',
+        cancelText: 'Batal',
+        variant: 'warning',
+        onConfirm: () => {
+          ControlSettingsManager.reset();
+          if (this.onConfigChange) this.onConfigChange();
+        }
+      });
       return true;
     }
 

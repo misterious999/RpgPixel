@@ -11,6 +11,7 @@ export class GuildNPC {
   public name: string = 'Resepsionis Guild Elaine';
 
   public isAppraisalOpen: boolean = false;
+  private openTime: number = 0;
   private selectedRole: RoleType = 'KNIGHT';
 
   // Special Magician Elemental Affinity Selection state
@@ -32,6 +33,7 @@ export class GuildNPC {
   public openAppraisal(): void {
     this.isAppraisalOpen = true;
     this.isChoosingElement = false;
+    this.openTime = Date.now();
   }
 
   public closeAppraisal(): void {
@@ -48,6 +50,11 @@ export class GuildNPC {
     floatingText: FloatingTextManager
   ): boolean {
     if (!this.isAppraisalOpen) return false;
+
+    // Debounce to prevent click-through immediately upon pressing [A] (220ms)
+    if (Date.now() - this.openTime < 220) {
+      return true;
+    }
 
     // Landscape optimized dimensions
     const modalWidth = Math.min(540, screenWidth - 20);

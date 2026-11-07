@@ -102,53 +102,73 @@ export class OnboardingUI {
       const costume = CHARACTER_COSTUMES[this.selectedCostumeIndex];
 
       overlay.innerHTML = `
-        <div style="max-width: 380px; width: 92%; max-height: 90vh; overflow-y: auto; background: #0f172a; border: 2px solid #38bdf8; border-radius: 14px; padding: 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
-          <div style="font-size: 20px; font-weight: 800; color: #38bdf8; margin-bottom: 2px;">KUSTOMISASI KARAKTER</div>
-          <div style="font-size: 11px; color: #94a3b8; margin-bottom: 16px;">Tentukan identitas pahlawanmu sebelum menjelajah</div>
+        <div style="max-width: 520px; width: 94%; max-height: 94vh; background: #0f172a; border: 2px solid #38bdf8; border-radius: 14px; padding: 16px 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.85); box-sizing: border-box;">
+          <div style="font-size: 18px; font-weight: 800; color: #38bdf8; margin-bottom: 2px; letter-spacing: 0.5px;">KUSTOMISASI KARAKTER</div>
+          <div style="font-size: 10px; color: #94a3b8; margin-bottom: 12px;">Tentukan nama dan kostum pahlawanmu sebelum menjelajah dunia</div>
 
-          <!-- Live Preview Canvas -->
-          <div style="margin: 0 auto 14px; width: 80px; height: 80px; background: #1e293b; border: 2px solid #38bdf8; border-radius: 12px; display: flex; align-items: center; justify-content: center;">
-            <canvas id="preview-avatar-canvas" width="64" height="64"></canvas>
-          </div>
-
-          <!-- Input Username -->
-          <div style="text-align: left; margin-bottom: 14px;">
-            <label style="font-size: 11px; font-weight: bold; color: #cbd5e1; display: block; margin-bottom: 6px;">
-              Username (Maksimal 15 Karakter):
-            </label>
-            <input id="input-username" type="text" maxlength="15" value="${this.username}" placeholder="Nama Petualang..." 
-              style="width: 100%; box-sizing: border-box; padding: 10px 14px; background: #1e293b; border: 1px solid #475569; border-radius: 8px; color: #ffffff; font-size: 14px; outline: none;">
-            <div id="username-error" style="color: #ef4444; font-size: 10px; margin-top: 4px; display: none;">Username tidak boleh kosong!</div>
-          </div>
-
-          <!-- Costume Selection -->
-          <div style="text-align: left; margin-bottom: 18px;">
-            <label style="font-size: 11px; font-weight: bold; color: #cbd5e1; display: block; margin-bottom: 8px;">
-              Pilihan Kostum Karakter: <span style="color: #38bdf8;" id="costume-name">${costume.name}</span>
-            </label>
-            <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;">
-              ${CHARACTER_COSTUMES.map((c, i) => `
-                <div class="costume-opt" data-idx="${i}" style="padding: 8px 4px; background: ${i === this.selectedCostumeIndex ? '#1e3a8a' : '#1e293b'}; border: 2px solid ${i === this.selectedCostumeIndex ? '#38bdf8' : '#334155'}; border-radius: 8px; cursor: pointer; text-align: center;">
-                  <div style="width: 18px; height: 18px; border-radius: 50%; background: ${c.outfitColor}; margin: 0 auto 4px; border: 1px solid #ffffff;"></div>
-                  <div style="font-size: 9px; font-weight: bold; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name.split(' ')[0]}</div>
+          <!-- 2-Column Landscape Layout -->
+          <div style="display: flex; gap: 16px; text-align: left; margin-bottom: 12px;">
+            <!-- Kolom Kiri: Avatar Preview & Username Input -->
+            <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
+              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
+                <div style="width: 68px; height: 68px; background: #1e293b; border: 2px solid #38bdf8; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+                  <canvas id="preview-avatar-canvas" width="64" height="64"></canvas>
                 </div>
-              `).join('')}
+                <div>
+                  <div style="font-size: 11px; font-weight: 700; color: #38bdf8;" id="costume-name">${costume.name}</div>
+                  <div style="font-size: 9px; color: #94a3b8; margin-top: 2px;">Kostum pilihan petualang</div>
+                </div>
+              </div>
+
+              <div>
+                <label style="font-size: 10px; font-weight: bold; color: #cbd5e1; display: block; margin-bottom: 4px;">
+                  Username (Maks. 15 Karakter):
+                </label>
+                <input id="input-username" type="text" maxlength="15" value="${this.username}" placeholder="Nama Petualang..." 
+                  style="width: 100%; box-sizing: border-box; padding: 8px 12px; background: #1e293b; border: 1px solid #475569; border-radius: 6px; color: #ffffff; font-size: 13px; outline: none;">
+                <div id="username-error" style="color: #ef4444; font-size: 9px; margin-top: 3px; display: none;">Username tidak boleh kosong!</div>
+              </div>
+            </div>
+
+            <!-- Kolom Kanan: Pilihan 8 Kostum & Tombol Mulai -->
+            <div style="flex: 1.2; display: flex; flex-direction: column; justify-content: space-between;">
+              <div>
+                <label style="font-size: 10px; font-weight: bold; color: #cbd5e1; display: block; margin-bottom: 6px;">
+                  Pilih Gaya Kostum Karakter:
+                </label>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px;">
+                  ${CHARACTER_COSTUMES.map((c, i) => `
+                    <div class="costume-opt" data-idx="${i}" style="padding: 6px 3px; background: ${i === this.selectedCostumeIndex ? '#1e3a8a' : '#1e293b'}; border: 2px solid ${i === this.selectedCostumeIndex ? '#38bdf8' : '#334155'}; border-radius: 6px; cursor: pointer; text-align: center;">
+                      <div style="width: 14px; height: 14px; border-radius: 50%; background: ${c.outfitColor}; margin: 0 auto 3px; border: 1px solid #ffffff;"></div>
+                      <div style="font-size: 8px; font-weight: bold; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name.split(' ')[0]}</div>
+                    </div>
+                  `).join('')}
+                </div>
+              </div>
+
+              <!-- Submit Button -->
+              <button id="btn-start-game" style="width: 100%; padding: 10px; background: #22c55e; color: #ffffff; border: none; border-radius: 8px; font-size: 13px; font-weight: 800; cursor: pointer; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);">
+                ⚔️ MULAI MENJELAJAH
+              </button>
             </div>
           </div>
-
-          <!-- Submit Button -->
-          <button id="btn-start-game" style="width: 100%; padding: 14px; background: #22c55e; color: #ffffff; border: none; border-radius: 8px; font-size: 15px; font-weight: 800; cursor: pointer; letter-spacing: 0.5px; box-shadow: 0 4px 14px rgba(34, 197, 94, 0.4);">
-            ⚔️ MULAI MENJELAJAH
-          </button>
         </div>
       `;
 
       this.renderAvatarPreview();
 
+      // Listen to input changes so username is never lost
+      const inputEl = document.getElementById('input-username') as HTMLInputElement;
+      inputEl?.addEventListener('input', (e) => {
+        this.username = (e.target as HTMLInputElement).value;
+      });
+
       // Costume selection click handlers
       const optEls = overlay.querySelectorAll('.costume-opt');
       optEls.forEach(el => {
         el.addEventListener('click', (e) => {
+          const curInput = document.getElementById('input-username') as HTMLInputElement;
+          if (curInput) this.username = curInput.value;
           const idx = parseInt((e.currentTarget as HTMLElement).getAttribute('data-idx') || '0', 10);
           this.selectedCostumeIndex = idx;
           this.renderHtml();

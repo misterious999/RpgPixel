@@ -1,3 +1,5 @@
+import { NotificationModal } from '../ui/NotificationModal.ts';
+
 export class PwaService {
   private static deferredPrompt: any = null;
   public static isInstallable: boolean = false;
@@ -48,13 +50,16 @@ export class PwaService {
 
   public static async promptInstall(): Promise<boolean> {
     if (!this.deferredPrompt) {
-      // If deferredPrompt is not yet available, provide clear instructions
-      alert(
-        'Untuk memasang sebagai Web App di HP:\n\n' +
-        '1. Klik menu titik tiga (⋮) di pojok kanan atas browser Chrome.\n' +
-        '2. Pilih "Tambahkan ke Layar Utama" (Add to Home screen) atau "Install Aplikasi".\n' +
-        '3. Buka game dari icon di Layar Utama HP Anda untuk bermain fullscreen tanpa address bar!'
-      );
+      // If deferredPrompt is not yet available, provide clear instructions with premium modal
+      NotificationModal.alert({
+        title: 'CARA MEMASANG WEB APP',
+        message:
+          '1. Ketuk menu titik tiga (⋮) di pojok kanan atas browser Chrome.\n' +
+          '2. Pilih "Tambahkan ke Layar Utama" atau "Install Aplikasi".\n' +
+          '3. Buka game dari icon di Layar Utama HP Anda untuk bermain fullscreen tanpa address bar!',
+        icon: '📲',
+        confirmText: '✓ Saya Mengerti'
+      });
       return false;
     }
 

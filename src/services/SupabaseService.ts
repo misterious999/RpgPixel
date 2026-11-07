@@ -1,4 +1,5 @@
 import { createClient, User } from '@supabase/supabase-js';
+import { NotificationModal } from '../ui/NotificationModal.ts';
 
 const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || 'https://ortqafpygytnebsgupdq.supabase.co';
 const SUPABASE_ANON_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 'sb_publishable_sRL486t-wxLbeD1IdEbQCg_mooHTXGQ';
@@ -64,7 +65,13 @@ export class SupabaseService {
       });
       if (error) {
         console.error('Error logging in with Google:', error.message);
-        alert('Gagal login Google: ' + error.message);
+        NotificationModal.alert({
+          title: 'GAGAL LOGIN GOOGLE',
+          message: 'Terjadi kendala saat login Google: ' + error.message,
+          icon: '⚠️',
+          variant: 'warning',
+          confirmText: 'Tutup'
+        });
       }
     } catch (err) {
       console.error('Login error:', err);
