@@ -5,11 +5,15 @@ import { TileMap } from '../world/TileMap.ts';
 import { Player } from '../entities/Player.ts';
 import { WorldItem } from '../world/WorldItem.ts';
 import { Chest } from '../world/Chest.ts';
+import { GuildNPC } from '../world/GuildNPC.ts';
 import { FloatingTextManager } from '../ui/FloatingText.ts';
 import { InventoryUI } from '../ui/InventoryUI.ts';
 import { AuthUI } from '../ui/AuthUI.ts';
+import { SkillBarUI } from '../ui/SkillBarUI.ts';
+import { OnboardingUI } from '../ui/OnboardingUI.ts';
 import { SupabaseService } from '../services/SupabaseService.ts';
 import { ITEM_DEFINITIONS } from '../items/ItemTypes.ts';
+import { ROLE_INFO } from '../data/RolesData.ts';
 
 export class Game {
   private canvas: HTMLCanvasElement;
@@ -21,10 +25,13 @@ export class Game {
   private floatingText: FloatingTextManager;
   private inventoryUI: InventoryUI;
   private authUI: AuthUI;
+  private skillBarUI: SkillBarUI;
+  private onboardingUI: OnboardingUI;
 
   // World objects
   private worldItems: WorldItem[] = [];
   private chests: Chest[] = [];
+  private guildNPC: GuildNPC;
 
   private lastTime: number = 0;
   private fps: number = 60;
@@ -59,18 +66,38 @@ export class Game {
 
     this.floatingText = new FloatingTextManager();
     this.inventoryUI = new InventoryUI(this.player.inventory, this.player, this.floatingText);
+    this.skillBarUI = new SkillBarUI(this.player, this.floatingText);
+
+    // Create Guild Receptionist Elaine near spawn
+    const guildX = 51 * CONSTANTS.TILE_SIZE;
+    const guildY = 48 * CONSTANTS.TILE_SIZE;
+    this.guildNPC = new GuildNPC(guildX, guildY);
 
     this.spawnInitialWorldObjects();
 
-    // Inisialisasi Auth & Cloud Save
+    // Inisialisasi Auth & Onboarding flow
     this.authUI = new AuthUI(this.player, this.chests, this.floatingText);
-    SupabaseService.init();
+    this.onboardingUI = new OnboardingUI();
 
-    // Connect touch interceptor for Backpack, Inventory UI, and Auth buttons
+    this.setupOnboardingFlow();
+
+    // Connect touch interceptor for all UI layers
     this.input.setTouchInterceptor((touchX, touchY) => {
+      if (this.onboardingUI.state !== 'PLAYING') return true;
+
+      // 1. Guild Appraisal Modal
+      if (this.guildNPC.handleTouch(touchX, touchY, this.canvas.width, this.canvas.height, this.player, this.floatingText)) {
+        return true;
+      }
+      // 2. Auth Profile / Logout buttons
       if (this.authUI.handleTouch(touchX, touchY, this.canvas.width)) {
         return true;
       }
+      // 3. Mobile Skill Bar
+      if (this.skillBarUI.handleTouch(touchX, touchY, this.canvas.width, this.canvas.height)) {
+        return true;
+      }
+      // 4. Inventory Backpack
       return this.inventoryUI.handleTouch(touchX, touchY, this.canvas.width, this.canvas.height);
     });
 
@@ -84,12 +111,48 @@ export class Game {
     });
   }
 
+  private async setupOnboardingFlow(): Promise<void> {
+    await SupabaseService.init();
+
+    SupabaseService.onAuthChange(async (user) => {
+      if (user) {
+        this.authUI.isGuest = false;
+        // Check if user already has cloud save
+        const hasSave = await this.authUI.loadCloudSave(user.id);
+        if (hasSave) {
+          // Cloud save exists -> proceed directly to PLAYING!
+          this.onboardingUI.setState('PLAYING');
+          const roleName = ROLE_INFO[this.player.role].name;
+          this.floatingText.spawn(this.player.x + 10, this.player.y - 20, `Selamat datang kembali, ${this.player.username}! (${roleName})`, '#38bdf8', 3.0);
+        } else {
+          // New Google User -> Go to Character Creation!
+          this.onboardingUI.username = (user.user_metadata?.full_name || 'Hero').slice(0, 15);
+          this.onboardingUI.setState('CHARACTER_CREATION');
+        }
+      }
+    });
+
+    // Callback when user confirms Character Creation (Costume & Username)
+    this.onboardingUI.onComplete((username, costume, isGuest) => {
+      this.player.username = username;
+      this.player.costume = costume;
+      this.authUI.isGuest = isGuest;
+
+      // Initial save to cloud if logged in
+      if (!isGuest) {
+        this.authUI.saveCurrentGame();
+      }
+
+      this.floatingText.spawn(this.player.x + 10, this.player.y - 18, `Selamat datang, ${username}! Temui Pihak Guild untuk memilih Role.`, '#facc15', 3.5);
+    });
+  }
+
   private spawnInitialWorldObjects(): void {
     const ts = CONSTANTS.TILE_SIZE;
 
-    // 1. Spawn Treasure Chests around the area
+    // 1. Treasure Chests
     this.chests.push(
-      new Chest(52 * ts + 5, 48 * ts + 6, [
+      new Chest(53 * ts + 5, 47 * ts + 6, [
         { itemId: 'HEALTH_POTION', count: 3 },
         { itemId: 'GOLD_COIN', count: 50 }
       ]),
@@ -102,7 +165,7 @@ export class Game {
       ])
     );
 
-    // 2. Scatter World Items (Bunga, Kayu, Koin, Potion)
+    // 2. World Items
     const scatterOffsets = [
       { dx: -2, dy: -2, item: 'MAGIC_FLOWER', count: 2 },
       { dx: 2, dy: -1, item: 'WOOD_LOG', count: 3 },
@@ -166,39 +229,54 @@ export class Game {
   }
 
   private update(deltaTime: number): void {
+    if (this.onboardingUI.state !== 'PLAYING') {
+      this.onboardingUI.update(deltaTime);
+      return;
+    }
+
     // 1. Process Input
     this.input.update();
 
     // 2. Update World Animations
     this.tileMap.update(deltaTime);
+    this.skillBarUI.update(deltaTime);
 
-    // 3. Update Player & Collisions (Chests act as solid obstacles)
+    // 3. Update Player & Collisions
     const playerCenterX = this.player.x + this.player.width / 2;
     const playerCenterY = this.player.y + this.player.height / 2;
 
-    const chestObstacleChecker = (box: { x: number; y: number; width: number; height: number }) => {
+    const obstacleChecker = (box: { x: number; y: number; width: number; height: number }) => {
+      // Chests
       for (const chest of this.chests) {
         const cb = chest.getCollisionBox();
-        if (
-          box.x < cb.x + cb.width &&
-          box.x + box.width > cb.x &&
-          box.y < cb.y + cb.height &&
-          box.y + box.height > cb.y
-        ) {
+        if (box.x < cb.x + cb.width && box.x + box.width > cb.x && box.y < cb.y + cb.height && box.y + box.height > cb.y) {
           return true;
         }
+      }
+      // Guild Desk
+      const gx = this.guildNPC.x - 4;
+      const gy = this.guildNPC.y + 14;
+      if (box.x < gx + 40 && box.x + box.width > gx && box.y < gy + 16 && box.y + box.height > gy) {
+        return true;
       }
       return false;
     };
 
-    // Don't move player if inventory modal is open
-    const activeInput = this.inventoryUI.isOpen
+    // Freeze player if inventory or guild dialog is open
+    const activeInput = (this.inventoryUI.isOpen || this.guildNPC.isAppraisalOpen)
       ? { axisX: 0, axisY: 0, isAction: false, isSprint: false }
       : this.input.state;
 
-    this.player.update(deltaTime, activeInput, this.tileMap, chestObstacleChecker);
+    this.player.update(deltaTime, activeInput, this.tileMap, obstacleChecker);
 
-    // 4. Update Chests & Handle Interactions
+    // 4. Guild Receptionist Interaction
+    if (!this.guildNPC.isAppraisalOpen && this.guildNPC.isNearPlayer(playerCenterX, playerCenterY)) {
+      if (this.input.state.isAction) {
+        this.guildNPC.openAppraisal();
+      }
+    }
+
+    // 5. Update Chests & Handle Interactions
     for (const chest of this.chests) {
       chest.update(deltaTime);
       if (!chest.isOpen && chest.isNearPlayer(playerCenterX, playerCenterY)) {
@@ -210,13 +288,17 @@ export class Game {
             const name = def ? def.name : reward.itemId;
             this.floatingText.spawn(chest.x + 11, chest.y - 12, `+${reward.count} ${name}`, '#facc15', 1.8);
           }
-          // Auto-save after opening chest
+          // Gain exp from opening chest!
+          const leveledUp = this.player.addExp(25);
+          if (leveledUp) {
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 30, `🎉 LEVEL UP! Sekarang Lv. ${this.player.level}`, '#fde047', 3.0);
+          }
           this.authUI.saveCurrentGame();
         }
       }
     }
 
-    // 5. Update World Items (Magnet & Pickup)
+    // 6. Update World Items (Magnet & Pickup)
     for (let i = this.worldItems.length - 1; i >= 0; i--) {
       const item = this.worldItems[i];
       const pickedUp = item.update(deltaTime, playerCenterX, playerCenterY);
@@ -231,27 +313,41 @@ export class Game {
       }
     }
 
-    // 6. Update Floating Text Notifications
+    // 7. Update Floating Text Notifications
     this.floatingText.update(deltaTime);
 
-    // 7. Update Auth & Cloud Auto-Save
+    // 8. Update Auth & Cloud Auto-Save
     this.authUI.update(deltaTime);
 
-    // 8. Update Camera to follow player
+    // 9. Update Camera to follow player
     this.camera.update(playerCenterX, playerCenterY);
 
-    // 9. Update HUD Coordinates & Player Health
+    // 10. Update HUD Coordinates & Player Health/Mana Bar
     if (this.coordsEl) {
       const tileX = Math.floor(this.player.x / CONSTANTS.TILE_SIZE);
       const tileY = Math.floor(this.player.y / CONSTANTS.TILE_SIZE);
+      const roleInfo = ROLE_INFO[this.player.role];
+
       this.coordsEl.innerHTML = `
+        <div style="font-weight: 700; color: ${roleInfo.color}; margin-bottom: 2px;">
+          ${this.player.username} · Lv.${this.player.level} [${roleInfo.tag}]
+        </div>
         Tile: (${tileX}, ${tileY})<br>
-        <div style="margin-top: 4px; display: flex; align-items: center; gap: 6px;">
-          <span>HP:</span>
-          <div style="width: 80px; height: 8px; background: #334155; border-radius: 4px; overflow: hidden; display: inline-block;">
+        <!-- HP Bar -->
+        <div style="margin-top: 3px; display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 10px; width: 20px;">HP</span>
+          <div style="width: 75px; height: 6px; background: #334155; border-radius: 3px; overflow: hidden; display: inline-block;">
             <div style="width: ${(this.player.hp / this.player.maxHp) * 100}%; height: 100%; background: #22c55e;"></div>
           </div>
-          <span>${this.player.hp}/${this.player.maxHp}</span>
+          <span style="font-size: 10px;">${this.player.hp}/${this.player.maxHp}</span>
+        </div>
+        <!-- MP Bar -->
+        <div style="margin-top: 2px; display: flex; align-items: center; gap: 6px;">
+          <span style="font-size: 10px; width: 20px;">MP</span>
+          <div style="width: 75px; height: 6px; background: #334155; border-radius: 3px; overflow: hidden; display: inline-block;">
+            <div style="width: ${(this.player.mp / this.player.maxMp) * 100}%; height: 100%; background: #38bdf8;"></div>
+          </div>
+          <span style="font-size: 10px;">${this.player.mp}/${this.player.maxMp}</span>
         </div>
       `;
     }
@@ -266,7 +362,7 @@ export class Game {
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(0, 0, screenWidth, screenHeight);
 
-    // Disable image smoothing for pixel-art clarity
+    // Disable image smoothing for crisp pixel-art
     ctx.imageSmoothingEnabled = false;
 
     // --- WORLD RENDERING (SCALED & TRANSLATED) ---
@@ -277,36 +373,49 @@ export class Game {
     // 1. Render TileMap
     this.tileMap.render(ctx, this.camera);
 
-    // 2. Render Chests
+    // 2. Render Guild NPC
     const playerCenterX = this.player.x + this.player.width / 2;
     const playerCenterY = this.player.y + this.player.height / 2;
+    this.guildNPC.render(ctx, this.guildNPC.isNearPlayer(playerCenterX, playerCenterY));
+
+    // 3. Render Chests
     for (const chest of this.chests) {
       chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY));
     }
 
-    // 3. Render World Items
+    // 4. Render World Items
     for (const item of this.worldItems) {
       item.render(ctx);
     }
 
-    // 4. Render Player
+    // 5. Render Player
     this.player.render(ctx);
 
-    // 5. Render Floating Texts
+    // 6. Render Spell Effects
+    this.skillBarUI.renderWorldEffects(ctx);
+
+    // 7. Render Floating Texts
     this.floatingText.render(ctx);
 
     ctx.restore();
 
     // --- SCREEN SPACE 1:1 RENDERING ---
-    // 6. Mobile Touch Controls (D-pad & action buttons)
-    if (!this.inventoryUI.isOpen) {
-      this.input.renderTouchUI(ctx, screenWidth, screenHeight);
+    if (this.onboardingUI.state === 'PLAYING') {
+      // 8. Mobile Touch D-Pad & Action Buttons
+      if (!this.inventoryUI.isOpen && !this.guildNPC.isAppraisalOpen) {
+        this.input.renderTouchUI(ctx, screenWidth, screenHeight);
+        // Mobile Skill Bar
+        this.skillBarUI.renderTouchSkillBar(ctx, screenWidth, screenHeight);
+      }
+
+      // 9. Auth Status Pill / Logout
+      this.authUI.render(ctx, screenWidth);
+
+      // 10. Inventory UI Overlay
+      this.inventoryUI.render(ctx, screenWidth, screenHeight);
+
+      // 11. Guild Appraisal Ceremony Modal
+      this.guildNPC.renderModal(ctx, screenWidth, screenHeight, this.player);
     }
-
-    // 7. Auth UI (Masuk Google / Profile Pill / Simpan / Keluar)
-    this.authUI.render(ctx, screenWidth);
-
-    // 8. Inventory UI Overlay (Backpack button & Modal)
-    this.inventoryUI.render(ctx, screenWidth, screenHeight);
   }
 }

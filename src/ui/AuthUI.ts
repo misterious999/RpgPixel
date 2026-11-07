@@ -2,12 +2,14 @@ import { SupabaseService, GameSaveData } from '../services/SupabaseService.ts';
 import { Player } from '../entities/Player.ts';
 import { Chest } from '../world/Chest.ts';
 import { FloatingTextManager } from './FloatingText.ts';
+import { RoleType } from '../types/GameTypes.ts';
 
 export class AuthUI {
   private player: Player;
   private chests: Chest[];
   private floatingText: FloatingTextManager;
 
+  public isGuest: boolean = false;
   private avatarImg: HTMLImageElement | null = null;
   private isSaving: boolean = false;
   private autoSaveTimer: number = 0;
@@ -20,6 +22,7 @@ export class AuthUI {
 
     SupabaseService.onAuthChange((user) => {
       if (user) {
+        this.isGuest = false;
         const avatarUrl = user.user_metadata?.avatar_url || user.user_metadata?.picture;
         if (avatarUrl) {
           const img = new Image();
@@ -29,56 +32,51 @@ export class AuthUI {
             this.avatarImg = img;
           };
         }
-        // Load cloud save
-        this.loadCloudSave(user.id);
       } else {
         this.avatarImg = null;
       }
     });
   }
 
-  private async loadCloudSave(userId: string): Promise<void> {
-    this.floatingText.spawn(this.player.x + 10, this.player.y - 10, 'Memuat Cloud Save...', '#38bdf8', 2.0);
+  public async loadCloudSave(userId: string): Promise<boolean> {
     const save = await SupabaseService.loadGameSave(userId);
+    if (!save) return false;
 
-    if (save) {
-      if (typeof save.world_x === 'number' && typeof save.world_y === 'number') {
-        this.player.x = save.world_x;
-        this.player.y = save.world_y;
-      }
-      if (typeof save.hp === 'number') {
-        this.player.hp = save.hp;
-      }
-      if (typeof save.max_hp === 'number') {
-        this.player.maxHp = save.max_hp;
-      }
+    if (save.display_name) this.player.username = save.display_name;
+    if (typeof save.world_x === 'number') this.player.x = save.world_x;
+    if (typeof save.world_y === 'number') this.player.y = save.world_y;
+    if (typeof save.hp === 'number') this.player.hp = save.hp;
+    if (typeof save.max_hp === 'number') this.player.maxHp = save.max_hp;
+    if (typeof save.mp === 'number') this.player.mp = save.mp;
+    if (typeof save.max_mp === 'number') this.player.maxMp = save.max_mp;
+    if (typeof save.level === 'number') this.player.level = save.level;
+    if (typeof save.exp === 'number') this.player.exp = save.exp;
+    if (typeof save.max_exp === 'number') this.player.maxExp = save.max_exp;
+    if (save.role) this.player.setRole(save.role as RoleType);
 
-      // Restore Inventory
-      if (Array.isArray(save.inventory)) {
-        this.player.inventory.slots = new Array(this.player.inventory.capacity).fill(null);
-        for (let i = 0; i < Math.min(save.inventory.length, this.player.inventory.capacity); i++) {
-          this.player.inventory.slots[i] = save.inventory[i];
-        }
+    // Restore Inventory
+    if (Array.isArray(save.inventory)) {
+      this.player.inventory.slots = new Array(this.player.inventory.capacity).fill(null);
+      for (let i = 0; i < Math.min(save.inventory.length, this.player.inventory.capacity); i++) {
+        this.player.inventory.slots[i] = save.inventory[i];
       }
-
-      // Restore opened chests
-      if (Array.isArray(save.opened_chests)) {
-        for (const idx of save.opened_chests) {
-          if (this.chests[idx]) {
-            this.chests[idx].isOpen = true;
-          }
-        }
-      }
-
-      const name = SupabaseService.currentUser?.user_metadata?.full_name || 'Petualang';
-      this.floatingText.spawn(this.player.x + 10, this.player.y - 20, `Halo, ${name}! Game dimuat.`, '#4ade80', 2.5);
-    } else {
-      // First time saving
-      await this.saveCurrentGame();
     }
+
+    // Restore opened chests
+    if (Array.isArray(save.opened_chests)) {
+      for (const idx of save.opened_chests) {
+        if (this.chests[idx]) {
+          this.chests[idx].isOpen = true;
+        }
+      }
+    }
+
+    return true;
   }
 
   public async saveCurrentGame(): Promise<void> {
+    if (this.isGuest) return; // Guest mode does not write to Cloud
+
     const user = SupabaseService.currentUser;
     if (!user || this.isSaving) return;
 
@@ -88,17 +86,23 @@ export class AuthUI {
       if (chest.isOpen) openedChestsIndices.push(idx);
     });
 
-    const saveData: GameSaveData = {
-      user_id: user.id,
+    const saveData: Partial<GameSaveData> = {
+      display_name: this.player.username,
+      avatar_url: user.user_metadata?.avatar_url || '',
+      costume_id: this.player.costume.id,
+      role: this.player.role,
+      level: this.player.level,
+      exp: this.player.exp,
+      max_exp: this.player.maxExp,
       hp: this.player.hp,
       max_hp: this.player.maxHp,
+      mp: this.player.mp,
+      max_mp: this.player.maxMp,
       world_x: this.player.x,
       world_y: this.player.y,
       inventory: this.player.inventory.slots,
-      opened_chests: openedChestsIndices,
-      display_name: user.user_metadata?.full_name || user.email || 'Petualang',
-      avatar_url: user.user_metadata?.avatar_url || ''
-    } as any;
+      opened_chests: openedChestsIndices
+    };
 
     const success = await SupabaseService.saveGame(user.id, saveData);
     this.isSaving = false;
@@ -106,13 +110,12 @@ export class AuthUI {
     if (success) {
       const now = new Date();
       this.lastSavedTimeText = `${now.getHours().toString().padStart(2, '0')}:${now.getMinutes().toString().padStart(2, '0')}:${now.getSeconds().toString().padStart(2, '0')}`;
-      this.floatingText.spawn(this.player.x + 10, this.player.y - 15, '💾 Cloud Save Berhasil!', '#38bdf8', 1.5);
+      this.floatingText.spawn(this.player.x + 10, this.player.y - 15, '💾 Cloud Save Tersimpan!', '#38bdf8', 1.5);
     }
   }
 
   public update(deltaTime: number): void {
-    // Auto-save every 30 seconds if user is logged in
-    if (SupabaseService.currentUser) {
+    if (!this.isGuest && SupabaseService.currentUser) {
       this.autoSaveTimer += deltaTime;
       if (this.autoSaveTimer >= 30) {
         this.autoSaveTimer = 0;
@@ -122,26 +125,29 @@ export class AuthUI {
   }
 
   public handleTouch(touchX: number, touchY: number, screenWidth: number): boolean {
-    const user = SupabaseService.currentUser;
-
-    if (!user) {
-      // "Masuk Google" button at top right (left of backpack)
-      const btnW = 120;
-      const btnH = 34;
-      const btnX = screenWidth - 180;
-      const btnY = 14;
+    if (this.isGuest) {
+      // Guest: Option to bind account to Google
+      const bindBtnW = 110;
+      const bindBtnH = 30;
+      const bindBtnX = screenWidth - 170;
+      const bindBtnY = 14;
 
       if (
-        touchX >= btnX &&
-        touchX <= btnX + btnW &&
-        touchY >= btnY &&
-        touchY <= btnY + btnH
+        touchX >= bindBtnX &&
+        touchX <= bindBtnX + bindBtnW &&
+        touchY >= bindBtnY &&
+        touchY <= bindBtnY + bindBtnH
       ) {
-        SupabaseService.loginWithGoogle();
+        if (confirm('Hubungkan dengan Google untuk menyimpan progres game ke Cloud?')) {
+          SupabaseService.loginWithGoogle();
+        }
         return true;
       }
-    } else {
-      // Logged in UI area:
+      return false;
+    }
+
+    const user = SupabaseService.currentUser;
+    if (user) {
       // "💾 Simpan" button
       const saveBtnW = 60;
       const saveBtnH = 30;
@@ -170,8 +176,9 @@ export class AuthUI {
         touchY >= logoutBtnY &&
         touchY <= logoutBtnY + logoutBtnH
       ) {
-        if (confirm('Apakah Anda yakin ingin logout?')) {
+        if (confirm('Apakah Anda yakin ingin logout? Progres lokal akan ditutup.')) {
           SupabaseService.logout();
+          window.location.reload();
         }
         return true;
       }
@@ -182,42 +189,35 @@ export class AuthUI {
 
   public render(ctx: CanvasRenderingContext2D, screenWidth: number): void {
     ctx.save();
-    const user = SupabaseService.currentUser;
 
-    if (!user) {
-      // --- Tombol Masuk Google ---
-      const btnW = 120;
-      const btnH = 34;
-      const btnX = screenWidth - 180;
-      const btnY = 14;
+    if (this.isGuest) {
+      // --- Guest Profile Tag ---
+      const pillW = 100;
+      const pillH = 32;
+      const pillX = screenWidth - 160;
+      const pillY = 12;
 
-      // Button background with glass blur look
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-      ctx.fillRect(btnX, btnY, btnW, btnH);
-      ctx.strokeStyle = '#38bdf8';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(btnX, btnY, btnW, btnH);
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.fillRect(pillX, pillY, pillW, pillH);
+      ctx.strokeStyle = '#64748b';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(pillX, pillY, pillW, pillH);
 
-      // Google 'G' icon badge
-      ctx.fillStyle = '#ffffff';
-      ctx.beginPath();
-      ctx.arc(btnX + 18, btnY + btnH / 2, 10, 0, Math.PI * 2);
-      ctx.fill();
-
-      ctx.fillStyle = '#ea4335';
-      ctx.font = 'bold 12px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('G', btnX + 18, btnY + btnH / 2);
-
-      // Button label
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 11px sans-serif';
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = 'bold 9px sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText('Masuk Google', btnX + 34, btnY + btnH / 2);
-    } else {
-      // --- User Logged In Profile Pill ---
-      const name = user.user_metadata?.full_name || user.email?.split('@')[0] || 'Petualang';
+      ctx.fillText('👤 Akun Tamu', pillX + 10, pillY + 13);
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '8px sans-serif';
+      ctx.fillText('Data Sementara', pillX + 10, pillY + 24);
+
+      ctx.restore();
+      return;
+    }
+
+    const user = SupabaseService.currentUser;
+    if (user) {
+      const name = this.player.username || user.user_metadata?.full_name || 'Petualang';
 
       // 1. "Keluar" (Logout) button
       const logoutBtnW = 55;
@@ -255,7 +255,7 @@ export class AuthUI {
       ctx.textBaseline = 'middle';
       ctx.fillText(this.isSaving ? 'Menyimpan..' : '💾 Simpan', saveBtnX + saveBtnW / 2, saveBtnY + saveBtnH / 2);
 
-      // 3. User Avatar Pill (next to backpack)
+      // 3. User Avatar Pill
       const pillW = 95;
       const pillH = 34;
       const pillX = screenWidth - 152;
@@ -280,7 +280,6 @@ export class AuthUI {
       if (this.avatarImg && this.avatarImg.complete) {
         ctx.drawImage(this.avatarImg, avX - avR, avY - avR, avR * 2, avR * 2);
       } else {
-        // Fallback Initial
         ctx.fillStyle = '#38bdf8';
         ctx.fillRect(avX - avR, avY - avR, avR * 2, avR * 2);
         ctx.fillStyle = '#ffffff';
@@ -291,7 +290,7 @@ export class AuthUI {
       }
       ctx.restore();
 
-      // User name truncated
+      // Display Name
       ctx.fillStyle = '#f8fafc';
       ctx.font = 'bold 10px sans-serif';
       ctx.textAlign = 'left';
@@ -299,7 +298,7 @@ export class AuthUI {
       const displayName = name.length > 8 ? name.substring(0, 7) + '..' : name;
       ctx.fillText(displayName, pillX + 34, pillY + 6);
 
-      // Cloud green dot
+      // Cloud status dot
       ctx.fillStyle = '#22c55e';
       ctx.beginPath();
       ctx.arc(pillX + 38, pillY + 23, 3, 0, Math.PI * 2);

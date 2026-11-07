@@ -6,14 +6,22 @@ const SUPABASE_ANON_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 's
 export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
 
 export interface GameSaveData {
+  user_id: string;
+  display_name: string;
+  avatar_url?: string;
+  costume_id?: number;
+  role?: string;
+  level?: number;
+  exp?: number;
+  max_exp?: number;
   hp: number;
   max_hp: number;
+  mp?: number;
+  max_mp?: number;
   world_x: number;
   world_y: number;
   inventory: any[];
   opened_chests: number[];
-  display_name?: string;
-  avatar_url?: string;
 }
 
 export class SupabaseService {
@@ -26,7 +34,7 @@ export class SupabaseService {
       const { data } = await supabase.auth.getSession();
       this.currentUser = (data.session?.user as User) || null;
 
-      // Listen for auth state changes (e.g. after OAuth redirect)
+      // Listen for auth state changes
       supabase.auth.onAuthStateChange((_event: any, session: any) => {
         this.currentUser = (session?.user as User) || null;
         for (const cb of this.onAuthChangeCallbacks) {
@@ -93,7 +101,7 @@ export class SupabaseService {
     }
   }
 
-  public static async saveGame(userId: string, saveData: GameSaveData): Promise<boolean> {
+  public static async saveGame(userId: string, saveData: Partial<GameSaveData>): Promise<boolean> {
     try {
       const { error } = await supabase
         .from('game_saves')
