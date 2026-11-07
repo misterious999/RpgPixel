@@ -4,7 +4,7 @@ import { FloatingTextManager } from './FloatingText.ts';
 export interface VisualEffect {
   x: number;
   y: number;
-  type: 'slash' | 'fireball' | 'frost' | 'lightning' | 'heal' | 'summon' | 'barrier';
+  type: 'slash' | 'fire' | 'ice' | 'lightning' | 'wind' | 'earth' | 'heal' | 'summon' | 'barrier' | 'abnormal';
   timer: number;
   maxTimer: number;
   radius: number;
@@ -22,7 +22,6 @@ export class SkillBarUI {
   }
 
   public update(deltaTime: number): void {
-    // Update visual spell effects in the world
     for (let i = this.visualEffects.length - 1; i >= 0; i--) {
       const fx = this.visualEffects[i];
       fx.timer -= deltaTime;
@@ -36,13 +35,11 @@ export class SkillBarUI {
     const skills = this.player.skills;
     if (skills.length === 0) return false;
 
-    // 4 Skill buttons placed neatly above the right action buttons
-    // Right buttons are at width - 65. Let's arrange skills in an arc or horizontal row
     const btnSize = 36;
     const gap = 10;
     const totalW = 4 * btnSize + 3 * gap;
     const startX = screenWidth - totalW - 16;
-    const startY = screenHeight - 175; // above RUN & A buttons
+    const startY = screenHeight - 175;
 
     for (let i = 0; i < 4; i++) {
       const bx = startX + i * (btnSize + gap);
@@ -68,36 +65,140 @@ export class SkillBarUI {
     const skill = this.player.skills[index];
     if (!skill) return;
 
-    // Check level lock
     if (this.player.level < skill.unlockLevel) {
       this.floatingText.spawn(this.player.x + 10, this.player.y - 12, `Terkunci! Butuh Lv. ${skill.unlockLevel}`, '#f87171');
       return;
     }
 
-    // Check Cooldown
     if (skill.currentCooldown > 0) {
       this.floatingText.spawn(this.player.x + 10, this.player.y - 12, `Cooldown: ${skill.currentCooldown.toFixed(1)}s`, '#fbbf24');
       return;
     }
 
-    // Check Mana
     if (this.player.mp < skill.manaCost) {
       this.floatingText.spawn(this.player.x + 10, this.player.y - 12, 'Mana Tidak Cukup!', '#38bdf8');
       return;
     }
 
-    // Deduct Mana & Set Cooldown
     this.player.mp -= skill.manaCost;
     skill.currentCooldown = skill.cooldown;
 
     const px = this.player.x + 10;
     const py = this.player.y + 14;
 
-    // Trigger Visual & Mechanical Skill Effects
     this.floatingText.spawn(px, py - 22, `[${skill.name}]`, skill.color, 1.4);
 
+    // 1. Magician Elemental Skills
+    if (skill.role === 'MAGICIAN') {
+      const dirX = this.player.direction === 'right' ? 32 : (this.player.direction === 'left' ? -32 : 0);
+      const dirY = this.player.direction === 'down' ? 32 : (this.player.direction === 'up' ? -32 : 0);
+
+      if (skill.id.startsWith('fire') || skill.id === 'abnormal_fire') {
+        const isAbnormal = skill.id === 'abnormal_fire';
+        this.visualEffects.push({
+          x: px + dirX,
+          y: py + dirY,
+          type: isAbnormal ? 'abnormal' : 'fire',
+          timer: isAbnormal ? 1.0 : 0.5,
+          maxTimer: isAbnormal ? 1.0 : 0.5,
+          radius: isAbnormal ? 70 : (skill.isPrimaryElement ? 34 : 20),
+          color: '#ef4444'
+        });
+        if (isAbnormal) {
+          this.floatingText.spawn(px, py - 35, '💥 EXPLOSION MAGIC!!', '#dc2626', 2.5);
+        }
+        return;
+      }
+
+      if (skill.id.startsWith('ice') || skill.id === 'abnormal_ice') {
+        const isAbnormal = skill.id === 'abnormal_ice';
+        this.visualEffects.push({
+          x: px,
+          y: py,
+          type: isAbnormal ? 'abnormal' : 'ice',
+          timer: isAbnormal ? 1.0 : 0.6,
+          maxTimer: isAbnormal ? 1.0 : 0.6,
+          radius: isAbnormal ? 80 : (skill.isPrimaryElement ? 44 : 26),
+          color: '#38bdf8'
+        });
+        if (isAbnormal) {
+          this.floatingText.spawn(px, py - 35, '❄️ ABSOLUTE ZERO DOMAIN!', '#0284c7', 2.5);
+        }
+        return;
+      }
+
+      if (skill.id.startsWith('lightning') || skill.id === 'abnormal_lightning') {
+        const isAbnormal = skill.id === 'abnormal_lightning';
+        this.visualEffects.push({
+          x: px + dirX,
+          y: py + dirY,
+          type: isAbnormal ? 'abnormal' : 'lightning',
+          timer: isAbnormal ? 0.8 : 0.45,
+          maxTimer: isAbnormal ? 0.8 : 0.45,
+          radius: isAbnormal ? 75 : 40,
+          color: '#facc15'
+        });
+        if (isAbnormal) {
+          this.floatingText.spawn(px, py - 35, '⚡ KIRIN THUNDER GOD!', '#eab308', 2.5);
+        }
+        return;
+      }
+
+      if (skill.id.startsWith('wind') || skill.id === 'abnormal_wind') {
+        const isAbnormal = skill.id === 'abnormal_wind';
+        this.visualEffects.push({
+          x: px + dirX,
+          y: py + dirY,
+          type: isAbnormal ? 'abnormal' : 'wind',
+          timer: isAbnormal ? 0.9 : 0.5,
+          maxTimer: isAbnormal ? 0.9 : 0.5,
+          radius: isAbnormal ? 70 : 36,
+          color: '#4ade80'
+        });
+        if (isAbnormal) {
+          this.floatingText.spawn(px, py - 35, '🌪️ KAMAITACHI VOID TYPHOON!', '#16a34a', 2.5);
+        }
+        return;
+      }
+
+      if (skill.id.startsWith('earth') || skill.id === 'abnormal_earth') {
+        const isAbnormal = skill.id === 'abnormal_earth';
+        this.visualEffects.push({
+          x: px + dirX,
+          y: py + dirY,
+          type: isAbnormal ? 'abnormal' : 'earth',
+          timer: isAbnormal ? 1.0 : 0.55,
+          maxTimer: isAbnormal ? 1.0 : 0.55,
+          radius: isAbnormal ? 75 : 36,
+          color: '#a16207'
+        });
+        if (isAbnormal) {
+          this.floatingText.spawn(px, py - 35, '☄️ GAIA CATACLYSM METEOR!', '#854d0e', 2.5);
+        }
+        return;
+      }
+
+      if (skill.id === 'teleport') {
+        const dist = 90;
+        if (this.player.direction === 'right') this.player.x += dist;
+        else if (this.player.direction === 'left') this.player.x -= dist;
+        else if (this.player.direction === 'down') this.player.y += dist;
+        else if (this.player.direction === 'up') this.player.y -= dist;
+        this.visualEffects.push({
+          x: this.player.x + 10,
+          y: this.player.y + 14,
+          type: 'barrier',
+          timer: 0.3,
+          maxTimer: 0.3,
+          radius: 26,
+          color: '#a855f7'
+        });
+        return;
+      }
+    }
+
+    // 2. Non-Magician Skills
     switch (skill.id) {
-      // KNIGHT SKILLS
       case 'slash':
         this.visualEffects.push({
           x: px,
@@ -128,58 +229,6 @@ export class SkillBarUI {
         this.floatingText.spawn(px, py - 32, '💥 BERSERK OVERDRIVE ACTIVATED!', '#dc2626', 2.0);
         break;
 
-      // MAGICIAN SKILLS
-      case 'fireball':
-        this.visualEffects.push({
-          x: px + (this.player.direction === 'right' ? 30 : this.player.direction === 'left' ? -30 : 0),
-          y: py + (this.player.direction === 'down' ? 30 : this.player.direction === 'up' ? -30 : 0),
-          type: 'fireball',
-          timer: 0.5,
-          maxTimer: 0.5,
-          radius: 24,
-          color: '#ef4444'
-        });
-        break;
-      case 'frost_nova':
-        this.visualEffects.push({
-          x: px,
-          y: py,
-          type: 'frost',
-          timer: 0.6,
-          maxTimer: 0.6,
-          radius: 48,
-          color: '#38bdf8'
-        });
-        break;
-      case 'chain_lightning':
-        this.visualEffects.push({
-          x: px,
-          y: py,
-          type: 'lightning',
-          timer: 0.4,
-          maxTimer: 0.4,
-          radius: 40,
-          color: '#fde047'
-        });
-        break;
-      case 'teleport':
-        const distance = 80;
-        if (this.player.direction === 'right') this.player.x += distance;
-        else if (this.player.direction === 'left') this.player.x -= distance;
-        else if (this.player.direction === 'down') this.player.y += distance;
-        else if (this.player.direction === 'up') this.player.y -= distance;
-        this.visualEffects.push({
-          x: this.player.x + 10,
-          y: this.player.y + 14,
-          type: 'barrier',
-          timer: 0.3,
-          maxTimer: 0.3,
-          radius: 25,
-          color: '#a855f7'
-        });
-        break;
-
-      // ASSASSIN SKILLS
       case 'stealth':
         this.player.isStealthed = true;
         this.player.stealthTimer = 7.0;
@@ -198,7 +247,6 @@ export class SkillBarUI {
         });
         break;
 
-      // HEALER SKILLS
       case 'holy_heal':
         this.player.heal(45);
         this.visualEffects.push({
@@ -225,7 +273,6 @@ export class SkillBarUI {
         });
         break;
 
-      // NECROMANCER SKILLS
       case 'raise_skeleton':
         if (this.player.minions.length < 3) {
           this.player.minions.push({
@@ -276,31 +323,47 @@ export class SkillBarUI {
         ctx.beginPath();
         ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI * 1.5);
         ctx.stroke();
-      } else if (fx.type === 'fireball') {
+      } else if (fx.type === 'fire') {
         ctx.fillStyle = fx.color;
         ctx.beginPath();
-        ctx.arc(fx.x, fx.y, fx.radius * (1 - alpha * 0.3), 0, Math.PI * 2);
+        ctx.arc(fx.x, fx.y, fx.radius * (1 - alpha * 0.25), 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#fef08a';
         ctx.beginPath();
         ctx.arc(fx.x, fx.y, fx.radius * 0.5, 0, Math.PI * 2);
         ctx.fill();
-      } else if (fx.type === 'frost') {
+      } else if (fx.type === 'ice') {
         ctx.strokeStyle = fx.color;
         ctx.lineWidth = 2.5;
         ctx.beginPath();
         ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI * 2);
         ctx.stroke();
-        ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
+        ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
         ctx.fill();
+        // Crystal spikes
+        ctx.fillStyle = '#ffffff';
+        for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) {
+          ctx.fillRect(fx.x + Math.cos(a) * fx.radius * 0.7, fx.y + Math.sin(a) * fx.radius * 0.7, 4, 4);
+        }
       } else if (fx.type === 'lightning') {
         ctx.strokeStyle = fx.color;
         ctx.lineWidth = 2.5;
         ctx.beginPath();
-        ctx.moveTo(fx.x - 20, fx.y - 30);
+        ctx.moveTo(fx.x - 15, fx.y - 25);
         ctx.lineTo(fx.x, fx.y);
-        ctx.lineTo(fx.x + 20, fx.y - 15);
+        ctx.lineTo(fx.x + 15, fx.y - 10);
         ctx.stroke();
+      } else if (fx.type === 'wind') {
+        ctx.strokeStyle = fx.color;
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+        ctx.arc(fx.x, fx.y, fx.radius * (1 - alpha * 0.3), 0, Math.PI * 1.8);
+        ctx.stroke();
+      } else if (fx.type === 'earth') {
+        ctx.fillStyle = fx.color;
+        ctx.fillRect(fx.x - 12, fx.y - 8, 24, 16);
+        ctx.fillStyle = '#ca8a04';
+        ctx.fillRect(fx.x - 8, fx.y - 12, 16, 20);
       } else if (fx.type === 'heal') {
         ctx.fillStyle = 'rgba(74, 222, 128, 0.25)';
         ctx.beginPath();
@@ -309,7 +372,6 @@ export class SkillBarUI {
         ctx.strokeStyle = '#4ade80';
         ctx.lineWidth = 2;
         ctx.stroke();
-        // Green sparkles
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(fx.x - 4, fx.y - 8, 8, 2);
         ctx.fillRect(fx.x - 1, fx.y - 11, 2, 8);
@@ -319,6 +381,19 @@ export class SkillBarUI {
         ctx.beginPath();
         ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI * 2);
         ctx.stroke();
+      } else if (fx.type === 'abnormal') {
+        // Massive Anime Ultimate Shockwave
+        ctx.strokeStyle = fx.color;
+        ctx.lineWidth = 4;
+        ctx.beginPath();
+        ctx.arc(fx.x, fx.y, fx.radius * (1 - alpha * 0.2), 0, Math.PI * 2);
+        ctx.stroke();
+
+        ctx.fillStyle = fx.color;
+        ctx.globalAlpha = alpha * 0.3;
+        ctx.beginPath();
+        ctx.arc(fx.x, fx.y, fx.radius * 0.8, 0, Math.PI * 2);
+        ctx.fill();
       }
     }
     ctx.restore();
@@ -351,9 +426,9 @@ export class SkillBarUI {
       ctx.arc(bx + btnSize / 2, by + btnSize / 2, btnSize / 2, 0, Math.PI * 2);
       ctx.fill();
 
-      // Border
-      ctx.strokeStyle = isUnlocked ? (isOnCooldown ? '#475569' : skill.color) : '#334155';
-      ctx.lineWidth = 2;
+      // Border (Golden border for primary elemental mastery!)
+      ctx.strokeStyle = isUnlocked ? (isOnCooldown ? '#475569' : (skill.isPrimaryElement ? '#fbbf24' : skill.color)) : '#334155';
+      ctx.lineWidth = skill.isPrimaryElement ? 2.5 : 2;
       ctx.stroke();
 
       // Symbol
@@ -390,9 +465,9 @@ export class SkillBarUI {
       }
 
       // Small Skill Tag (1, 2, 3, 4)
-      ctx.fillStyle = '#94a3b8';
+      ctx.fillStyle = skill.isPrimaryElement ? '#fde047' : '#94a3b8';
       ctx.font = 'bold 8px sans-serif';
-      ctx.fillText(`${i + 1}`, bx + 6, by + 6);
+      ctx.fillText(skill.isPrimaryElement ? '★1' : `${i + 1}`, bx + 6, by + 6);
     }
 
     ctx.restore();

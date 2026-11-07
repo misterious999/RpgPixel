@@ -11,6 +11,7 @@ export interface GameSaveData {
   avatar_url?: string;
   costume_id?: number;
   role?: string;
+  magician_affinities?: any;
   level?: number;
   exp?: number;
   max_exp?: number;

@@ -2,8 +2,8 @@ import { CONSTANTS } from '../core/Constants.ts';
 import { InputState } from '../core/Input.ts';
 import { TileMap } from '../world/TileMap.ts';
 import { Inventory } from '../items/Inventory.ts';
-import { CharacterCostume, RoleType, Skill } from '../types/GameTypes.ts';
-import { CHARACTER_COSTUMES, ROLE_INFO } from '../data/RolesData.ts';
+import { CharacterCostume, RoleType, Skill, MagicianAffinities } from '../types/GameTypes.ts';
+import { CHARACTER_COSTUMES, ROLE_INFO, getMagicianSkills, ELEMENT_INFO } from '../data/RolesData.ts';
 
 export type Direction = 'down' | 'up' | 'left' | 'right';
 
@@ -34,6 +34,12 @@ export class Player {
   public maxExp: number = 50;
   public role: RoleType = 'NOVICE';
   public skills: Skill[] = [];
+
+  // Special Magician Elemental Affinities
+  public magicianAffinities: MagicianAffinities = {
+    primary: 'FIRE',
+    secondaries: []
+  };
 
   // Active Buffs / Effects
   public isStealthed: boolean = false;
@@ -75,19 +81,30 @@ export class Player {
     this.updateSkills();
   }
 
-  public setRole(newRole: RoleType): void {
+  public setRole(newRole: RoleType, affinities?: MagicianAffinities): void {
     this.role = newRole;
+    if (affinities) {
+      this.magicianAffinities = affinities;
+    }
     this.updateSkills();
   }
 
   public updateSkills(): void {
+    if (this.role === 'MAGICIAN') {
+      const generated = getMagicianSkills(this.magicianAffinities);
+      this.skills = generated.map(s => ({
+        ...s,
+        currentCooldown: 0
+      }));
+      return;
+    }
+
     const info = ROLE_INFO[this.role];
     if (!info) {
       this.skills = [];
       return;
     }
 
-    // Filter available skills based on level
     this.skills = info.skills.map(s => ({
       ...s,
       currentCooldown: 0
@@ -102,7 +119,7 @@ export class Player {
     this.exp += amount;
     if (this.exp >= this.maxExp) {
       this.levelUp();
-      return true; // Leveled up
+      return true;
     }
     return false;
   }
@@ -145,7 +162,6 @@ export class Player {
     // Attack timer
     if (isAction && this.attackTimer <= 0) {
       this.attackTimer = 0.25;
-      // Breaking stealth on attack
       if (this.isStealthed) {
         this.isStealthed = false;
         this.stealthTimer = 0;
@@ -189,7 +205,6 @@ export class Player {
         this.direction = axisY > 0 ? 'down' : 'up';
       }
 
-      // Calculate speed (boosted by sprint, stealth, or berserk)
       let speed = CONSTANTS.PLAYER_SPEED;
       if (isSprint) speed *= CONSTANTS.PLAYER_SPRINT_MULTIPLIER;
       if (this.isStealthed) speed *= 1.4;
@@ -204,7 +219,6 @@ export class Player {
         return false;
       };
 
-      // Axis-separated sliding
       const nextBoxX = {
         x: this.x + moveX + this.collisionBox.offsetX,
         y: this.y + this.collisionBox.offsetY,
@@ -352,12 +366,19 @@ export class Player {
     ctx.font = 'bold 8px sans-serif';
     ctx.textAlign = 'center';
 
-    // Role Tag Badge
-    const roleInfo = ROLE_INFO[this.role];
-    ctx.fillStyle = roleInfo.color;
+    let tagText = `[${ROLE_INFO[this.role].tag} Lv.${this.level}]`;
+    let tagColor = ROLE_INFO[this.role].color;
+
+    // Special Tag if Magician with Element
+    if (this.role === 'MAGICIAN') {
+      const pInfo = ELEMENT_INFO[this.magicianAffinities.primary];
+      tagText = `[Mage·${pInfo.name.split(' ')[0]} Lv.${this.level}]`;
+      tagColor = pInfo.color;
+    }
+
+    ctx.fillStyle = tagColor;
     ctx.strokeStyle = '#000000';
     ctx.lineWidth = 2;
-    const tagText = `[${roleInfo.tag} Lv.${this.level}]`;
     ctx.strokeText(tagText, px + 10, py - 12);
     ctx.fillText(tagText, px + 10, py - 12);
 
@@ -375,25 +396,21 @@ export class Player {
 
     ctx.save();
     if (minion.type === 'skeleton') {
-      // Skeleton Warrior
       ctx.fillStyle = 'rgba(0,0,0,0.3)';
       ctx.beginPath();
       ctx.ellipse(mx + 6, my + 14, 5, 2, 0, 0, Math.PI * 2);
       ctx.fill();
 
-      // Bones
       ctx.fillStyle = '#e2e8f0';
-      ctx.fillRect(mx + 3, my + 2, 6, 6); // Skull
-      ctx.fillRect(mx + 4, my + 8, 4, 6); // Ribcage
-      ctx.fillRect(mx + 3, my + 14, 2, 4); // Legs
+      ctx.fillRect(mx + 3, my + 2, 6, 6);
+      ctx.fillRect(mx + 4, my + 8, 4, 6);
+      ctx.fillRect(mx + 3, my + 14, 2, 4);
       ctx.fillRect(mx + 7, my + 14, 2, 4);
 
-      // Glowing Eyes
       ctx.fillStyle = '#a855f7';
       ctx.fillRect(mx + 4, my + 4, 1, 1);
       ctx.fillRect(mx + 7, my + 4, 1, 1);
 
-      // Sword
       ctx.fillStyle = '#94a3b8';
       ctx.fillRect(mx + 10, my + 6, 2, 8);
     }

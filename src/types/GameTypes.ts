@@ -2,6 +2,13 @@ export type GameState = 'AUTH' | 'CHARACTER_CREATION' | 'PLAYING';
 
 export type RoleType = 'NOVICE' | 'KNIGHT' | 'MAGICIAN' | 'ASSASSIN' | 'HEALER' | 'NECROMANCER';
 
+export type MagicElement = 'FIRE' | 'ICE' | 'LIGHTNING' | 'WIND' | 'EARTH';
+
+export interface MagicianAffinities {
+  primary: MagicElement;
+  secondaries: MagicElement[]; // max 2
+}
+
 export interface CharacterCostume {
   id: number;
   name: string;
@@ -17,6 +24,8 @@ export interface Skill {
   name: string;
   description: string;
   role: RoleType;
+  element?: MagicElement;
+  isPrimaryElement?: boolean;
   unlockLevel: number;
   manaCost: number;
   cooldown: number; // in seconds
@@ -33,4 +42,5 @@ export interface PlayerStats {
   mp: number;
   maxMp: number;
   role: RoleType;
+  magicianAffinities?: MagicianAffinities;
 }

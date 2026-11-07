@@ -52,7 +52,8 @@ export class AuthUI {
     if (typeof save.level === 'number') this.player.level = save.level;
     if (typeof save.exp === 'number') this.player.exp = save.exp;
     if (typeof save.max_exp === 'number') this.player.maxExp = save.max_exp;
-    if (save.role) this.player.setRole(save.role as RoleType);
+    if (save.magician_affinities) this.player.magicianAffinities = save.magician_affinities;
+    if (save.role) this.player.setRole(save.role as RoleType, save.magician_affinities);
 
     // Restore Inventory
     if (Array.isArray(save.inventory)) {
@@ -91,6 +92,7 @@ export class AuthUI {
       avatar_url: user.user_metadata?.avatar_url || '',
       costume_id: this.player.costume.id,
       role: this.player.role,
+      magician_affinities: this.player.magicianAffinities,
       level: this.player.level,
       exp: this.player.exp,
       max_exp: this.player.maxExp,
