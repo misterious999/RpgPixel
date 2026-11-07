@@ -1,5 +1,6 @@
 import { Player } from '../entities/Player.ts';
 import { FloatingTextManager } from './FloatingText.ts';
+import { ControlSettingsManager } from '../core/ControlSettings.ts';
 
 export interface VisualEffect {
   x: number;
@@ -35,11 +36,13 @@ export class SkillBarUI {
     const skills = this.player.skills;
     if (skills.length === 0) return false;
 
-    const btnSize = 36;
-    const gap = 10;
+    const cfg = ControlSettingsManager.get();
+    const scale = cfg.buttonScale;
+    const btnSize = 36 * scale;
+    const gap = 8 * scale;
     const totalW = 4 * btnSize + 3 * gap;
     const startX = screenWidth - totalW - 16;
-    const startY = screenHeight - 175;
+    const startY = screenHeight - cfg.bottomOffset - (120 * scale);
 
     for (let i = 0; i < 4; i++) {
       const bx = startX + i * (btnSize + gap);
@@ -403,12 +406,18 @@ export class SkillBarUI {
     const skills = this.player.skills;
     if (skills.length === 0) return;
 
+    const cfg = ControlSettingsManager.get();
+    const scale = cfg.buttonScale;
+    const alpha = cfg.opacity;
+
     ctx.save();
-    const btnSize = 36;
-    const gap = 10;
+    ctx.globalAlpha = alpha;
+
+    const btnSize = 36 * scale;
+    const gap = 8 * scale;
     const totalW = 4 * btnSize + 3 * gap;
     const startX = screenWidth - totalW - 16;
-    const startY = screenHeight - 175;
+    const startY = screenHeight - cfg.bottomOffset - (120 * scale);
 
     for (let i = 0; i < 4; i++) {
       const skill = skills[i];

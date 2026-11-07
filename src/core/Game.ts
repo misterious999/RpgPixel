@@ -11,6 +11,7 @@ import { InventoryUI } from '../ui/InventoryUI.ts';
 import { AuthUI } from '../ui/AuthUI.ts';
 import { SkillBarUI } from '../ui/SkillBarUI.ts';
 import { OnboardingUI } from '../ui/OnboardingUI.ts';
+import { ControlSettingsModal } from '../ui/ControlSettingsModal.ts';
 import { SupabaseService } from '../services/SupabaseService.ts';
 import { ITEM_DEFINITIONS } from '../items/ItemTypes.ts';
 import { ROLE_INFO } from '../data/RolesData.ts';
@@ -27,6 +28,7 @@ export class Game {
   private authUI: AuthUI;
   private skillBarUI: SkillBarUI;
   private onboardingUI: OnboardingUI;
+  private controlSettingsModal: ControlSettingsModal;
 
   // World objects
   private worldItems: WorldItem[] = [];
@@ -67,6 +69,7 @@ export class Game {
     this.floatingText = new FloatingTextManager();
     this.inventoryUI = new InventoryUI(this.player.inventory, this.player, this.floatingText);
     this.skillBarUI = new SkillBarUI(this.player, this.floatingText);
+    this.controlSettingsModal = new ControlSettingsModal();
 
     // Create Guild Receptionist Elaine near spawn
     const guildX = 51 * CONSTANTS.TILE_SIZE;
@@ -85,6 +88,10 @@ export class Game {
     this.input.setTouchInterceptor((touchX, touchY) => {
       if (this.onboardingUI.state !== 'PLAYING') return true;
 
+      // 0. Control Settings Modal
+      if (this.controlSettingsModal.handleTouch(touchX, touchY, this.canvas.width, this.canvas.height)) {
+        return true;
+      }
       // 1. Guild Appraisal Modal
       if (this.guildNPC.handleTouch(touchX, touchY, this.canvas.width, this.canvas.height, this.player, this.floatingText)) {
         return true;
@@ -262,8 +269,8 @@ export class Game {
       return false;
     };
 
-    // Freeze player if inventory or guild dialog is open
-    const activeInput = (this.inventoryUI.isOpen || this.guildNPC.isAppraisalOpen)
+    // Freeze player if inventory, guild dialog, or control settings is open
+    const activeInput = (this.inventoryUI.isOpen || this.guildNPC.isAppraisalOpen || this.controlSettingsModal.isOpen)
       ? { axisX: 0, axisY: 0, isAction: false, isSprint: false }
       : this.input.state;
 
@@ -402,7 +409,7 @@ export class Game {
     // --- SCREEN SPACE 1:1 RENDERING ---
     if (this.onboardingUI.state === 'PLAYING') {
       // 8. Mobile Touch D-Pad & Action Buttons
-      if (!this.inventoryUI.isOpen && !this.guildNPC.isAppraisalOpen) {
+      if (!this.inventoryUI.isOpen && !this.guildNPC.isAppraisalOpen && !this.controlSettingsModal.isOpen) {
         this.input.renderTouchUI(ctx, screenWidth, screenHeight);
         // Mobile Skill Bar
         this.skillBarUI.renderTouchSkillBar(ctx, screenWidth, screenHeight);
@@ -416,6 +423,9 @@ export class Game {
 
       // 11. Guild Appraisal Ceremony Modal
       this.guildNPC.renderModal(ctx, screenWidth, screenHeight, this.player);
+
+      // 12. Control Settings Modal (Gear ⚙️ & customization)
+      this.controlSettingsModal.render(ctx, screenWidth, screenHeight);
     }
   }
 }

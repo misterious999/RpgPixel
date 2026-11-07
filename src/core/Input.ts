@@ -1,3 +1,5 @@
+import { ControlSettingsManager } from './ControlSettings.ts';
+
 export interface InputState {
   axisX: number; // -1 to 1
   axisY: number; // -1 to 1
@@ -30,6 +32,7 @@ export class InputManager {
   };
 
   constructor(private canvas: HTMLCanvasElement) {
+    ControlSettingsManager.load();
     this.setupKeyboardListeners();
     this.setupTouchListeners();
   }
@@ -54,18 +57,19 @@ export class InputManager {
       const rect = this.canvas.getBoundingClientRect();
       const width = rect.width;
       const height = rect.height;
+      const cfg = ControlSettingsManager.get();
+      const scale = cfg.buttonScale;
 
       for (let i = 0; i < e.changedTouches.length; i++) {
         const touch = e.changedTouches[i];
         const clientX = touch.clientX - rect.left;
         const clientY = touch.clientY - rect.top;
 
-        // If UI consumes this touch (e.g. Backpack, Modal), ignore game movement/actions
         if (this.touchInterceptor && this.touchInterceptor(clientX, clientY)) {
           continue;
         }
 
-        // Left half of screen -> Dynamic Joystick
+        // Left 55% of screen -> Dynamic Joystick
         if (clientX < width * 0.55) {
           if (!this.joystickTouch) {
             this.joystickTouch = {
@@ -77,15 +81,15 @@ export class InputManager {
             };
           }
         } else {
-          // Right half: Buttons
-          const btnRadius = 38;
-          const sprintBtnX = width - 65;
-          const sprintBtnY = height - 120;
-          const actionBtnX = width - 65;
-          const actionBtnY = height - 55;
+          // Right half: Action (A) and Sprint (RUN) Buttons with custom positions
+          const btnRadius = 32 * scale;
+          const actionBtnX = width - cfg.sideMargin;
+          const actionBtnY = height - cfg.bottomOffset;
+          const sprintBtnX = width - cfg.sideMargin;
+          const sprintBtnY = height - cfg.bottomOffset - (65 * scale);
 
-          const distSprint = Math.hypot(clientX - sprintBtnX, clientY - sprintBtnY);
           const distAction = Math.hypot(clientX - actionBtnX, clientY - actionBtnY);
+          const distSprint = Math.hypot(clientX - sprintBtnX, clientY - sprintBtnY);
 
           if (distSprint < btnRadius * 1.5) {
             this.sprintTouchId = touch.identifier;
@@ -134,7 +138,6 @@ export class InputManager {
     this.canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
     this.canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
 
-    // Also support desktop mouse clicks for Backpack UI
     this.canvas.addEventListener('mousedown', (e) => {
       const rect = this.canvas.getBoundingClientRect();
       const clientX = e.clientX - rect.left;
@@ -149,7 +152,6 @@ export class InputManager {
     let x = 0;
     let y = 0;
 
-    // Keyboard Input
     if (this.keys.has('KeyA') || this.keys.has('ArrowLeft')) x -= 1;
     if (this.keys.has('KeyD') || this.keys.has('ArrowRight')) x += 1;
     if (this.keys.has('KeyW') || this.keys.has('ArrowUp')) y -= 1;
@@ -158,7 +160,6 @@ export class InputManager {
     const keyboardSprint = this.keys.has('ShiftLeft') || this.keys.has('ShiftRight');
     const keyboardAction = this.keys.has('Space') || this.keys.has('KeyE');
 
-    // Virtual Touch Joystick input
     if (this.joystickTouch) {
       const dx = this.joystickTouch.currentX - this.joystickTouch.startX;
       const dy = this.joystickTouch.currentY - this.joystickTouch.startY;
@@ -170,7 +171,6 @@ export class InputManager {
         y = (dy / distance) * factor;
       }
     } else if (x !== 0 || y !== 0) {
-      // Normalize keyboard diagonals
       const len = Math.hypot(x, y);
       if (len > 0) {
         x /= len;
@@ -185,9 +185,14 @@ export class InputManager {
   }
 
   public renderTouchUI(ctx: CanvasRenderingContext2D, width: number, height: number): void {
-    ctx.save();
+    const cfg = ControlSettingsManager.get();
+    const scale = cfg.buttonScale;
+    const alpha = cfg.opacity;
 
-    // 1. Render Left Joystick Base & Thumb
+    ctx.save();
+    ctx.globalAlpha = alpha;
+
+    // 1. Render Left Dynamic Joystick
     if (this.joystickTouch) {
       const { startX, startY, currentX, currentY } = this.joystickTouch;
       const dx = currentX - startX;
@@ -198,66 +203,77 @@ export class InputManager {
       const thumbX = startX + Math.cos(angle) * thumbDist;
       const thumbY = startY + Math.sin(angle) * thumbDist;
 
-      // Outer ring
+      // Base ring
       ctx.beginPath();
       ctx.arc(startX, startY, this.maxJoystickRadius, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.15)';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.16)';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.5)';
       ctx.lineWidth = 2;
       ctx.stroke();
 
-      // Thumb stick
+      // Stick knob
       ctx.beginPath();
       ctx.arc(thumbX, thumbY, 22, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(56, 189, 248, 0.7)';
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.85)';
       ctx.fill();
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 2;
       ctx.stroke();
     } else {
+      // Resting guide for thumb (elevated safely away from phone navigation bar!)
+      const restX = cfg.sideMargin + 10;
+      const restY = height - cfg.bottomOffset - 15;
+
       ctx.beginPath();
-      ctx.arc(75, height - 75, 45, 0, Math.PI * 2);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';
+      ctx.arc(restX, restY, 44 * scale, 0, Math.PI * 2);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.08)';
       ctx.fill();
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.25)';
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.font = '11px sans-serif';
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
+      ctx.font = `${Math.floor(11 * scale)}px sans-serif`;
       ctx.textAlign = 'center';
-      ctx.fillText('Sentuh disini', 75, height - 72);
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Sentuh disini', restX, restY);
     }
 
     // 2. Action Button (A)
-    const actionBtnX = width - 65;
-    const actionBtnY = height - 55;
+    const actionRadius = 28 * scale;
+    const actionBtnX = width - cfg.sideMargin;
+    const actionBtnY = height - cfg.bottomOffset;
+
     ctx.beginPath();
-    ctx.arc(actionBtnX, actionBtnY, 28, 0, Math.PI * 2);
-    ctx.fillStyle = this.state.isAction ? 'rgba(239, 68, 68, 0.75)' : 'rgba(239, 68, 68, 0.35)';
+    ctx.arc(actionBtnX, actionBtnY, actionRadius, 0, Math.PI * 2);
+    ctx.fillStyle = this.state.isAction ? 'rgba(239, 68, 68, 0.85)' : 'rgba(239, 68, 68, 0.45)';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
     ctx.lineWidth = 2;
     ctx.stroke();
+
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 16px sans-serif';
+    ctx.font = `bold ${Math.floor(16 * scale)}px sans-serif`;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('A', actionBtnX, actionBtnY);
 
-    // 3. Sprint Button (B)
-    const sprintBtnX = width - 65;
-    const sprintBtnY = height - 120;
+    // 3. Sprint Button (RUN)
+    const sprintRadius = 24 * scale;
+    const sprintBtnX = width - cfg.sideMargin;
+    const sprintBtnY = height - cfg.bottomOffset - (65 * scale);
+
     ctx.beginPath();
-    ctx.arc(sprintBtnX, sprintBtnY, 24, 0, Math.PI * 2);
-    ctx.fillStyle = this.state.isSprint ? 'rgba(16, 185, 129, 0.75)' : 'rgba(16, 185, 129, 0.35)';
+    ctx.arc(sprintBtnX, sprintBtnY, sprintRadius, 0, Math.PI * 2);
+    ctx.fillStyle = this.state.isSprint ? 'rgba(16, 185, 129, 0.85)' : 'rgba(16, 185, 129, 0.45)';
     ctx.fill();
-    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
     ctx.lineWidth = 2;
     ctx.stroke();
+
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 14px sans-serif';
+    ctx.font = `bold ${Math.floor(13 * scale)}px sans-serif`;
     ctx.fillText('RUN', sprintBtnX, sprintBtnY);
 
     ctx.restore();
