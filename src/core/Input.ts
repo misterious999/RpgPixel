@@ -20,6 +20,7 @@ export class InputManager {
 
   private actionTouchId: number | null = null;
   private sprintTouchId: number | null = null;
+  private touchInterceptor?: (touchX: number, touchY: number) => boolean;
 
   public state: InputState = {
     axisX: 0,
@@ -31,6 +32,10 @@ export class InputManager {
   constructor(private canvas: HTMLCanvasElement) {
     this.setupKeyboardListeners();
     this.setupTouchListeners();
+  }
+
+  public setTouchInterceptor(fn: (touchX: number, touchY: number) => boolean): void {
+    this.touchInterceptor = fn;
   }
 
   private setupKeyboardListeners(): void {
@@ -55,6 +60,11 @@ export class InputManager {
         const clientX = touch.clientX - rect.left;
         const clientY = touch.clientY - rect.top;
 
+        // If UI consumes this touch (e.g. Backpack, Modal), ignore game movement/actions
+        if (this.touchInterceptor && this.touchInterceptor(clientX, clientY)) {
+          continue;
+        }
+
         // Left half of screen -> Dynamic Joystick
         if (clientX < width * 0.55) {
           if (!this.joystickTouch) {
@@ -68,7 +78,6 @@ export class InputManager {
           }
         } else {
           // Right half: Buttons
-          // Check Sprint (upper right button area) or Action (lower right button area)
           const btnRadius = 38;
           const sprintBtnX = width - 65;
           const sprintBtnY = height - 120;
@@ -124,6 +133,16 @@ export class InputManager {
     this.canvas.addEventListener('touchmove', handleTouchMove, { passive: false });
     this.canvas.addEventListener('touchend', handleTouchEnd, { passive: false });
     this.canvas.addEventListener('touchcancel', handleTouchEnd, { passive: false });
+
+    // Also support desktop mouse clicks for Backpack UI
+    this.canvas.addEventListener('mousedown', (e) => {
+      const rect = this.canvas.getBoundingClientRect();
+      const clientX = e.clientX - rect.left;
+      const clientY = e.clientY - rect.top;
+      if (this.touchInterceptor) {
+        this.touchInterceptor(clientX, clientY);
+      }
+    });
   }
 
   public update(): void {
@@ -165,9 +184,6 @@ export class InputManager {
     this.state.isAction = keyboardAction || this.actionTouchId !== null;
   }
 
-  /**
-   * Render virtual UI elements directly over canvas in screen coordinates
-   */
   public renderTouchUI(ctx: CanvasRenderingContext2D, width: number, height: number): void {
     ctx.save();
 
@@ -200,7 +216,6 @@ export class InputManager {
       ctx.lineWidth = 2;
       ctx.stroke();
     } else {
-      // Resting guide for thumb
       ctx.beginPath();
       ctx.arc(75, height - 75, 45, 0, Math.PI * 2);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.05)';

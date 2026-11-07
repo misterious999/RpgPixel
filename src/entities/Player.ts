@@ -1,6 +1,7 @@
 import { CONSTANTS } from '../core/Constants.ts';
 import { InputState } from '../core/Input.ts';
 import { TileMap } from '../world/TileMap.ts';
+import { Inventory } from '../items/Inventory.ts';
 
 export type Direction = 'down' | 'up' | 'left' | 'right';
 
@@ -9,6 +10,13 @@ export class Player {
   public y: number;
   public width: number = 20;
   public height: number = 26;
+
+  // Health Stats
+  public hp: number = 70;
+  public maxHp: number = 100;
+
+  // Player Inventory
+  public inventory: Inventory = new Inventory(16);
 
   // Collision box relative to player (feet area for 2D top-down perspective)
   public collisionBox = {
@@ -21,14 +29,33 @@ export class Player {
   public direction: Direction = 'down';
   public isMoving: boolean = false;
   private animTimer: number = 0;
-  private attackTimer: number = 0;
+  public attackTimer: number = 0;
 
   constructor(startX: number, startY: number) {
     this.x = startX;
     this.y = startY;
+
+    // Give player some starter items
+    this.inventory.addItem('HEALTH_POTION', 2);
+    this.inventory.addItem('GOLD_COIN', 15);
   }
 
-  public update(deltaTime: number, input: InputState, tileMap: TileMap): void {
+  public heal(amount: number): number {
+    const prevHp = this.hp;
+    this.hp = Math.min(this.maxHp, this.hp + amount);
+    return this.hp - prevHp;
+  }
+
+  public getCollisionBox() {
+    return {
+      x: this.x + this.collisionBox.offsetX,
+      y: this.y + this.collisionBox.offsetY,
+      width: this.collisionBox.width,
+      height: this.collisionBox.height
+    };
+  }
+
+  public update(deltaTime: number, input: InputState, tileMap: TileMap, obstacleChecker?: (box: { x: number; y: number; width: number; height: number }) => boolean): void {
     const { axisX, axisY, isSprint, isAction } = input;
 
     if (isAction && this.attackTimer <= 0) {
@@ -55,6 +82,12 @@ export class Player {
       const moveX = axisX * speed * deltaTime;
       const moveY = axisY * speed * deltaTime;
 
+      const collides = (box: { x: number; y: number; width: number; height: number }) => {
+        if (tileMap.checkCollision(box)) return true;
+        if (obstacleChecker && obstacleChecker(box)) return true;
+        return false;
+      };
+
       // Move with Axis Separation for smooth sliding against walls
       // 1. Try X movement
       const nextBoxX = {
@@ -63,7 +96,7 @@ export class Player {
         width: this.collisionBox.width,
         height: this.collisionBox.height
       };
-      if (!tileMap.checkCollision(nextBoxX)) {
+      if (!collides(nextBoxX)) {
         this.x += moveX;
       }
 
@@ -74,7 +107,7 @@ export class Player {
         width: this.collisionBox.width,
         height: this.collisionBox.height
       };
-      if (!tileMap.checkCollision(nextBoxY)) {
+      if (!collides(nextBoxY)) {
         this.y += moveY;
       }
     } else {
@@ -130,7 +163,6 @@ export class Player {
       ctx.fillRect(px + 7, py + 5, 2, 2);
       ctx.fillRect(px + 11, py + 5, 2, 2);
     } else if (this.direction === 'up') {
-      // Back of head, show more hair
       ctx.fillStyle = '#92400e';
       ctx.fillRect(px + 5, py + 2, 10, 7);
     } else if (this.direction === 'left') {
