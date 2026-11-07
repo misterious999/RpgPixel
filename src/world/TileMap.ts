@@ -54,22 +54,19 @@ export class TileMap {
           continue;
         }
 
-        // Trees & Forests
+        // Trees & Forests (jauh dari jalan dan area spawn)
+        const isNearMainPath = Math.abs(x - 50) <= 3 || Math.abs(y - 50) <= 3;
         const treeNoise = Math.sin(x * 0.35) * Math.sin(y * 0.35);
-        if (treeNoise > 0.45 && Math.hypot(x - 50, y - 50) > 8) {
+        if (treeNoise > 0.48 && Math.hypot(x - 50, y - 50) > 10 && !isNearMainPath) {
           this.tiles[y][x] = TileType.TREE;
           continue;
         }
 
-        // Scattered Rocks
-        const rockChance = Math.sin(x * 0.8 + y * 0.8);
-        if (rockChance > 0.92 && Math.hypot(x - 50, y - 50) > 6) {
-          this.tiles[y][x] = TileType.ROCK;
-          continue;
-        }
+        // Batu-batuan padat penghalang dijelajah DIHAPUS sesuai permintaan user.
+        // Area luas bebas hambatan untuk petualangan leluasa!
 
-        // Roads / paths through center
-        if (Math.abs(x - 50) <= 1 || Math.abs(y - 50) <= 1) {
+        // Roads / paths through center (lebar & lega)
+        if (Math.abs(x - 50) <= 2 || Math.abs(y - 50) <= 2) {
           this.tiles[y][x] = TileType.DIRT_PATH;
           continue;
         }
@@ -83,13 +80,13 @@ export class TileMap {
       }
     }
 
-    // Ensure spawn area (center 50, 50) is clear grass/path
-    for (let dy = -3; dy <= 3; dy++) {
-      for (let dx = -3; dx <= 3; dx++) {
+    // Pastikan area spawn utama & guild plaza luas dan bersih (radius 5 tile)
+    for (let dy = -5; dy <= 5; dy++) {
+      for (let dx = -5; dx <= 5; dx++) {
         const sx = 50 + dx;
         const sy = 50 + dy;
-        if (this.tiles[sy] && this.tiles[sy][sx]) {
-          this.tiles[sy][sx] = (dx === 0 || dy === 0) ? TileType.DIRT_PATH : TileType.GRASS;
+        if (this.tiles[sy] && this.tiles[sy][sx] !== undefined) {
+          this.tiles[sy][sx] = (Math.abs(dx) <= 2 || Math.abs(dy) <= 2) ? TileType.DIRT_PATH : TileType.GRASS;
         }
       }
     }
@@ -100,9 +97,9 @@ export class TileMap {
       return true; // Outside bounds is solid
     }
     const tile = this.tiles[tileY][tileX];
+    // Batu tidak lagi padat (tidak menghalangi jalan petualang)
     return tile === TileType.WATER ||
            tile === TileType.TREE ||
-           tile === TileType.ROCK ||
            tile === TileType.CLIFF;
   }
 

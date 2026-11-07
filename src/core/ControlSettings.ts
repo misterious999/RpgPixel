@@ -3,15 +3,17 @@ export interface ControlConfig {
   sideMargin: number;   // Pixels from left/right screen edge (in landscape)
   buttonScale: number;  // 0.85, 1.0, 1.2
   opacity: number;      // 0.4 to 1.0
+  cameraZoom: number;   // 1.0 (Luas/Jauh), 1.25 (Sedang), 1.5 (Dekat)
 }
 
-const STORAGE_KEY = 'rpg_control_config_landscape_v2';
+const STORAGE_KEY = 'rpg_control_config_landscape_v3';
 
 export const DEFAULT_CONTROL_CONFIG: ControlConfig = {
   bottomOffset: 58,   // Perfect ergonomic height in mobile landscape!
   sideMargin: 58,     // Perfect thumb reach from bezel
   buttonScale: 1.0,
-  opacity: 0.85
+  opacity: 0.85,
+  cameraZoom: 1.0     // 1.0x Luas & Lapang (Jarak kamera retro RPG nyaman!)
 };
 
 export class ControlSettingsManager {

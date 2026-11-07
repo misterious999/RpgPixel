@@ -1,11 +1,12 @@
-import { ControlSettingsManager } from '../core/ControlSettings.ts';
+import { ControlSettingsManager, DEFAULT_CONTROL_CONFIG } from '../core/ControlSettings.ts';
 
 export class ControlSettingsModal {
   public isOpen: boolean = false;
+  public onConfigChange?: () => void;
 
   private gearBtn = {
     x: 0,
-    y: 14,
+    y: 10,
     size: 34
   };
 
@@ -14,7 +15,7 @@ export class ControlSettingsModal {
   }
 
   public handleTouch(touchX: number, touchY: number, screenWidth: number, screenHeight: number): boolean {
-    this.gearBtn.x = screenWidth - 92;
+    this.gearBtn.x = screenWidth - 88;
 
     // 1. Gear icon toggle check
     if (
@@ -29,76 +30,103 @@ export class ControlSettingsModal {
 
     if (!this.isOpen) return false;
 
-    const modalWidth = Math.min(360, screenWidth - 24);
-    const modalHeight = Math.min(420, screenHeight - 30);
+    // Landscape optimized modal dimensions
+    const modalWidth = Math.min(540, screenWidth - 24);
+    const modalHeight = Math.min(300, screenHeight - 16);
     const modalX = (screenWidth - modalWidth) / 2;
     const modalY = (screenHeight - modalHeight) / 2;
 
     // Close button (X)
     if (
-      touchX >= modalX + modalWidth - 36 &&
-      touchX <= modalX + modalWidth - 8 &&
-      touchY >= modalY + 6 &&
-      touchY <= modalY + 34
+      touchX >= modalX + modalWidth - 40 &&
+      touchX <= modalX + modalWidth - 4 &&
+      touchY >= modalY + 4 &&
+      touchY <= modalY + 36
     ) {
       this.isOpen = false;
       return true;
     }
 
-    // 1. Ketinggian dari Bawah (Bottom Offset Options)
-    // Rendah (65px) | Sedang (95px) | Tinggi (135px)
-    const optY1 = modalY + 84;
-    const optW = (modalWidth - 40) / 3;
-    const heights = [65, 95, 135];
-    for (let i = 0; i < 3; i++) {
-      const ox = modalX + 20 + i * optW;
-      if (touchX >= ox && touchX <= ox + optW - 4 && touchY >= optY1 && touchY <= optY1 + 32) {
-        ControlSettingsManager.save({ bottomOffset: heights[i] });
-        return true;
+    const colW = (modalWidth - 42) / 2;
+    const col1X = modalX + 16;
+    const col2X = modalX + 26 + colW;
+    const optW = (colW - 8) / 3;
+
+    // Helper for touch on 3-button segments
+    const checkSegmentTouch = (
+      secX: number,
+      secY: number,
+      options: { val: number }[],
+      onSelect: (val: number) => void
+    ) => {
+      for (let i = 0; i < options.length; i++) {
+        const ox = secX + i * (optW + 4);
+        if (touchX >= ox && touchX <= ox + optW && touchY >= secY && touchY <= secY + 28) {
+          onSelect(options[i].val);
+          if (this.onConfigChange) this.onConfigChange();
+          return true;
+        }
       }
+      return false;
+    };
+
+    // --- KOLOM 1 (KIRI) ---
+    // 1. Jarak Kamera (Luas 1.0 | Sedang 1.25 | Dekat 1.5)
+    const sec1Y = modalY + 54;
+    if (
+      checkSegmentTouch(col1X, sec1Y + 16, [{ val: 1.0 }, { val: 1.25 }, { val: 1.5 }], (val) => {
+        ControlSettingsManager.save({ cameraZoom: val });
+      })
+    ) {
+      return true;
     }
 
-    // 2. Ukuran Tombol (Button Scale)
-    // Kecil (0.85) | Normal (1.0) | Besar (1.25)
-    const optY2 = modalY + 154;
-    const scales = [0.85, 1.0, 1.25];
-    for (let i = 0; i < 3; i++) {
-      const ox = modalX + 20 + i * optW;
-      if (touchX >= ox && touchX <= ox + optW - 4 && touchY >= optY2 && touchY <= optY2 + 32) {
-        ControlSettingsManager.save({ buttonScale: scales[i] });
-        return true;
-      }
+    // 2. Ketinggian Tombol dari Bawah (45 | 58 | 80)
+    const sec2Y = sec1Y + 58;
+    if (
+      checkSegmentTouch(col1X, sec2Y + 16, [{ val: 45 }, { val: 58 }, { val: 80 }], (val) => {
+        ControlSettingsManager.save({ bottomOffset: val });
+      })
+    ) {
+      return true;
     }
 
-    // 3. Jarak Sisi Layar (Side Margin)
-    // Rapat (55px) | Standar (75px) | Lebar (95px)
-    const optY3 = modalY + 224;
-    const margins = [55, 75, 95];
-    for (let i = 0; i < 3; i++) {
-      const ox = modalX + 20 + i * optW;
-      if (touchX >= ox && touchX <= ox + optW - 4 && touchY >= optY3 && touchY <= optY3 + 32) {
-        ControlSettingsManager.save({ sideMargin: margins[i] });
-        return true;
-      }
+    // 3. Transparansi Tombol (0.5 | 0.85 | 1.0)
+    const sec3Y = sec2Y + 58;
+    if (
+      checkSegmentTouch(col1X, sec3Y + 16, [{ val: 0.5 }, { val: 0.85 }, { val: 1.0 }], (val) => {
+        ControlSettingsManager.save({ opacity: val });
+      })
+    ) {
+      return true;
     }
 
-    // 4. Transparansi (Opacity)
-    // Samar (0.5) | Normal (0.85) | Pekat (1.0)
-    const optY4 = modalY + 294;
-    const opacities = [0.5, 0.85, 1.0];
-    for (let i = 0; i < 3; i++) {
-      const ox = modalX + 20 + i * optW;
-      if (touchX >= ox && touchX <= ox + optW - 4 && touchY >= optY4 && touchY <= optY4 + 32) {
-        ControlSettingsManager.save({ opacity: opacities[i] });
-        return true;
-      }
+    // --- KOLOM 2 (KANAN) ---
+    // 4. Ukuran Tombol (0.85 | 1.0 | 1.2)
+    const sec4Y = modalY + 54;
+    if (
+      checkSegmentTouch(col2X, sec4Y + 16, [{ val: 0.85 }, { val: 1.0 }, { val: 1.2 }], (val) => {
+        ControlSettingsManager.save({ buttonScale: val });
+      })
+    ) {
+      return true;
     }
 
-    // Reset Button
-    const resetBtnW = 100;
-    const resetBtnH = 34;
-    const resetBtnX = modalX + 20;
-    const resetBtnY = modalY + modalHeight - 48;
+    // 5. Jarak dari Tepi Layar (45 | 58 | 75)
+    const sec5Y = sec4Y + 58;
+    if (
+      checkSegmentTouch(col2X, sec5Y + 16, [{ val: 45 }, { val: 58 }, { val: 75 }], (val) => {
+        ControlSettingsManager.save({ sideMargin: val });
+      })
+    ) {
+      return true;
+    }
+
+    // Reset Default Button
+    const resetBtnW = 120;
+    const resetBtnH = 32;
+    const resetBtnX = modalX + 16;
+    const resetBtnY = modalY + modalHeight - 44;
     if (
       touchX >= resetBtnX &&
       touchX <= resetBtnX + resetBtnW &&
@@ -106,14 +134,15 @@ export class ControlSettingsModal {
       touchY <= resetBtnY + resetBtnH
     ) {
       ControlSettingsManager.reset();
+      if (this.onConfigChange) this.onConfigChange();
       return true;
     }
 
-    // Close & Save Button
-    const saveBtnW = 140;
-    const saveBtnH = 34;
-    const saveBtnX = modalX + modalWidth - saveBtnW - 20;
-    const saveBtnY = modalY + modalHeight - 48;
+    // Simpan & Tutup Button
+    const saveBtnW = 150;
+    const saveBtnH = 32;
+    const saveBtnX = modalX + modalWidth - saveBtnW - 16;
+    const saveBtnY = modalY + modalHeight - 44;
     if (
       touchX >= saveBtnX &&
       touchX <= saveBtnX + saveBtnW &&
@@ -124,12 +153,12 @@ export class ControlSettingsModal {
       return true;
     }
 
-    return true; // Modal consumes touch
+    return true; // Modal consumes touches
   }
 
   public render(ctx: CanvasRenderingContext2D, screenWidth: number, screenHeight: number): void {
     ctx.save();
-    this.gearBtn.x = screenWidth - 92;
+    this.gearBtn.x = screenWidth - 88;
 
     // 1. Gear Icon Button
     const { x: gx, y: gy, size: gs } = this.gearBtn;
@@ -152,16 +181,16 @@ export class ControlSettingsModal {
     }
 
     // 2. Dim Overlay
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
     ctx.fillRect(0, 0, screenWidth, screenHeight);
 
-    // 3. Modal Box
-    const modalWidth = Math.min(360, screenWidth - 24);
-    const modalHeight = Math.min(420, screenHeight - 30);
+    // 3. Modal Box (Landscape Optimized)
+    const modalWidth = Math.min(540, screenWidth - 24);
+    const modalHeight = Math.min(300, screenHeight - 16);
     const modalX = (screenWidth - modalWidth) / 2;
     const modalY = (screenHeight - modalHeight) / 2;
 
-    ctx.fillStyle = '#0f172a';
+    ctx.fillStyle = '#090d16';
     ctx.fillRect(modalX, modalY, modalWidth, modalHeight);
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 2;
@@ -169,122 +198,173 @@ export class ControlSettingsModal {
 
     // Header
     ctx.fillStyle = '#1e293b';
-    ctx.fillRect(modalX, modalY, modalWidth, 40);
+    ctx.fillRect(modalX, modalY, modalWidth, 36);
     ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 14px sans-serif';
+    ctx.font = 'bold 13px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText('⚙️ KUSTOMISASI TOMBOL KONTROL', modalX + 16, modalY + 20);
+    ctx.fillText('⚙️ PENGATURAN KAMERA & KONTROL MOBILE', modalX + 16, modalY + 18);
 
     // Close X
     ctx.fillStyle = '#ef4444';
-    ctx.font = 'bold 18px sans-serif';
+    ctx.font = 'bold 16px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('✕', modalX + modalWidth - 20, modalY + 20);
+    ctx.fillText('✕', modalX + modalWidth - 18, modalY + 18);
 
     const cfg = ControlSettingsManager.get();
-    const optW = (modalWidth - 40) / 3;
+    const colW = (modalWidth - 42) / 2;
+    const col1X = modalX + 16;
+    const col2X = modalX + 26 + colW;
+    const optW = (colW - 8) / 3;
 
     // Helper for rendering segment buttons
-    const renderSegment = (label: string, startY: number, options: { name: string; val: number }[], activeVal: number) => {
-      ctx.fillStyle = '#cbd5e1';
-      ctx.font = 'bold 11px sans-serif';
+    const renderSegment = (
+      secX: number,
+      secY: number,
+      label: string,
+      options: { name: string; val: number }[],
+      activeVal: number
+    ) => {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = 'bold 10px sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      ctx.fillText(label, modalX + 20, startY - 18);
+      ctx.fillText(label, secX, secY);
 
+      const btnY = secY + 15;
       for (let i = 0; i < options.length; i++) {
         const opt = options[i];
-        const ox = modalX + 20 + i * optW;
-        const isSelected = Math.abs(opt.val - activeVal) < 0.05;
+        const ox = secX + i * (optW + 4);
+        const isSelected = Math.abs(opt.val - activeVal) < 0.04;
 
         ctx.fillStyle = isSelected ? '#0284c7' : '#1e293b';
-        ctx.fillRect(ox, startY, optW - 4, 30);
+        ctx.fillRect(ox, btnY, optW, 26);
         ctx.strokeStyle = isSelected ? '#38bdf8' : '#334155';
         ctx.lineWidth = isSelected ? 2 : 1;
-        ctx.strokeRect(ox, startY, optW - 4, 30);
+        ctx.strokeRect(ox, btnY, optW, 26);
 
-        ctx.fillStyle = isSelected ? '#ffffff' : '#94a3b8';
-        ctx.font = 'bold 9px sans-serif';
+        ctx.fillStyle = isSelected ? '#ffffff' : '#cbd5e1';
+        ctx.font = isSelected ? 'bold 9px sans-serif' : '9px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(opt.name, ox + (optW - 4) / 2, startY + 15);
+        ctx.fillText(opt.name, ox + optW / 2, btnY + 13);
       }
     };
 
-    // 1. Ketinggian dari Bawah (Solves user's issue!)
+    // --- KOLOM 1 (KIRI) ---
+    // 1. Jarak Kamera (Solves user's issue: "kurasa itu terlalu dekat")
+    const sec1Y = modalY + 48;
     renderSegment(
-      '🔼 Posisi Ketinggian Tombol dari Bawah:',
-      modalY + 84,
+      col1X,
+      sec1Y,
+      '📷 Jarak Kamera (Luas Pandang):',
       [
-        { name: 'Rendah (65px)', val: 65 },
-        { name: 'Sedang (95px) ★', val: 95 },
-        { name: 'Tinggi (135px)', val: 135 }
+        { name: 'Luas ★', val: 1.0 },
+        { name: 'Sedang', val: 1.25 },
+        { name: 'Dekat', val: 1.5 }
+      ],
+      cfg.cameraZoom || DEFAULT_CONTROL_CONFIG.cameraZoom
+    );
+
+    // 2. Ketinggian Tombol dari Bawah
+    const sec2Y = sec1Y + 54;
+    renderSegment(
+      col1X,
+      sec2Y,
+      '🔼 Posisi Tombol dari Bawah:',
+      [
+        { name: 'Rendah', val: 45 },
+        { name: 'Normal ★', val: 58 },
+        { name: 'Tinggi', val: 80 }
       ],
       cfg.bottomOffset
     );
 
-    // 2. Ukuran Tombol
+    // 3. Transparansi Tombol
+    const sec3Y = sec2Y + 54;
     renderSegment(
-      '🔍 Ukuran Tombol Keypad & Aksi:',
-      modalY + 154,
+      col1X,
+      sec3Y,
+      '🌓 Transparansi Tombol:',
       [
-        { name: 'Kecil (85%)', val: 0.85 },
-        { name: 'Normal (100%)', val: 1.0 },
-        { name: 'Besar (125%)', val: 1.25 }
-      ],
-      cfg.buttonScale
-    );
-
-    // 3. Jarak Sisi Layar (Horizontal)
-    renderSegment(
-      '↔️ Jarak dari Sisi Kiri / Kanan:',
-      modalY + 224,
-      [
-        { name: 'Rapat (55px)', val: 55 },
-        { name: 'Standar (75px)', val: 75 },
-        { name: 'Lebar (95px)', val: 95 }
-      ],
-      cfg.sideMargin
-    );
-
-    // 4. Transparansi (Opacity)
-    renderSegment(
-      '👁️ Transparansi Tombol di Layar:',
-      modalY + 294,
-      [
-        { name: 'Samar (50%)', val: 0.5 },
-        { name: 'Normal (85%)', val: 0.85 },
-        { name: 'Pekat (100%)', val: 1.0 }
+        { name: 'Samar', val: 0.5 },
+        { name: 'Jelas ★', val: 0.85 },
+        { name: 'Pekat', val: 1.0 }
       ],
       cfg.opacity
     );
 
-    // Bottom action buttons: Reset & Simpan
-    const resetBtnW = 100;
-    const resetBtnH = 34;
-    const resetBtnX = modalX + 20;
-    const resetBtnY = modalY + modalHeight - 46;
+    // --- KOLOM 2 (KANAN) ---
+    // 4. Ukuran Tombol
+    const sec4Y = modalY + 48;
+    renderSegment(
+      col2X,
+      sec4Y,
+      '🔍 Ukuran Tombol Layar:',
+      [
+        { name: 'Kecil', val: 0.85 },
+        { name: 'Normal ★', val: 1.0 },
+        { name: 'Besar', val: 1.2 }
+      ],
+      cfg.buttonScale
+    );
 
-    ctx.fillStyle = '#334155';
+    // 5. Jarak Sisi Layar
+    const sec5Y = sec4Y + 54;
+    renderSegment(
+      col2X,
+      sec5Y,
+      '↔️ Jarak dari Tepi Layar:',
+      [
+        { name: 'Rapat', val: 45 },
+        { name: 'Standar ★', val: 58 },
+        { name: 'Lebar', val: 75 }
+      ],
+      cfg.sideMargin
+    );
+
+    // 6. Tips landscape box
+    const sec6Y = sec5Y + 54;
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(col2X, sec6Y + 6, colW, 35);
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(col2X, sec6Y + 6, colW, 35);
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 9px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText('💡 Tips Jelajah:', col2X + 8, sec6Y + 18);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '8.5px sans-serif';
+    ctx.fillText('Pilih "Luas" untuk melihat panorama dunia RPG!', col2X + 8, sec6Y + 31);
+
+    // Footer Buttons
+    // Reset Default Button
+    const resetBtnW = 120;
+    const resetBtnH = 30;
+    const resetBtnX = modalX + 16;
+    const resetBtnY = modalY + modalHeight - 40;
+
+    ctx.fillStyle = '#1e293b';
     ctx.fillRect(resetBtnX, resetBtnY, resetBtnW, resetBtnH);
     ctx.strokeStyle = '#475569';
     ctx.lineWidth = 1;
     ctx.strokeRect(resetBtnX, resetBtnY, resetBtnW, resetBtnH);
-    ctx.fillStyle = '#cbd5e1';
+    ctx.fillStyle = '#94a3b8';
     ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('Reset Default', resetBtnX + resetBtnW / 2, resetBtnY + resetBtnH / 2);
+    ctx.fillText('↺ Reset Default', resetBtnX + resetBtnW / 2, resetBtnY + resetBtnH / 2);
 
-    const saveBtnW = 140;
-    const saveBtnH = 34;
-    const saveBtnX = modalX + modalWidth - saveBtnW - 20;
-    const saveBtnY = modalY + modalHeight - 46;
+    // Simpan & Tutup Button
+    const saveBtnW = 150;
+    const saveBtnH = 30;
+    const saveBtnX = modalX + modalWidth - saveBtnW - 16;
+    const saveBtnY = modalY + modalHeight - 40;
 
-    ctx.fillStyle = '#10b981';
+    ctx.fillStyle = '#0284c7';
     ctx.fillRect(saveBtnX, saveBtnY, saveBtnW, saveBtnH);
-    ctx.strokeStyle = '#34d399';
+    ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 1.5;
     ctx.strokeRect(saveBtnX, saveBtnY, saveBtnW, saveBtnH);
     ctx.fillStyle = '#ffffff';

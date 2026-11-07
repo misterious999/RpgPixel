@@ -12,6 +12,7 @@ import { AuthUI } from '../ui/AuthUI.ts';
 import { SkillBarUI } from '../ui/SkillBarUI.ts';
 import { OnboardingUI } from '../ui/OnboardingUI.ts';
 import { ControlSettingsModal } from '../ui/ControlSettingsModal.ts';
+import { ControlSettingsManager } from './ControlSettings.ts';
 import { SupabaseService } from '../services/SupabaseService.ts';
 import { ITEM_DEFINITIONS } from '../items/ItemTypes.ts';
 import { ROLE_INFO } from '../data/RolesData.ts';
@@ -66,10 +67,12 @@ export class Game {
     const spawnY = 50 * CONSTANTS.TILE_SIZE + 3;
     this.player = new Player(spawnX, spawnY);
 
+    ControlSettingsManager.load();
     this.floatingText = new FloatingTextManager();
     this.inventoryUI = new InventoryUI(this.player.inventory, this.player, this.floatingText);
     this.skillBarUI = new SkillBarUI(this.player, this.floatingText);
     this.controlSettingsModal = new ControlSettingsModal();
+    this.controlSettingsModal.onConfigChange = () => this.handleResize();
 
     // Create Guild Receptionist Elaine near spawn
     const guildX = 51 * CONSTANTS.TILE_SIZE;
@@ -191,16 +194,19 @@ export class Game {
     }
   }
 
-  private handleResize(): void {
+  public handleResize(): void {
     const screenWidth = window.innerWidth;
     const screenHeight = window.innerHeight;
 
     this.canvas.width = screenWidth;
     this.canvas.height = screenHeight;
 
-    const targetInternalW = 420;
-    const computedScale = Math.max(1, Math.round(screenWidth / targetInternalW));
-    this.scale = computedScale;
+    const cfg = ControlSettingsManager.get();
+    const zoomMultiplier = cfg.cameraZoom || 1.0;
+
+    // Viewport ideal menargetkan ~360px vertikal agar petualangan terasa lapang & tidak sempit
+    const baseScale = Math.max(1, Math.round(screenHeight / 360));
+    this.scale = Math.max(0.75, baseScale * zoomMultiplier);
 
     this.virtualWidth = Math.ceil(screenWidth / this.scale);
     this.virtualHeight = Math.ceil(screenHeight / this.scale);
