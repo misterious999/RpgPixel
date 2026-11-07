@@ -13,7 +13,14 @@
     "strict": true,
     "noUnusedLocals": true,
     "noUnusedParameters": true,
-    "noFallthroughCasesInSwitch": true
+    "noFallthroughCasesInSwitch": true,
+    "baseUrl": ".",
+    "paths": {
+      "@supabase/supabase-js": [
+        "/usr/local/lib/node_modules/@supabase/supabase-js",
+        "./node_modules/@supabase/supabase-js"
+      ]
+    }
   },
   "include": ["src"]
 }

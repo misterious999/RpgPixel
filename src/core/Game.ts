@@ -7,6 +7,8 @@ import { WorldItem } from '../world/WorldItem.ts';
 import { Chest } from '../world/Chest.ts';
 import { FloatingTextManager } from '../ui/FloatingText.ts';
 import { InventoryUI } from '../ui/InventoryUI.ts';
+import { AuthUI } from '../ui/AuthUI.ts';
+import { SupabaseService } from '../services/SupabaseService.ts';
 import { ITEM_DEFINITIONS } from '../items/ItemTypes.ts';
 
 export class Game {
@@ -18,6 +20,7 @@ export class Game {
   private player: Player;
   private floatingText: FloatingTextManager;
   private inventoryUI: InventoryUI;
+  private authUI: AuthUI;
 
   // World objects
   private worldItems: WorldItem[] = [];
@@ -57,15 +60,22 @@ export class Game {
     this.floatingText = new FloatingTextManager();
     this.inventoryUI = new InventoryUI(this.player.inventory, this.player, this.floatingText);
 
-    // Connect touch interceptor for Backpack and Inventory UI
+    this.spawnInitialWorldObjects();
+
+    // Inisialisasi Auth & Cloud Save
+    this.authUI = new AuthUI(this.player, this.chests, this.floatingText);
+    SupabaseService.init();
+
+    // Connect touch interceptor for Backpack, Inventory UI, and Auth buttons
     this.input.setTouchInterceptor((touchX, touchY) => {
+      if (this.authUI.handleTouch(touchX, touchY, this.canvas.width)) {
+        return true;
+      }
       return this.inventoryUI.handleTouch(touchX, touchY, this.canvas.width, this.canvas.height);
     });
 
     this.fpsEl = document.getElementById('fps-display');
     this.coordsEl = document.getElementById('coords-display');
-
-    this.spawnInitialWorldObjects();
 
     this.handleResize();
     window.addEventListener('resize', () => this.handleResize());
@@ -200,6 +210,8 @@ export class Game {
             const name = def ? def.name : reward.itemId;
             this.floatingText.spawn(chest.x + 11, chest.y - 12, `+${reward.count} ${name}`, '#facc15', 1.8);
           }
+          // Auto-save after opening chest
+          this.authUI.saveCurrentGame();
         }
       }
     }
@@ -222,10 +234,13 @@ export class Game {
     // 6. Update Floating Text Notifications
     this.floatingText.update(deltaTime);
 
-    // 7. Update Camera to follow player
+    // 7. Update Auth & Cloud Auto-Save
+    this.authUI.update(deltaTime);
+
+    // 8. Update Camera to follow player
     this.camera.update(playerCenterX, playerCenterY);
 
-    // 8. Update HUD Coordinates & Player Health
+    // 9. Update HUD Coordinates & Player Health
     if (this.coordsEl) {
       const tileX = Math.floor(this.player.x / CONSTANTS.TILE_SIZE);
       const tileY = Math.floor(this.player.y / CONSTANTS.TILE_SIZE);
@@ -288,7 +303,10 @@ export class Game {
       this.input.renderTouchUI(ctx, screenWidth, screenHeight);
     }
 
-    // 7. Inventory UI Overlay (Backpack button & Modal)
+    // 7. Auth UI (Masuk Google / Profile Pill / Simpan / Keluar)
+    this.authUI.render(ctx, screenWidth);
+
+    // 8. Inventory UI Overlay (Backpack button & Modal)
     this.inventoryUI.render(ctx, screenWidth, screenHeight);
   }
 }

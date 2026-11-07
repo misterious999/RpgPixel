@@ -1,0 +1,116 @@
+import { createClient, User } from '@supabase/supabase-js';
+
+const SUPABASE_URL = (import.meta as any).env?.VITE_SUPABASE_URL || 'https://ortqafpygytnebsgupdq.supabase.co';
+const SUPABASE_ANON_KEY = (import.meta as any).env?.VITE_SUPABASE_ANON_KEY || 'sb_publishable_sRL486t-wxLbeD1IdEbQCg_mooHTXGQ';
+
+export const supabase = createClient(SUPABASE_URL, SUPABASE_ANON_KEY);
+
+export interface GameSaveData {
+  hp: number;
+  max_hp: number;
+  world_x: number;
+  world_y: number;
+  inventory: any[];
+  opened_chests: number[];
+  display_name?: string;
+  avatar_url?: string;
+}
+
+export class SupabaseService {
+  public static currentUser: User | null = null;
+  private static onAuthChangeCallbacks: ((user: User | null) => void)[] = [];
+
+  public static async init(): Promise<void> {
+    try {
+      // Check active session
+      const { data } = await supabase.auth.getSession();
+      this.currentUser = (data.session?.user as User) || null;
+
+      // Listen for auth state changes (e.g. after OAuth redirect)
+      supabase.auth.onAuthStateChange((_event: any, session: any) => {
+        this.currentUser = (session?.user as User) || null;
+        for (const cb of this.onAuthChangeCallbacks) {
+          cb(this.currentUser);
+        }
+      });
+    } catch (err) {
+      console.warn('Supabase session check failed:', err);
+    }
+  }
+
+  public static onAuthChange(cb: (user: User | null) => void): void {
+    this.onAuthChangeCallbacks.push(cb);
+    if (this.currentUser) {
+      cb(this.currentUser);
+    }
+  }
+
+  public static async loginWithGoogle(): Promise<void> {
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: {
+          redirectTo: window.location.origin
+        }
+      });
+      if (error) {
+        console.error('Error logging in with Google:', error.message);
+        alert('Gagal login Google: ' + error.message);
+      }
+    } catch (err) {
+      console.error('Login error:', err);
+    }
+  }
+
+  public static async logout(): Promise<void> {
+    try {
+      await supabase.auth.signOut();
+      this.currentUser = null;
+      for (const cb of this.onAuthChangeCallbacks) {
+        cb(null);
+      }
+    } catch (err) {
+      console.error('Logout error:', err);
+    }
+  }
+
+  public static async loadGameSave(userId: string): Promise<GameSaveData | null> {
+    try {
+      const { data, error } = await supabase
+        .from('game_saves')
+        .select('*')
+        .eq('user_id', userId)
+        .maybeSingle();
+
+      if (error) {
+        console.warn('Could not load game save:', error.message);
+        return null;
+      }
+      return data as GameSaveData | null;
+    } catch (err) {
+      console.error('Error loading game save:', err);
+      return null;
+    }
+  }
+
+  public static async saveGame(userId: string, saveData: GameSaveData): Promise<boolean> {
+    try {
+      const { error } = await supabase
+        .from('game_saves')
+        .upsert({
+          user_id: userId,
+          ...saveData,
+          updated_at: new Date().toISOString()
+        });
+
+      if (error) {
+        console.error('Error saving game:', error.message);
+        return false;
+      }
+      return true;
+    } catch (err) {
+      console.error('Error in saveGame:', err);
+      return false;
+    }
+  }
+}
