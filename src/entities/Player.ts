@@ -17,8 +17,8 @@ export interface Minion {
 export class Player {
   public x: number;
   public y: number;
-  public width: number = 20;
-  public height: number = 26;
+  public width: number = 24;
+  public height: number = 32;
 
   // Identity & Customization
   public username: string = 'Petualang';
@@ -49,23 +49,24 @@ export class Player {
   public hasBarrier: boolean = false;
   public barrierTimer: number = 0;
 
-  // Minions (e.g. Necromancer skeleton)
+  // Minions
   public minions: Minion[] = [];
 
   // Player Inventory
   public inventory: Inventory = new Inventory(16);
 
-  // Collision box relative to player (feet area for top-down perspective)
+  // Collision box relative to player (feet area)
   public collisionBox = {
-    offsetX: 3,
-    offsetY: 16,
-    width: 14,
-    height: 9
+    offsetX: 4,
+    offsetY: 20,
+    width: 16,
+    height: 10
   };
 
   public direction: Direction = 'down';
   public isMoving: boolean = false;
   private animTimer: number = 0;
+  private breathTimer: number = 0;
   public attackTimer: number = 0;
 
   constructor(startX: number, startY: number, username: string = 'Petualang', costumeId: number = 0) {
@@ -159,7 +160,8 @@ export class Player {
   public update(deltaTime: number, input: InputState, tileMap: TileMap, obstacleChecker?: (box: { x: number; y: number; width: number; height: number }) => boolean): void {
     const { axisX, axisY, isSprint, isAction } = input;
 
-    // Attack timer
+    this.breathTimer += deltaTime * 3;
+
     if (isAction && this.attackTimer <= 0) {
       this.attackTimer = 0.25;
       if (this.isStealthed) {
@@ -171,14 +173,12 @@ export class Player {
       this.attackTimer -= deltaTime;
     }
 
-    // Cooldown updates
     for (const skill of this.skills) {
       if (skill.currentCooldown > 0) {
         skill.currentCooldown = Math.max(0, skill.currentCooldown - deltaTime);
       }
     }
 
-    // Buff Timers
     if (this.isStealthed) {
       this.stealthTimer -= deltaTime;
       if (this.stealthTimer <= 0) this.isStealthed = false;
@@ -192,13 +192,11 @@ export class Player {
       if (this.barrierTimer <= 0) this.hasBarrier = false;
     }
 
-    // Movement calculation
     this.isMoving = Math.abs(axisX) > 0.05 || Math.abs(axisY) > 0.05;
 
     if (this.isMoving) {
-      this.animTimer += deltaTime * 10;
+      this.animTimer += deltaTime * 9;
 
-      // Facing Direction
       if (Math.abs(axisX) > Math.abs(axisY)) {
         this.direction = axisX > 0 ? 'right' : 'left';
       } else {
@@ -258,110 +256,205 @@ export class Player {
 
     ctx.save();
 
-    // 0. Render Minions behind player
+    // 0. Minions
     for (const minion of this.minions) {
       this.renderMinion(ctx, minion);
     }
 
-    // Apply Stealth Alpha
+    // Stealth transparency
     if (this.isStealthed) {
-      ctx.globalAlpha = 0.4;
+      ctx.globalAlpha = 0.38;
     }
 
-    // 1. Shadow Underneath
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    // 1. Soft Multi-Layer Shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
     ctx.beginPath();
-    ctx.ellipse(px + 10, py + 24, 8, 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(px + 12, py + 29, 11, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+    ctx.beginPath();
+    ctx.ellipse(px + 12, py + 29, 8, 3.5, 0, 0, Math.PI * 2);
     ctx.fill();
 
     // 2. Barrier Aura
     if (this.hasBarrier) {
-      ctx.strokeStyle = 'rgba(250, 204, 21, 0.8)';
-      ctx.lineWidth = 2;
+      ctx.strokeStyle = 'rgba(250, 204, 21, 0.85)';
+      ctx.lineWidth = 2.5;
       ctx.beginPath();
-      ctx.arc(px + 10, py + 14, 18, 0, Math.PI * 2);
+      ctx.arc(px + 12, py + 16, 20, 0, Math.PI * 2);
       ctx.stroke();
     }
 
     // 3. Berserk Flame Aura
     if (this.isBerserk) {
-      ctx.strokeStyle = 'rgba(239, 68, 68, 0.8)';
-      ctx.lineWidth = 2;
-      ctx.beginPath();
-      ctx.arc(px + 10, py + 14, 16 + Math.sin(this.animTimer * 2) * 2, 0, Math.PI * 2);
-      ctx.stroke();
-    }
-
-    // Leg bounce
-    const step = this.isMoving ? Math.sin(this.animTimer) : 0;
-    const legOffset1 = step * 3;
-    const legOffset2 = -step * 3;
-
-    // 4. Legs / Boots
-    ctx.fillStyle = '#292524';
-    ctx.fillRect(px + 4, py + 18 + legOffset1, 4, 7);
-    ctx.fillRect(px + 12, py + 18 + legOffset2, 4, 7);
-
-    // 5. Body / Outfit
-    ctx.fillStyle = this.costume.outfitColor;
-    ctx.fillRect(px + 4, py + 10, 12, 10);
-
-    // Accent Belt / Sash
-    ctx.fillStyle = this.costume.accentColor;
-    ctx.fillRect(px + 4, py + 16, 12, 2);
-
-    // 6. Head & Skin
-    ctx.fillStyle = '#fed7aa';
-    ctx.fillRect(px + 5, py + 2, 10, 9);
-
-    // 7. Hair / Hat based on Costume
-    ctx.fillStyle = this.costume.hairColor;
-    if (this.costume.hairStyle === 'short') {
-      ctx.fillRect(px + 4, py, 12, 4);
-      ctx.fillRect(px + 3, py + 2, 2, 5);
-      ctx.fillRect(px + 15, py + 2, 2, 5);
-    } else if (this.costume.hairStyle === 'spiky') {
-      ctx.fillRect(px + 4, py - 2, 12, 6);
-      ctx.fillRect(px + 2, py, 3, 5);
-      ctx.fillRect(px + 15, py, 3, 5);
-    } else if (this.costume.hairStyle === 'long') {
-      ctx.fillRect(px + 4, py, 12, 4);
-      ctx.fillRect(px + 2, py + 2, 3, 10);
-      ctx.fillRect(px + 15, py + 2, 3, 10);
-    } else if (this.costume.hairStyle === 'hood') {
-      ctx.fillStyle = this.costume.hatColor || this.costume.outfitColor;
-      ctx.fillRect(px + 3, py - 2, 14, 6);
-      ctx.fillRect(px + 2, py + 2, 3, 9);
-      ctx.fillRect(px + 15, py + 2, 3, 9);
-    }
-
-    // 8. Eyes
-    ctx.fillStyle = '#0f172a';
-    if (this.direction === 'down') {
-      ctx.fillRect(px + 7, py + 5, 2, 2);
-      ctx.fillRect(px + 11, py + 5, 2, 2);
-    } else if (this.direction === 'up') {
-      ctx.fillStyle = this.costume.hairColor;
-      ctx.fillRect(px + 5, py + 2, 10, 7);
-    } else if (this.direction === 'left') {
-      ctx.fillRect(px + 6, py + 5, 2, 2);
-    } else if (this.direction === 'right') {
-      ctx.fillRect(px + 12, py + 5, 2, 2);
-    }
-
-    // 9. Slash Swing Effect
-    if (this.attackTimer > 0) {
-      ctx.strokeStyle = '#fef08a';
+      ctx.strokeStyle = 'rgba(239, 68, 68, 0.9)';
       ctx.lineWidth = 2.5;
       ctx.beginPath();
-      if (this.direction === 'right') ctx.arc(px + 22, py + 12, 12, -Math.PI * 0.3, Math.PI * 0.3);
-      else if (this.direction === 'left') ctx.arc(px - 2, py + 12, 12, Math.PI * 0.7, Math.PI * 1.3);
-      else if (this.direction === 'down') ctx.arc(px + 10, py + 26, 12, Math.PI * 0.2, Math.PI * 0.8);
-      else if (this.direction === 'up') ctx.arc(px + 10, py - 2, 12, Math.PI * 1.2, Math.PI * 1.8);
+      ctx.arc(px + 12, py + 16, 18 + Math.sin(this.animTimer * 2) * 3, 0, Math.PI * 2);
       ctx.stroke();
     }
 
-    // 10. Floating Username & Role Tag overhead
+    // Animation variables
+    const idleBob = !this.isMoving ? Math.sin(this.breathTimer) * 0.8 : 0;
+    const walkStep = this.isMoving ? Math.sin(this.animTimer) : 0;
+    const legOffset1 = walkStep * 4;
+    const legOffset2 = -walkStep * 4;
+    const capeFlutter = this.isMoving ? Math.sin(this.animTimer * 1.5) * 2.5 : 0;
+
+    const renderY = py + idleBob;
+
+    // 4. Flowing Cape / Mantle (Drawn behind body when facing down or moving)
+    const capeColor = this.costume.accentColor;
+    if (this.direction !== 'up') {
+      ctx.fillStyle = capeColor;
+      ctx.fillRect(px + 5 + capeFlutter * 0.5, renderY + 11, 14, 15);
+      // Cape folds / shadow
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fillRect(px + 10 + capeFlutter * 0.5, renderY + 13, 4, 13);
+    }
+
+    // 5. Legs & Boots (Dual-tone retro shoes with soles)
+    // Left Leg & Boot
+    ctx.fillStyle = '#1c1917'; // Dark pant
+    ctx.fillRect(px + 5, renderY + 20 + legOffset1, 5, 5);
+    ctx.fillStyle = '#451a03'; // Leather boot upper
+    ctx.fillRect(px + 4, renderY + 23 + legOffset1, 6, 6);
+    ctx.fillStyle = '#78350f'; // Boot knee cuff
+    ctx.fillRect(px + 4, renderY + 23 + legOffset1, 6, 2);
+    ctx.fillStyle = '#0f172a'; // Sole
+    ctx.fillRect(px + 4, renderY + 28 + legOffset1, 6, 2);
+
+    // Right Leg & Boot
+    ctx.fillStyle = '#1c1917';
+    ctx.fillRect(px + 14, renderY + 20 + legOffset2, 5, 5);
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(px + 14, renderY + 23 + legOffset2, 6, 6);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(px + 14, renderY + 23 + legOffset2, 6, 2);
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(px + 14, renderY + 28 + legOffset2, 6, 2);
+
+    // 6. Torso & Tunic / Armor
+    // Base Shirt / Armor
+    ctx.fillStyle = this.costume.outfitColor;
+    ctx.fillRect(px + 5, renderY + 10, 14, 12);
+
+    // Armor shading / depth highlight
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+    ctx.fillRect(px + 6, renderY + 11, 5, 8);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.fillRect(px + 14, renderY + 11, 4, 9);
+
+    // Collar / Neckline trim
+    ctx.fillStyle = '#fed7aa'; // Neck
+    ctx.fillRect(px + 10, renderY + 9, 4, 2);
+    ctx.fillStyle = this.costume.accentColor;
+    ctx.fillRect(px + 8, renderY + 10, 8, 2);
+
+    // Belt & Metallic Buckle & Pouch
+    ctx.fillStyle = '#292524'; // Leather belt
+    ctx.fillRect(px + 5, renderY + 18, 14, 3);
+    ctx.fillStyle = '#facc15'; // Gold buckle
+    ctx.fillRect(px + 11, renderY + 18, 3, 3);
+    ctx.fillStyle = '#78350f'; // Hip pouch / potion vial
+    ctx.fillRect(px + 16, renderY + 18, 3, 4);
+
+    // Pauldrons (Shoulder pads)
+    ctx.fillStyle = this.costume.accentColor;
+    ctx.fillRect(px + 3, renderY + 10, 3, 4);
+    ctx.fillRect(px + 18, renderY + 10, 3, 4);
+
+    // 7. Arms & Hands (Animated swing)
+    const armSwingL = -walkStep * 3;
+    const armSwingR = walkStep * 3;
+
+    // Left Arm
+    ctx.fillStyle = this.costume.outfitColor;
+    ctx.fillRect(px + 2, renderY + 12 + armSwingL, 3, 6);
+    ctx.fillStyle = '#fed7aa'; // Left Hand
+    ctx.fillRect(px + 2, renderY + 17 + armSwingL, 3, 3);
+
+    // Right Arm
+    ctx.fillStyle = this.costume.outfitColor;
+    ctx.fillRect(px + 19, renderY + 12 + armSwingR, 3, 6);
+    ctx.fillStyle = '#fed7aa'; // Right Hand
+    ctx.fillRect(px + 19, renderY + 17 + armSwingR, 3, 3);
+
+    // 8. EQUIPPED WEAPON in Right Hand based on Role / Magician Element!
+    this.renderEquippedWeapon(ctx, px, renderY, armSwingR);
+
+    // 9. Cape back view (if facing UP, cape covers the back)
+    if (this.direction === 'up') {
+      ctx.fillStyle = capeColor;
+      ctx.fillRect(px + 5, renderY + 11, 14, 15);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+      ctx.fillRect(px + 9, renderY + 12, 6, 14);
+    }
+
+    // 10. Head & Facial Expressions
+    // Chin & Face Base
+    ctx.fillStyle = '#fed7aa';
+    ctx.fillRect(px + 6, renderY + 2, 12, 9);
+    // Cheek blush / skin tone warmth
+    ctx.fillStyle = 'rgba(244, 63, 94, 0.2)';
+    ctx.fillRect(px + 7, renderY + 7, 2, 2);
+    ctx.fillRect(px + 15, renderY + 7, 2, 2);
+
+    // 11. Hair & Headgear (Layered with highlights)
+    this.renderHairAndHeadgear(ctx, px, renderY);
+
+    // 12. Eyes & Facial Direction
+    if (this.direction === 'down') {
+      // Eye Whites
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(px + 8, renderY + 5, 3, 3);
+      ctx.fillRect(px + 13, renderY + 5, 3, 3);
+      // Iris / Pupil (Expressive dark blue)
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(px + 9, renderY + 5, 2, 2);
+      ctx.fillRect(px + 14, renderY + 5, 2, 2);
+      // Eye highlight shine
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(px + 9, renderY + 5, 1, 1);
+      ctx.fillRect(px + 14, renderY + 5, 1, 1);
+      // Mouth
+      ctx.fillStyle = '#e11d48';
+      ctx.fillRect(px + 11, renderY + 9, 2, 1);
+    } else if (this.direction === 'left') {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(px + 7, renderY + 5, 3, 3);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(px + 7, renderY + 5, 2, 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(px + 7, renderY + 5, 1, 1);
+    } else if (this.direction === 'right') {
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(px + 14, renderY + 5, 3, 3);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(px + 15, renderY + 5, 2, 2);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(px + 16, renderY + 5, 1, 1);
+    } else if (this.direction === 'up') {
+      // Back of hair
+      ctx.fillStyle = this.costume.hairColor;
+      ctx.fillRect(px + 6, renderY + 2, 12, 9);
+      ctx.fillStyle = 'rgba(0,0,0,0.2)';
+      ctx.fillRect(px + 7, renderY + 7, 10, 4);
+    }
+
+    // 13. Attack Slash Swing
+    if (this.attackTimer > 0) {
+      ctx.strokeStyle = '#fef08a';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      if (this.direction === 'right') ctx.arc(px + 26, renderY + 14, 16, -Math.PI * 0.35, Math.PI * 0.35);
+      else if (this.direction === 'left') ctx.arc(px - 2, renderY + 14, 16, Math.PI * 0.65, Math.PI * 1.35);
+      else if (this.direction === 'down') ctx.arc(px + 12, renderY + 28, 16, Math.PI * 0.15, Math.PI * 0.85);
+      else if (this.direction === 'up') ctx.arc(px + 12, renderY - 4, 16, Math.PI * 1.15, Math.PI * 1.85);
+      ctx.stroke();
+    }
+
+    // 14. Floating Header (Role Badge & Username)
     ctx.globalAlpha = 1.0;
     ctx.font = 'bold 8px sans-serif';
     ctx.textAlign = 'center';
@@ -369,7 +462,6 @@ export class Player {
     let tagText = `[${ROLE_INFO[this.role].tag} Lv.${this.level}]`;
     let tagColor = ROLE_INFO[this.role].color;
 
-    // Special Tag if Magician with Element
     if (this.role === 'MAGICIAN') {
       const pInfo = ELEMENT_INFO[this.magicianAffinities.primary];
       tagText = `[Mage·${pInfo.name.split(' ')[0]} Lv.${this.level}]`;
@@ -378,16 +470,124 @@ export class Player {
 
     ctx.fillStyle = tagColor;
     ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 2;
-    ctx.strokeText(tagText, px + 10, py - 12);
-    ctx.fillText(tagText, px + 10, py - 12);
+    ctx.lineWidth = 2.5;
+    ctx.strokeText(tagText, px + 12, renderY - 14);
+    ctx.fillText(tagText, px + 12, renderY - 14);
 
-    // Username
     ctx.fillStyle = '#ffffff';
-    ctx.strokeText(this.username, px + 10, py - 3);
-    ctx.fillText(this.username, px + 10, py - 3);
+    ctx.strokeText(this.username, px + 12, renderY - 4);
+    ctx.fillText(this.username, px + 12, renderY - 4);
 
     ctx.restore();
+  }
+
+  private renderEquippedWeapon(ctx: CanvasRenderingContext2D, px: number, py: number, armSwing: number): void {
+    const wx = px + 21;
+    const wy = py + 16 + armSwing;
+
+    if (this.role === 'KNIGHT' || this.role === 'NOVICE') {
+      // Silver Steel Broadsword
+      ctx.fillStyle = '#64748b'; // Pommel
+      ctx.fillRect(wx - 1, wy + 4, 3, 2);
+      ctx.fillStyle = '#facc15'; // Gold guard
+      ctx.fillRect(wx - 2, wy + 2, 5, 2);
+      ctx.fillStyle = '#e2e8f0'; // Blade
+      ctx.fillRect(wx - 1, wy - 8, 3, 10);
+      ctx.fillStyle = '#ffffff'; // Blade edge shine
+      ctx.fillRect(wx, wy - 8, 1, 10);
+    } else if (this.role === 'MAGICIAN') {
+      // Wizard Staff with glowing Elemental Orb!
+      const pInfo = ELEMENT_INFO[this.magicianAffinities.primary];
+      ctx.fillStyle = '#78350f'; // Wood staff pole
+      ctx.fillRect(wx, wy - 6, 2, 14);
+      // Staff Top Ring
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(wx - 2, wy - 9, 6, 3);
+      // Floating glowing elemental crystal
+      ctx.fillStyle = pInfo.color;
+      ctx.beginPath();
+      ctx.arc(wx + 1, wy - 11, 4, 0, Math.PI * 2);
+      ctx.fill();
+      // Orb core sparkle
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(wx, wy - 12, 2, 2);
+    } else if (this.role === 'ASSASSIN') {
+      // Twin Toxic Shadow Daggers
+      ctx.fillStyle = '#22c55e'; // Poison edge
+      ctx.fillRect(wx, wy - 4, 2, 7);
+      ctx.fillStyle = '#0f172a'; // Dark hilt
+      ctx.fillRect(wx - 1, wy + 3, 4, 2);
+    } else if (this.role === 'HEALER') {
+      // Holy Cross Scepter
+      ctx.fillStyle = '#fde047'; // Golden scepter
+      ctx.fillRect(wx, wy - 8, 2, 16);
+      ctx.fillRect(wx - 3, wy - 6, 8, 2);
+      // Holy jewel
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(wx, wy - 10, 2, 2);
+    } else if (this.role === 'NECROMANCER') {
+      // Dark Bone Scythe / Wand
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(wx, wy - 8, 2, 15);
+      ctx.fillStyle = '#a855f7'; // Purple Soul Gem
+      ctx.fillRect(wx - 1, wy - 10, 4, 3);
+      ctx.fillStyle = '#e2e8f0'; // Bone curve
+      ctx.fillRect(wx - 4, wy - 10, 3, 2);
+    }
+  }
+
+  private renderHairAndHeadgear(ctx: CanvasRenderingContext2D, px: number, py: number): void {
+    const hair = this.costume.hairColor;
+
+    if (this.costume.hairStyle === 'short') {
+      // Layered bangs with volume
+      ctx.fillStyle = hair;
+      ctx.fillRect(px + 5, py, 14, 5);
+      ctx.fillRect(px + 4, py + 2, 3, 6);
+      ctx.fillRect(px + 17, py + 2, 3, 6);
+      // Hair highlight shine
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.fillRect(px + 7, py + 1, 7, 2);
+      // Bang tips
+      ctx.fillStyle = hair;
+      ctx.fillRect(px + 7, py + 4, 2, 2);
+      ctx.fillRect(px + 11, py + 4, 2, 2);
+      ctx.fillRect(px + 14, py + 4, 2, 2);
+    } else if (this.costume.hairStyle === 'spiky') {
+      // Dynamic anime spiky tufts
+      ctx.fillStyle = hair;
+      ctx.fillRect(px + 5, py - 2, 14, 7);
+      ctx.fillRect(px + 3, py, 3, 7);
+      ctx.fillRect(px + 18, py, 3, 7);
+      // Top spikes
+      ctx.fillRect(px + 6, py - 4, 3, 3);
+      ctx.fillRect(px + 11, py - 5, 3, 4);
+      ctx.fillRect(px + 15, py - 4, 3, 3);
+      // Highlight
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.fillRect(px + 8, py - 1, 6, 2);
+    } else if (this.costume.hairStyle === 'long') {
+      // Long flowing locks past shoulders
+      ctx.fillStyle = hair;
+      ctx.fillRect(px + 5, py, 14, 5);
+      ctx.fillRect(px + 3, py + 2, 4, 14);
+      ctx.fillRect(px + 17, py + 2, 4, 14);
+      // Forehead headband
+      ctx.fillStyle = this.costume.accentColor;
+      ctx.fillRect(px + 6, py + 2, 12, 2);
+    } else if (this.costume.hairStyle === 'hood') {
+      // Deep cowl hood covering head with folded collar
+      const hoodCol = this.costume.hatColor || this.costume.outfitColor;
+      ctx.fillStyle = hoodCol;
+      ctx.fillRect(px + 4, py - 2, 16, 7);
+      ctx.fillRect(px + 3, py + 2, 4, 10);
+      ctx.fillRect(px + 17, py + 2, 4, 10);
+      // Hood peak tip
+      ctx.fillRect(px + 10, py - 4, 4, 3);
+      // Inner shadow of the hood
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.fillRect(px + 6, py + 2, 12, 3);
+    }
   }
 
   private renderMinion(ctx: CanvasRenderingContext2D, minion: Minion): void {

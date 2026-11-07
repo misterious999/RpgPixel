@@ -186,56 +186,130 @@ export class OnboardingUI {
     ctx.imageSmoothingEnabled = false;
 
     const costume = CHARACTER_COSTUMES[this.selectedCostumeIndex];
-    const px = 22;
-    const py = 16;
+    const px = 20;
+    const py = 14;
 
-    // Shadow
-    ctx.fillStyle = 'rgba(0,0,0,0.4)';
+    // 1. Soft Shadow
+    ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.beginPath();
-    ctx.ellipse(px + 10, py + 26, 9, 4, 0, 0, Math.PI * 2);
+    ctx.ellipse(px + 12, py + 30, 11, 5, 0, 0, Math.PI * 2);
     ctx.fill();
 
-    // Legs
-    ctx.fillStyle = '#292524';
-    ctx.fillRect(px + 4, py + 20, 4, 7);
-    ctx.fillRect(px + 12, py + 20, 4, 7);
-
-    // Body
-    ctx.fillStyle = costume.outfitColor;
-    ctx.fillRect(px + 4, py + 11, 12, 10);
-    // Belt
+    // 2. Flowing Cape Behind
     ctx.fillStyle = costume.accentColor;
-    ctx.fillRect(px + 4, py + 17, 12, 2);
+    ctx.fillRect(px + 5, py + 12, 14, 15);
+    ctx.fillStyle = 'rgba(0,0,0,0.2)';
+    ctx.fillRect(px + 10, py + 14, 4, 13);
 
-    // Head
+    // 3. Legs & Leather Boots with soles
+    ctx.fillStyle = '#1c1917';
+    ctx.fillRect(px + 5, py + 21, 5, 5);
+    ctx.fillRect(px + 14, py + 21, 5, 5);
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(px + 4, py + 24, 6, 6);
+    ctx.fillRect(px + 14, py + 24, 6, 6);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(px + 4, py + 24, 6, 2);
+    ctx.fillRect(px + 14, py + 24, 6, 2);
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(px + 4, py + 29, 6, 2);
+    ctx.fillRect(px + 14, py + 29, 6, 2);
+
+    // 4. Torso & Shaded Armor
+    ctx.fillStyle = costume.outfitColor;
+    ctx.fillRect(px + 5, py + 11, 14, 12);
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.fillRect(px + 6, py + 12, 5, 8);
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+    ctx.fillRect(px + 14, py + 12, 4, 9);
+
+    // Neck & Collar
     ctx.fillStyle = '#fed7aa';
-    ctx.fillRect(px + 5, py + 3, 10, 9);
+    ctx.fillRect(px + 10, py + 10, 4, 2);
+    ctx.fillStyle = costume.accentColor;
+    ctx.fillRect(px + 8, py + 11, 8, 2);
 
-    // Hair / Hat
-    ctx.fillStyle = costume.hairColor;
+    // Belt & Gold Buckle
+    ctx.fillStyle = '#292524';
+    ctx.fillRect(px + 5, py + 19, 14, 3);
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(px + 11, py + 19, 3, 3);
+
+    // Pauldrons (Shoulder Armor)
+    ctx.fillStyle = costume.accentColor;
+    ctx.fillRect(px + 3, py + 11, 3, 4);
+    ctx.fillRect(px + 18, py + 11, 3, 4);
+
+    // Arms & Hands
+    ctx.fillStyle = costume.outfitColor;
+    ctx.fillRect(px + 2, py + 13, 3, 6);
+    ctx.fillRect(px + 19, py + 13, 3, 6);
+    ctx.fillStyle = '#fed7aa';
+    ctx.fillRect(px + 2, py + 18, 3, 3);
+    ctx.fillRect(px + 19, py + 18, 3, 3);
+
+    // Equipped Sword in Hand
+    ctx.fillStyle = '#facc15'; // Guard
+    ctx.fillRect(px + 19, py + 19, 5, 2);
+    ctx.fillStyle = '#e2e8f0'; // Blade
+    ctx.fillRect(px + 20, py + 9, 3, 10);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(px + 21, py + 9, 1, 10);
+
+    // 5. Head & Facial Expressions
+    ctx.fillStyle = '#fed7aa';
+    ctx.fillRect(px + 6, py + 3, 12, 9);
+    ctx.fillStyle = 'rgba(244, 63, 94, 0.2)'; // Cheek blush
+    ctx.fillRect(px + 7, py + 8, 2, 2);
+    ctx.fillRect(px + 15, py + 8, 2, 2);
+
+    // Layered Hair
+    const hair = costume.hairColor;
     if (costume.hairStyle === 'short') {
-      ctx.fillRect(px + 4, py + 1, 12, 4);
-      ctx.fillRect(px + 3, py + 3, 2, 5);
-      ctx.fillRect(px + 15, py + 3, 2, 5);
+      ctx.fillStyle = hair;
+      ctx.fillRect(px + 5, py + 1, 14, 5);
+      ctx.fillRect(px + 4, py + 3, 3, 6);
+      ctx.fillRect(px + 17, py + 3, 3, 6);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.fillRect(px + 7, py + 2, 7, 2);
     } else if (costume.hairStyle === 'spiky') {
-      ctx.fillRect(px + 4, py - 1, 12, 6);
-      ctx.fillRect(px + 2, py + 1, 3, 5);
-      ctx.fillRect(px + 15, py + 1, 3, 5);
+      ctx.fillStyle = hair;
+      ctx.fillRect(px + 5, py - 1, 14, 7);
+      ctx.fillRect(px + 3, py + 1, 3, 7);
+      ctx.fillRect(px + 18, py + 1, 3, 7);
+      ctx.fillRect(px + 6, py - 3, 3, 3);
+      ctx.fillRect(px + 11, py - 4, 3, 4);
+      ctx.fillRect(px + 15, py - 3, 3, 3);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.fillRect(px + 8, py, 6, 2);
     } else if (costume.hairStyle === 'long') {
-      ctx.fillRect(px + 4, py + 1, 12, 4);
-      ctx.fillRect(px + 2, py + 3, 3, 10);
-      ctx.fillRect(px + 15, py + 3, 3, 10);
+      ctx.fillStyle = hair;
+      ctx.fillRect(px + 5, py + 1, 14, 5);
+      ctx.fillRect(px + 3, py + 3, 4, 14);
+      ctx.fillRect(px + 17, py + 3, 4, 14);
+      ctx.fillStyle = costume.accentColor;
+      ctx.fillRect(px + 6, py + 3, 12, 2);
     } else if (costume.hairStyle === 'hood') {
-      ctx.fillStyle = costume.hatColor || costume.outfitColor;
-      ctx.fillRect(px + 3, py - 1, 14, 6);
-      ctx.fillRect(px + 2, py + 3, 3, 9);
-      ctx.fillRect(px + 15, py + 3, 3, 9);
+      const hoodCol = costume.hatColor || costume.outfitColor;
+      ctx.fillStyle = hoodCol;
+      ctx.fillRect(px + 4, py - 1, 16, 7);
+      ctx.fillRect(px + 3, py + 3, 4, 10);
+      ctx.fillRect(px + 17, py + 3, 4, 10);
+      ctx.fillRect(px + 10, py - 3, 4, 3);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.fillRect(px + 6, py + 3, 12, 3);
     }
 
-    // Eyes
+    // Expressive Eyes (Shine & Pupils)
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(px + 8, py + 6, 3, 3);
+    ctx.fillRect(px + 13, py + 6, 3, 3);
     ctx.fillStyle = '#0f172a';
-    ctx.fillRect(px + 7, py + 6, 2, 2);
-    ctx.fillRect(px + 11, py + 6, 2, 2);
+    ctx.fillRect(px + 9, py + 6, 2, 2);
+    ctx.fillRect(px + 14, py + 6, 2, 2);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(px + 9, py + 6, 1, 1);
+    ctx.fillRect(px + 14, py + 6, 1, 1);
   }
 
   public update(deltaTime: number): void {
