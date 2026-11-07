@@ -1,15 +1,15 @@
 export interface ControlConfig {
-  bottomOffset: number; // Pixels from bottom screen edge (default lifted from bottom)
-  sideMargin: number;   // Pixels from left/right screen edge
-  buttonScale: number;  // 0.85, 1.0, 1.25
+  bottomOffset: number; // Pixels from bottom screen edge (in landscape)
+  sideMargin: number;   // Pixels from left/right screen edge (in landscape)
+  buttonScale: number;  // 0.85, 1.0, 1.2
   opacity: number;      // 0.4 to 1.0
 }
 
-const STORAGE_KEY = 'rpg_control_config_v1';
+const STORAGE_KEY = 'rpg_control_config_landscape_v2';
 
 export const DEFAULT_CONTROL_CONFIG: ControlConfig = {
-  bottomOffset: 95,   // Safe distance above mobile navigation/gesture bar!
-  sideMargin: 75,
+  bottomOffset: 58,   // Perfect ergonomic height in mobile landscape!
+  sideMargin: 58,     // Perfect thumb reach from bezel
   buttonScale: 1.0,
   opacity: 0.85
 };

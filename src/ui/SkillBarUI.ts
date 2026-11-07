@@ -1,6 +1,6 @@
 import { Player } from '../entities/Player.ts';
 import { FloatingTextManager } from './FloatingText.ts';
-import { ControlSettingsManager } from '../core/ControlSettings.ts';
+import { ControlSettingsManager, ControlConfig } from '../core/ControlSettings.ts';
 
 export interface VisualEffect {
   x: number;
@@ -22,6 +22,23 @@ export class SkillBarUI {
     this.floatingText = floatingText;
   }
 
+  private getSkillSlot(index: number, width: number, height: number, cfg: ControlConfig) {
+    const scale = cfg.buttonScale;
+    // Ergonomic Arc around Action & Run buttons for Landscape thumb reach
+    const offsets = [
+      { dx: -114, dy: -18 }, // S1 (Left of RUN)
+      { dx: -96,  dy: -64 }, // S2 (Upper-left)
+      { dx: -50,  dy: -82 }, // S3 (Top-center)
+      { dx: 4,    dy: -66 }  // S4 (Above A)
+    ];
+    const off = offsets[index] || { dx: 0, dy: 0 };
+    return {
+      x: width - cfg.sideMargin + off.dx * scale,
+      y: height - cfg.bottomOffset + off.dy * scale,
+      radius: 17 * scale
+    };
+  }
+
   public update(deltaTime: number): void {
     for (let i = this.visualEffects.length - 1; i >= 0; i--) {
       const fx = this.visualEffects[i];
@@ -37,23 +54,12 @@ export class SkillBarUI {
     if (skills.length === 0) return false;
 
     const cfg = ControlSettingsManager.get();
-    const scale = cfg.buttonScale;
-    const btnSize = 36 * scale;
-    const gap = 8 * scale;
-    const totalW = 4 * btnSize + 3 * gap;
-    const startX = screenWidth - totalW - 16;
-    const startY = screenHeight - cfg.bottomOffset - (120 * scale);
 
-    for (let i = 0; i < 4; i++) {
-      const bx = startX + i * (btnSize + gap);
-      const by = startY;
+    for (let i = 0; i < Math.min(skills.length, 4); i++) {
+      const slot = this.getSkillSlot(i, screenWidth, screenHeight, cfg);
+      const dist = Math.hypot(touchX - slot.x, touchY - slot.y);
 
-      if (
-        touchX >= bx &&
-        touchX <= bx + btnSize &&
-        touchY >= by &&
-        touchY <= by + btnSize
-      ) {
+      if (dist < slot.radius * 1.5) {
         if (skills[i]) {
           this.castSkill(i);
         }
@@ -343,7 +349,6 @@ export class SkillBarUI {
         ctx.stroke();
         ctx.fillStyle = 'rgba(56, 189, 248, 0.25)';
         ctx.fill();
-        // Crystal spikes
         ctx.fillStyle = '#ffffff';
         for (let a = 0; a < Math.PI * 2; a += Math.PI / 3) {
           ctx.fillRect(fx.x + Math.cos(a) * fx.radius * 0.7, fx.y + Math.sin(a) * fx.radius * 0.7, 4, 4);
@@ -385,7 +390,6 @@ export class SkillBarUI {
         ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI * 2);
         ctx.stroke();
       } else if (fx.type === 'abnormal') {
-        // Massive Anime Ultimate Shockwave
         ctx.strokeStyle = fx.color;
         ctx.lineWidth = 4;
         ctx.beginPath();
@@ -407,55 +411,46 @@ export class SkillBarUI {
     if (skills.length === 0) return;
 
     const cfg = ControlSettingsManager.get();
-    const scale = cfg.buttonScale;
     const alpha = cfg.opacity;
 
     ctx.save();
     ctx.globalAlpha = alpha;
 
-    const btnSize = 36 * scale;
-    const gap = 8 * scale;
-    const totalW = 4 * btnSize + 3 * gap;
-    const startX = screenWidth - totalW - 16;
-    const startY = screenHeight - cfg.bottomOffset - (120 * scale);
-
-    for (let i = 0; i < 4; i++) {
+    for (let i = 0; i < Math.min(skills.length, 4); i++) {
       const skill = skills[i];
-      const bx = startX + i * (btnSize + gap);
-      const by = startY;
-
       if (!skill) continue;
 
+      const slot = this.getSkillSlot(i, screenWidth, screenHeight, cfg);
       const isUnlocked = this.player.level >= skill.unlockLevel;
       const isOnCooldown = skill.currentCooldown > 0;
 
-      // Button background
+      // Circle Button
       ctx.fillStyle = isUnlocked ? (isOnCooldown ? '#1e293b' : 'rgba(15, 23, 42, 0.85)') : 'rgba(15, 23, 42, 0.4)';
       ctx.beginPath();
-      ctx.arc(bx + btnSize / 2, by + btnSize / 2, btnSize / 2, 0, Math.PI * 2);
+      ctx.arc(slot.x, slot.y, slot.radius, 0, Math.PI * 2);
       ctx.fill();
 
-      // Border (Golden border for primary elemental mastery!)
+      // Border
       ctx.strokeStyle = isUnlocked ? (isOnCooldown ? '#475569' : (skill.isPrimaryElement ? '#fbbf24' : skill.color)) : '#334155';
       ctx.lineWidth = skill.isPrimaryElement ? 2.5 : 2;
       ctx.stroke();
 
       // Symbol
-      ctx.font = '16px sans-serif';
+      ctx.font = `${Math.floor(slot.radius * 0.9)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       if (isUnlocked) {
-        ctx.fillText(skill.iconSymbol, bx + btnSize / 2, by + btnSize / 2);
+        ctx.fillText(skill.iconSymbol, slot.x, slot.y);
       } else {
         ctx.fillStyle = '#64748b';
-        ctx.fillText('🔒', bx + btnSize / 2, by + btnSize / 2 - 2);
+        ctx.fillText('🔒', slot.x, slot.y);
       }
 
       // Unlock requirement badge
       if (!isUnlocked) {
-        ctx.font = 'bold 8px sans-serif';
+        ctx.font = 'bold 7px sans-serif';
         ctx.fillStyle = '#f87171';
-        ctx.fillText(`Lv.${skill.unlockLevel}`, bx + btnSize / 2, by + btnSize - 6);
+        ctx.fillText(`Lv.${skill.unlockLevel}`, slot.x, slot.y + slot.radius + 7);
       }
 
       // Cooldown sweep overlay
@@ -463,20 +458,20 @@ export class SkillBarUI {
         const sweep = skill.currentCooldown / skill.cooldown;
         ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
         ctx.beginPath();
-        ctx.moveTo(bx + btnSize / 2, by + btnSize / 2);
-        ctx.arc(bx + btnSize / 2, by + btnSize / 2, btnSize / 2, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * sweep);
+        ctx.moveTo(slot.x, slot.y);
+        ctx.arc(slot.x, slot.y, slot.radius, -Math.PI / 2, -Math.PI / 2 + Math.PI * 2 * sweep);
         ctx.closePath();
         ctx.fill();
 
         ctx.fillStyle = '#fde047';
-        ctx.font = 'bold 11px sans-serif';
-        ctx.fillText(skill.currentCooldown.toFixed(1), bx + btnSize / 2, by + btnSize / 2);
+        ctx.font = 'bold 10px sans-serif';
+        ctx.fillText(skill.currentCooldown.toFixed(1), slot.x, slot.y);
       }
 
-      // Small Skill Tag (1, 2, 3, 4)
+      // Small Skill Tag (★1, 2, 3, 4)
       ctx.fillStyle = skill.isPrimaryElement ? '#fde047' : '#94a3b8';
-      ctx.font = 'bold 8px sans-serif';
-      ctx.fillText(skill.isPrimaryElement ? '★1' : `${i + 1}`, bx + 6, by + 6);
+      ctx.font = 'bold 7px sans-serif';
+      ctx.fillText(skill.isPrimaryElement ? '★1' : `${i + 1}`, slot.x - slot.radius + 5, slot.y - slot.radius + 5);
     }
 
     ctx.restore();

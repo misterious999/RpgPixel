@@ -6,7 +6,9 @@
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-  <meta name="theme-color" content="#111116">
+  <meta name="screen-orientation" content="landscape">
+  <meta name="orientation" content="landscape">
+  <meta name="theme-color" content="#090d16">
   <title>Open World RPG 2D</title>
   <style>
     * {
@@ -21,7 +23,7 @@
       width: 100%;
       height: 100%;
       overflow: hidden;
-      background-color: #0b0c10;
+      background-color: #090d16;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif;
     }
     #game-container {
@@ -52,26 +54,84 @@
     }
     .hud-stat {
       position: absolute;
-      top: 12px;
-      left: 12px;
-      background: rgba(15, 23, 42, 0.75);
+      top: 8px;
+      left: 10px;
+      background: rgba(15, 23, 42, 0.8);
       backdrop-filter: blur(4px);
       border: 1px solid rgba(255, 255, 255, 0.15);
       border-radius: 8px;
-      padding: 8px 12px;
+      padding: 6px 10px;
       color: #f1f5f9;
-      font-size: 12px;
-      line-height: 1.4;
+      font-size: 11px;
+      line-height: 1.35;
       pointer-events: none;
+      max-width: 220px;
     }
     .hud-title {
       font-weight: bold;
       color: #38bdf8;
+      font-size: 11px;
       margin-bottom: 2px;
+    }
+
+    /* Peringatan Wajib Mode Landscape */
+    #orientation-warning {
+      display: none;
+      position: fixed;
+      top: 0;
+      left: 0;
+      width: 100vw;
+      height: 100vh;
+      background: #090d16;
+      color: #f8fafc;
+      z-index: 999999;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      text-align: center;
+      padding: 24px;
+    }
+    .phone-rotate-anim {
+      width: 64px;
+      height: 64px;
+      margin-bottom: 20px;
+      animation: rotatePhone 2.2s infinite ease-in-out;
+    }
+    @keyframes rotatePhone {
+      0% { transform: rotate(0deg); }
+      40% { transform: rotate(-90deg); }
+      75% { transform: rotate(-90deg); }
+      100% { transform: rotate(0deg); }
+    }
+
+    @media (orientation: portrait) {
+      #orientation-warning {
+        display: flex !important;
+      }
+      #game-container {
+        display: none !important;
+      }
     }
   </style>
 </head>
 <body>
+  <!-- Layar Peringatan Portrait -> Wajib Putar HP ke Landscape -->
+  <div id="orientation-warning">
+    <div class="phone-rotate-anim">
+      <svg viewBox="0 0 24 24" fill="none" stroke="#38bdf8" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="5" y="2" width="14" height="20" rx="2" ry="2"></rect>
+        <line x1="12" y1="18" x2="12.01" y2="18"></line>
+      </svg>
+    </div>
+    <h2 style="font-size: 20px; font-weight: 800; color: #38bdf8; margin-bottom: 8px;">PUTAR LAYAR KE HORIZONTAL</h2>
+    <p style="font-size: 13px; color: #cbd5e1; max-width: 280px; line-height: 1.5; margin-bottom: 20px;">
+      Game ini dibuat khusus untuk dimainkan dalam <b>Mode Mobile Landscape</b> demi kenyamanan tombol kontrol.
+    </p>
+    <div style="font-size: 11px; color: #94a3b8; background: #1e293b; padding: 6px 14px; border-radius: 20px; border: 1px solid #334155;">
+      💡 Aktifkan Auto-Rotate pada HP Anda
+    </div>
+  </div>
+
   <div id="game-container">
     <canvas id="game-canvas"></canvas>
     <div id="ui-overlay">
