@@ -3,6 +3,7 @@ import { Player } from '../entities/Player.ts';
 import { Chest } from '../world/Chest.ts';
 import { FloatingTextManager } from './FloatingText.ts';
 import { RoleType } from '../types/GameTypes.ts';
+import { PwaService } from '../services/PwaService.ts';
 
 export class AuthUI {
   private player: Player;
@@ -127,12 +128,14 @@ export class AuthUI {
   }
 
   public handleTouch(touchX: number, touchY: number, screenWidth: number): boolean {
+    const baseRight = PwaService.isInstallable ? 235 : 150;
+
     if (this.isGuest) {
       // Guest: Option to bind account to Google
-      const bindBtnW = 110;
-      const bindBtnH = 30;
-      const bindBtnX = screenWidth - 170;
-      const bindBtnY = 14;
+      const bindBtnW = 100;
+      const bindBtnH = 32;
+      const bindBtnX = screenWidth - baseRight - bindBtnW;
+      const bindBtnY = 12;
 
       if (
         touchX >= bindBtnX &&
@@ -153,8 +156,8 @@ export class AuthUI {
       // "💾 Simpan" button
       const saveBtnW = 60;
       const saveBtnH = 30;
-      const saveBtnX = screenWidth - 220;
-      const saveBtnY = 14;
+      const saveBtnX = screenWidth - baseRight - saveBtnW;
+      const saveBtnY = 12;
 
       if (
         touchX >= saveBtnX &&
@@ -167,10 +170,10 @@ export class AuthUI {
       }
 
       // "Keluar" (Logout) button
-      const logoutBtnW = 55;
+      const logoutBtnW = 50;
       const logoutBtnH = 30;
-      const logoutBtnX = screenWidth - 280;
-      const logoutBtnY = 14;
+      const logoutBtnX = saveBtnX - logoutBtnW - 6;
+      const logoutBtnY = 12;
 
       if (
         touchX >= logoutBtnX &&
@@ -191,12 +194,13 @@ export class AuthUI {
 
   public render(ctx: CanvasRenderingContext2D, screenWidth: number): void {
     ctx.save();
+    const baseRight = PwaService.isInstallable ? 235 : 150;
 
     if (this.isGuest) {
       // --- Guest Profile Tag ---
       const pillW = 100;
       const pillH = 32;
-      const pillX = screenWidth - 160;
+      const pillX = screenWidth - baseRight - pillW;
       const pillY = 12;
 
       ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
@@ -221,12 +225,17 @@ export class AuthUI {
     if (user) {
       const name = this.player.username || user.user_metadata?.full_name || 'Petualang';
 
-      // 1. "Keluar" (Logout) button
-      const logoutBtnW = 55;
-      const logoutBtnH = 30;
-      const logoutBtnX = screenWidth - 280;
-      const logoutBtnY = 14;
+      const saveBtnW = 60;
+      const saveBtnH = 30;
+      const saveBtnX = screenWidth - baseRight - saveBtnW;
+      const saveBtnY = 12;
 
+      const logoutBtnW = 50;
+      const logoutBtnH = 30;
+      const logoutBtnX = saveBtnX - logoutBtnW - 6;
+      const logoutBtnY = 12;
+
+      // 1. "Keluar" (Logout) button
       ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
       ctx.fillRect(logoutBtnX, logoutBtnY, logoutBtnW, logoutBtnH);
       ctx.strokeStyle = '#ef4444';
@@ -240,11 +249,6 @@ export class AuthUI {
       ctx.fillText('Keluar', logoutBtnX + logoutBtnW / 2, logoutBtnY + logoutBtnH / 2);
 
       // 2. "💾 Simpan" Button
-      const saveBtnW = 60;
-      const saveBtnH = 30;
-      const saveBtnX = screenWidth - 220;
-      const saveBtnY = 14;
-
       ctx.fillStyle = this.isSaving ? 'rgba(56, 189, 248, 0.4)' : 'rgba(16, 185, 129, 0.25)';
       ctx.fillRect(saveBtnX, saveBtnY, saveBtnW, saveBtnH);
       ctx.strokeStyle = '#10b981';
@@ -259,8 +263,8 @@ export class AuthUI {
 
       // 3. User Avatar Pill
       const pillW = 95;
-      const pillH = 34;
-      const pillX = screenWidth - 152;
+      const pillH = 30;
+      const pillX = logoutBtnX - pillW - 6;
       const pillY = 12;
 
       ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';

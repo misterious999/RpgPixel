@@ -14,6 +14,7 @@ import { OnboardingUI } from '../ui/OnboardingUI.ts';
 import { ControlSettingsModal } from '../ui/ControlSettingsModal.ts';
 import { ControlSettingsManager } from './ControlSettings.ts';
 import { SupabaseService } from '../services/SupabaseService.ts';
+import { PwaService } from '../services/PwaService.ts';
 import { ITEM_DEFINITIONS } from '../items/ItemTypes.ts';
 import { ROLE_INFO } from '../data/RolesData.ts';
 
@@ -95,6 +96,33 @@ export class Game {
       if (this.controlSettingsModal.handleTouch(touchX, touchY, this.canvas.width, this.canvas.height)) {
         return true;
       }
+
+      // Fullscreen Button (⛶)
+      const fsBtn = { x: this.canvas.width - 138, y: 10, size: 34 };
+      if (
+        touchX >= fsBtn.x &&
+        touchX <= fsBtn.x + fsBtn.size &&
+        touchY >= fsBtn.y &&
+        touchY <= fsBtn.y + fsBtn.size
+      ) {
+        PwaService.toggleFullscreen();
+        return true;
+      }
+
+      // Install App Button (📲) if installable
+      if (PwaService.isInstallable) {
+        const instBtn = { x: this.canvas.width - 232, y: 10, w: 86, h: 34 };
+        if (
+          touchX >= instBtn.x &&
+          touchX <= instBtn.x + instBtn.w &&
+          touchY >= instBtn.y &&
+          touchY <= instBtn.y + instBtn.h
+        ) {
+          PwaService.promptInstall();
+          return true;
+        }
+      }
+
       // 1. Guild Appraisal Modal
       if (this.guildNPC.handleTouch(touchX, touchY, this.canvas.width, this.canvas.height, this.player, this.floatingText)) {
         return true;
@@ -432,6 +460,45 @@ export class Game {
 
       // 12. Control Settings Modal (Gear ⚙️ & customization)
       this.controlSettingsModal.render(ctx, screenWidth, screenHeight);
+
+      // 13. Top HUD: Fullscreen Icon (⛶)
+      const fsX = screenWidth - 138;
+      const fsY = 10;
+      const fsSize = 34;
+
+      ctx.save();
+      ctx.fillStyle = PwaService.isFullscreen() ? 'rgba(56, 189, 248, 0.4)' : 'rgba(15, 23, 42, 0.85)';
+      ctx.beginPath();
+      ctx.arc(fsX + fsSize / 2, fsY + fsSize / 2, fsSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = PwaService.isFullscreen() ? '#38bdf8' : 'rgba(255, 255, 255, 0.3)';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '15px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(PwaService.isFullscreen() ? '🗗' : '⛶', fsX + fsSize / 2, fsY + fsSize / 2);
+
+      // Top HUD: Install Web App Button (📲) if installable
+      if (PwaService.isInstallable) {
+        const instX = screenWidth - 232;
+        const instY = 10;
+        const instW = 86;
+        const instH = 34;
+
+        ctx.fillStyle = 'rgba(2, 132, 199, 0.9)';
+        ctx.fillRect(instX, instY, instW, instH);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(instX, instY, instW, instH);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 9.5px sans-serif';
+        ctx.fillText('📲 Pasang App', instX + instW / 2, instY + instH / 2);
+      }
+      ctx.restore();
     }
   }
 }

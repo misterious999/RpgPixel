@@ -1,4 +1,5 @@
 import { ControlSettingsManager, DEFAULT_CONTROL_CONFIG } from '../core/ControlSettings.ts';
+import { PwaService } from '../services/PwaService.ts';
 
 export class ControlSettingsModal {
   public isOpen: boolean = false;
@@ -119,6 +120,26 @@ export class ControlSettingsModal {
         ControlSettingsManager.save({ sideMargin: val });
       })
     ) {
+      return true;
+    }
+
+    // 6. Pasang Web App / Fullscreen Button Touch
+    const sec6Y = sec5Y + 54;
+    const pwaBtnW = colW;
+    const pwaBtnH = 32;
+    const pwaBtnX = col2X;
+    const pwaBtnY = sec6Y + 6;
+    if (
+      touchX >= pwaBtnX &&
+      touchX <= pwaBtnX + pwaBtnW &&
+      touchY >= pwaBtnY &&
+      touchY <= pwaBtnY + pwaBtnH
+    ) {
+      if (PwaService.isInstallable) {
+        PwaService.promptInstall();
+      } else {
+        PwaService.toggleFullscreen();
+      }
       return true;
     }
 
@@ -323,20 +344,30 @@ export class ControlSettingsModal {
       cfg.sideMargin
     );
 
-    // 6. Tips landscape box
+    // 6. Pasang Web App (PWA) / Layar Penuh Button
     const sec6Y = sec5Y + 54;
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(col2X, sec6Y + 6, colW, 35);
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(col2X, sec6Y + 6, colW, 35);
-    ctx.fillStyle = '#38bdf8';
-    ctx.font = 'bold 9px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.fillText('💡 Tips Jelajah:', col2X + 8, sec6Y + 18);
-    ctx.fillStyle = '#94a3b8';
-    ctx.font = '8.5px sans-serif';
-    ctx.fillText('Pilih "Luas" untuk melihat panorama dunia RPG!', col2X + 8, sec6Y + 31);
+    const pwaBtnW = colW;
+    const pwaBtnH = 32;
+    const pwaBtnX = col2X;
+    const pwaBtnY = sec6Y + 6;
+
+    ctx.fillStyle = PwaService.isInstallable ? '#0284c7' : '#1e293b';
+    ctx.fillRect(pwaBtnX, pwaBtnY, pwaBtnW, pwaBtnH);
+    ctx.strokeStyle = PwaService.isInstallable ? '#38bdf8' : '#475569';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(pwaBtnX, pwaBtnY, pwaBtnW, pwaBtnH);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 9.5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    if (PwaService.isInstalled) {
+      ctx.fillText('✅ Web App Terpasang (Layar Penuh)', pwaBtnX + pwaBtnW / 2, pwaBtnY + pwaBtnH / 2);
+    } else if (PwaService.isInstallable) {
+      ctx.fillText('📲 Pasang Web App ke Layar HP', pwaBtnX + pwaBtnW / 2, pwaBtnY + pwaBtnH / 2);
+    } else {
+      ctx.fillText('⛶ Beralih Mode Layar Penuh (Fullscreen)', pwaBtnX + pwaBtnW / 2, pwaBtnY + pwaBtnH / 2);
+    }
 
     // Footer Buttons
     // Reset Default Button
