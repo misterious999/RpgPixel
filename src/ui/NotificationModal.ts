@@ -1,3 +1,5 @@
+import { CanvasText } from '../utils/CanvasText.ts';
+
 export interface ModalOptions {
   title: string;
   message: string;
@@ -151,7 +153,8 @@ export class NotificationModal {
     ctx.font = 'bold 13px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(modal.title, modalX + 52, modalY + 26);
+    const safeTitle = CanvasText.truncate(ctx, modal.title, modalWidth - 70);
+    ctx.fillText(safeTitle, modalX + 52, modalY + 26);
 
     // Message Body (With Multi-Line Word Wrapping)
     ctx.fillStyle = '#e2e8f0';
@@ -160,30 +163,8 @@ export class NotificationModal {
     ctx.textBaseline = 'top';
 
     const maxTextWidth = modalWidth - 44;
-    const lines: string[] = [];
-    const paragraphs = modal.message.split('\n');
-
-    for (const paragraph of paragraphs) {
-      const words = paragraph.split(' ');
-      let currentLine = '';
-
-      for (const word of words) {
-        const testLine = currentLine ? `${currentLine} ${word}` : word;
-        if (ctx.measureText(testLine).width > maxTextWidth) {
-          lines.push(currentLine);
-          currentLine = word;
-        } else {
-          currentLine = testLine;
-        }
-      }
-      if (currentLine) lines.push(currentLine);
-    }
-
-    const startTextY = modalY + 60;
-    const lineHeight = 17;
-    for (let l = 0; l < Math.min(lines.length, 6); l++) {
-      ctx.fillText(lines[l], modalX + 22, startTextY + l * lineHeight);
-    }
+    const startTextY = modalY + 54;
+    CanvasText.drawWrappedText(ctx, modal.message, modalX + 22, startTextY, maxTextWidth, 16, 5);
 
     // Action Buttons
     const btnHeight = 34;

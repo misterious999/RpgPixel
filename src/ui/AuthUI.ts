@@ -5,6 +5,7 @@ import { FloatingTextManager } from './FloatingText.ts';
 import { RoleType } from '../types/GameTypes.ts';
 import { PwaService } from '../services/PwaService.ts';
 import { NotificationModal } from './NotificationModal.ts';
+import { CanvasText } from '../utils/CanvasText.ts';
 
 export class AuthUI {
   private player: Player;
@@ -318,7 +319,7 @@ export class AuthUI {
       ctx.font = 'bold 10px sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      const displayName = name.length > 8 ? name.substring(0, 7) + '..' : name;
+      const displayName = CanvasText.truncate(ctx, name, 55);
       ctx.fillText(displayName, pillX + 34, pillY + 6);
 
       // Cloud status dot

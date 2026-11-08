@@ -1,6 +1,7 @@
 import { ControlSettingsManager, DEFAULT_CONTROL_CONFIG } from '../core/ControlSettings.ts';
 import { PwaService } from '../services/PwaService.ts';
 import { NotificationModal } from './NotificationModal.ts';
+import { CanvasText } from '../utils/CanvasText.ts';
 
 export class ControlSettingsModal {
   public isOpen: boolean = false;
@@ -232,10 +233,11 @@ export class ControlSettingsModal {
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(modalX, modalY, modalWidth, 36);
     ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 13px sans-serif';
+    ctx.font = 'bold 12.5px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText('⚙️ PENGATURAN KAMERA & KONTROL MOBILE', modalX + 16, modalY + 18);
+    const safeTitle = CanvasText.truncate(ctx, '⚙️ PENGATURAN KONTROL & KAMERA', modalWidth - 48);
+    ctx.fillText(safeTitle, modalX + 16, modalY + 18);
 
     // Close X
     ctx.fillStyle = '#ef4444';
@@ -261,7 +263,8 @@ export class ControlSettingsModal {
       ctx.font = 'bold 10px sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      ctx.fillText(label, secX, secY);
+      const safeLabel = CanvasText.truncate(ctx, label, colW - 4);
+      ctx.fillText(safeLabel, secX, secY);
 
       const btnY = secY + 15;
       for (let i = 0; i < options.length; i++) {
@@ -372,13 +375,14 @@ export class ControlSettingsModal {
     ctx.font = 'bold 9.5px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
+    let pwaText = '⛶ Beralih Mode Layar Penuh (Fullscreen)';
     if (PwaService.isInstalled) {
-      ctx.fillText('✅ Web App Terpasang (Layar Penuh)', pwaBtnX + pwaBtnW / 2, pwaBtnY + pwaBtnH / 2);
+      pwaText = '✅ Web App Terpasang (Layar Penuh)';
     } else if (PwaService.isInstallable) {
-      ctx.fillText('📲 Pasang Web App ke Layar HP', pwaBtnX + pwaBtnW / 2, pwaBtnY + pwaBtnH / 2);
-    } else {
-      ctx.fillText('⛶ Beralih Mode Layar Penuh (Fullscreen)', pwaBtnX + pwaBtnW / 2, pwaBtnY + pwaBtnH / 2);
+      pwaText = '📲 Pasang Web App ke Layar HP';
     }
+    const safePwaText = CanvasText.truncate(ctx, pwaText, pwaBtnW - 10);
+    ctx.fillText(safePwaText, pwaBtnX + pwaBtnW / 2, pwaBtnY + pwaBtnH / 2);
 
     // Footer Buttons
     // Reset Default Button

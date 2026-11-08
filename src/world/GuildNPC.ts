@@ -2,6 +2,7 @@ import { RoleType, MagicElement, MagicianAffinities } from '../types/GameTypes.t
 import { ROLE_INFO, ELEMENT_INFO, getMagicianSkills } from '../data/RolesData.ts';
 import { Player } from '../entities/Player.ts';
 import { FloatingTextManager } from '../ui/FloatingText.ts';
+import { CanvasText } from '../utils/CanvasText.ts';
 
 export class GuildNPC {
   public x: number;
@@ -339,14 +340,28 @@ export class GuildNPC {
 
       ctx.fillStyle = '#cbd5e1';
       ctx.font = '9px sans-serif';
-      ctx.fillText(curPrimaryInfo.description, col1X + 10, modalY + 130);
+      const descH = CanvasText.drawWrappedText(
+        ctx,
+        curPrimaryInfo.description,
+        col1X + 10,
+        modalY + 128,
+        colW - 20,
+        12,
+        4
+      );
 
+      const traitY = Math.max(modalY + 128 + descH + 8, modalY + 180);
       ctx.fillStyle = '#38bdf8';
       ctx.font = 'bold 9px sans-serif';
-      ctx.fillText('✨ Keistimewaan Utama:', col1X + 10, modalY + 185);
+      ctx.fillText('✨ Keistimewaan Utama:', col1X + 10, traitY);
       ctx.fillStyle = '#e2e8f0';
       ctx.font = '8.5px sans-serif';
-      ctx.fillText(`• Spesialisasi 100% Sihir ${curPrimaryInfo.name.split(' ')[0]}`, col1X + 10, modalY + 202);
+      const traitText = CanvasText.truncate(
+        ctx,
+        `• Spesialisasi 100% Sihir ${curPrimaryInfo.name.split(' ')[0]}`,
+        colW - 20
+      );
+      ctx.fillText(traitText, col1X + 10, traitY + 16);
 
       // Col 2: Elemen Sampingan (Secondary)
       ctx.fillStyle = '#38bdf8';
@@ -412,11 +427,13 @@ export class GuildNPC {
         ctx.textAlign = 'left';
         ctx.fillStyle = sk.color;
         ctx.font = 'bold 9px sans-serif';
-        ctx.fillText(sk.name, col2X + 28, sy + 8);
+        const safeSpellName = CanvasText.truncate(ctx, sk.name, colW - 42);
+        ctx.fillText(safeSpellName, col2X + 28, sy + 8);
 
         ctx.fillStyle = '#94a3b8';
         ctx.font = '7.5px sans-serif';
-        ctx.fillText(sk.description.slice(0, 32) + '...', col2X + 28, sy + 18);
+        const safeSpellDesc = CanvasText.truncate(ctx, sk.description, colW - 42);
+        ctx.fillText(safeSpellDesc, col2X + 28, sy + 18);
       }
 
       // Back Button
@@ -445,7 +462,14 @@ export class GuildNPC {
 
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 11px sans-serif';
-      ctx.fillText(`IKRAR MAGICIAN (${curPrimaryInfo.name.split(' ')[0]})`, btnX + btnW / 2, btnY + btnH / 2);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const safeIkrarText = CanvasText.truncate(
+        ctx,
+        `IKRAR MAGICIAN (${curPrimaryInfo.name.split(' ')[0]})`,
+        btnW - 12
+      );
+      ctx.fillText(safeIkrarText, btnX + btnW / 2, btnY + btnH / 2);
 
       ctx.restore();
       return;
@@ -495,59 +519,69 @@ export class GuildNPC {
     ctx.fillText(curRole.name, col1X + 12, contentY + 10);
 
     ctx.fillStyle = '#cbd5e1';
-    ctx.font = '9.5px sans-serif';
-    ctx.fillText(curRole.description, col1X + 12, contentY + 30);
+    ctx.font = '9px sans-serif';
+    const roleDescH = CanvasText.drawWrappedText(
+      ctx,
+      curRole.description,
+      col1X + 12,
+      contentY + 28,
+      colW - 24,
+      12,
+      3
+    );
+
+    const perkStartY = contentY + 28 + Math.max(roleDescH, 24) + 6;
+    const perkSpacing = 14;
+
+    const renderPerks = (headerTitle: string, headerColor: string, bullets: string[]) => {
+      ctx.fillStyle = headerColor;
+      ctx.font = 'bold 9.5px sans-serif';
+      ctx.fillText(headerTitle, col1X + 12, perkStartY);
+
+      ctx.fillStyle = '#e2e8f0';
+      ctx.font = '8px sans-serif';
+      for (let b = 0; b < bullets.length; b++) {
+        const by = perkStartY + 14 + b * perkSpacing;
+        const text = CanvasText.truncate(ctx, bullets[b], colW - 24);
+        ctx.fillText(text, col1X + 14, by);
+      }
+    };
 
     if (this.selectedRole === 'MAGICIAN') {
-      ctx.fillStyle = '#38bdf8';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.fillText('✨ Spesialisasi Magician:', col1X + 12, contentY + 68);
-      ctx.fillStyle = '#e2e8f0';
-      ctx.font = '8.5px sans-serif';
-      ctx.fillText('• 1 Elemen Utama (100% Full Power)', col1X + 14, contentY + 86);
-      ctx.fillText('• Bebas pilih hingga 2 Elemen Sampingan', col1X + 14, contentY + 102);
-      ctx.fillText('• 5 Elemen: Api, Es, Petir, Angin, Bumi', col1X + 14, contentY + 118);
-      ctx.fillText('• Skill abnormal anime unik per elemen!', col1X + 14, contentY + 134);
+      renderPerks('✨ Spesialisasi Magician:', '#38bdf8', [
+        '• 1 Elemen Utama (100% Full Power)',
+        '• Bebas pilih hingga 2 Elemen Sampingan',
+        '• 5 Elemen: Api, Es, Petir, Angin, Bumi',
+        '• Skill abnormal anime unik per elemen!'
+      ]);
     } else if (this.selectedRole === 'KNIGHT') {
-      ctx.fillStyle = '#facc15';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.fillText('🛡️ Keunggulan Ksatria:', col1X + 12, contentY + 68);
-      ctx.fillStyle = '#e2e8f0';
-      ctx.font = '8.5px sans-serif';
-      ctx.fillText('• Pertahanan fisik & HP tertinggi di Guild', col1X + 14, contentY + 86);
-      ctx.fillText('• Tangkal & counter serangan dengan Parrying', col1X + 14, contentY + 102);
-      ctx.fillText('• Melompat ke kerumunan dengan Leap Attack', col1X + 14, contentY + 118);
-      ctx.fillText('• Ultimate: Excalibur Golden Slash!', col1X + 14, contentY + 134);
+      renderPerks('🛡️ Keunggulan Ksatria:', '#facc15', [
+        '• Pertahanan fisik & HP tertinggi di Guild',
+        '• Tangkal & counter serangan dg Parrying',
+        '• Melompat ke musuh dengan Leap Attack',
+        '• Ultimate: Excalibur Golden Slash!'
+      ]);
     } else if (this.selectedRole === 'ASSASSIN') {
-      ctx.fillStyle = '#22c55e';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.fillText('🗡️ Keunggulan Assassin:', col1X + 12, contentY + 68);
-      ctx.fillStyle = '#e2e8f0';
-      ctx.font = '8.5px sans-serif';
-      ctx.fillText('• Menyusup tak terlihat dengan Stealth', col1X + 14, contentY + 86);
-      ctx.fillText('• Kecepatan lari kilat & critical burst', col1X + 14, contentY + 102);
-      ctx.fillText('• Racun mematikan melumpuhkan lawan', col1X + 14, contentY + 118);
-      ctx.fillText('• Ultimate: Anime Shadow Flash Slice!', col1X + 14, contentY + 134);
+      renderPerks('🗡️ Keunggulan Assassin:', '#22c55e', [
+        '• Menyusup tak terlihat dengan Stealth',
+        '• Kecepatan lari kilat & critical burst',
+        '• Racun mematikan melumpuhkan lawan',
+        '• Ultimate: Anime Shadow Flash Slice!'
+      ]);
     } else if (this.selectedRole === 'HEALER') {
-      ctx.fillStyle = '#38bdf8';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.fillText('🕊️ Keunggulan Healer:', col1X + 12, contentY + 68);
-      ctx.fillStyle = '#e2e8f0';
-      ctx.font = '8.5px sans-serif';
-      ctx.fillText('• Pemulihan instan HP sendiri & rekan', col1X + 14, contentY + 86);
-      ctx.fillText('• Perisai suci supresi kutukan & debuff', col1X + 14, contentY + 102);
-      ctx.fillText('• Regenerasi mana terus-menerus', col1X + 14, contentY + 118);
-      ctx.fillText('• Ultimate: Anime Divine Sanctuary Bless!', col1X + 14, contentY + 134);
+      renderPerks('🕊️ Keunggulan Healer:', '#38bdf8', [
+        '• Pemulihan instan HP sendiri & rekan',
+        '• Perisai suci supresi kutukan & debuff',
+        '• Regenerasi mana terus-menerus',
+        '• Ultimate: Divine Sanctuary Bless!'
+      ]);
     } else if (this.selectedRole === 'NECROMANCER') {
-      ctx.fillStyle = '#a855f7';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.fillText('💀 Keunggulan Necromancer:', col1X + 12, contentY + 68);
-      ctx.fillStyle = '#e2e8f0';
-      ctx.font = '8.5px sans-serif';
-      ctx.fillText('• Memanggil pasukan Skeleton Warrior', col1X + 14, contentY + 86);
-      ctx.fillText('• Menjinakkan Shadow Spirit Bear misterius', col1X + 14, contentY + 102);
-      ctx.fillText('• Kutukan hisap nyawa musuh (Life Drain)', col1X + 14, contentY + 118);
-      ctx.fillText('• Ultimate: Army of the Undead!', col1X + 14, contentY + 134);
+      renderPerks('💀 Keunggulan Necromancer:', '#a855f7', [
+        '• Memanggil pasukan Skeleton Warrior',
+        '• Menjinakkan Shadow Spirit Bear',
+        '• Kutukan hisap nyawa lawan (Life Drain)',
+        '• Ultimate: Army of the Undead!'
+      ]);
     }
 
     // --- KOLOM 2: SKILLS LIST & ACTION BUTTON ---
@@ -573,22 +607,29 @@ export class GuildNPC {
       ctx.textBaseline = 'middle';
       ctx.fillText(skill.iconSymbol, col2X + 14, sy + 14);
 
+      // Unlock requirement tag on the right
+      const unlockText = skill.unlockLevel === 1 ? 'Awal' : `Lv.${skill.unlockLevel}`;
+      ctx.font = 'bold 8px sans-serif';
+      const unlockW = ctx.measureText(unlockText).width;
+
+      ctx.fillStyle = player.level >= skill.unlockLevel ? '#4ade80' : '#f87171';
+      ctx.textAlign = 'right';
+      ctx.fillText(unlockText, col2X + colW - 8, sy + 8);
+
+      // Skill Name on the left (Safe truncated so it never overlaps unlock tag)
       ctx.textAlign = 'left';
       ctx.fillStyle = skill.isAbnormal ? '#d8b4fe' : '#f8fafc';
       ctx.font = 'bold 9px sans-serif';
-      ctx.fillText(skill.name, col2X + 28, sy + 8);
+      const maxSkillNameW = colW - 28 - unlockW - 14;
+      const safeSkillName = CanvasText.truncate(ctx, skill.name, maxSkillNameW);
+      ctx.fillText(safeSkillName, col2X + 28, sy + 8);
 
-      ctx.fillStyle = player.level >= skill.unlockLevel ? '#4ade80' : '#f87171';
-      ctx.font = 'bold 8px sans-serif';
-      ctx.textAlign = 'right';
-      const unlockText = skill.unlockLevel === 1 ? 'Awal' : `Lv.${skill.unlockLevel}`;
-      ctx.fillText(unlockText, col2X + colW - 8, sy + 8);
-
+      // Skill Description (Truncated so it never overflows card)
       ctx.fillStyle = '#94a3b8';
       ctx.font = '7.5px sans-serif';
       ctx.textAlign = 'left';
-      const shortDesc = skill.description.length > 36 ? skill.description.slice(0, 36) + '..' : skill.description;
-      ctx.fillText(shortDesc, col2X + 28, sy + 19);
+      const safeDesc = CanvasText.truncate(ctx, skill.description, colW - 36);
+      ctx.fillText(safeDesc, col2X + 28, sy + 19);
     }
 
     // Action Button (Bottom Right)
@@ -607,10 +648,11 @@ export class GuildNPC {
     ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const btnLabel =
+    const btnRawLabel =
       this.selectedRole === 'MAGICIAN'
         ? 'PILIH AFINITAS ELEMEN ➡'
         : `BANGKITKAN ${curRole.tag} ✨`;
+    const btnLabel = CanvasText.truncate(ctx, btnRawLabel, btnW - 10);
     ctx.fillText(btnLabel, btnX + btnW / 2, btnY + btnH / 2);
 
     ctx.restore();
