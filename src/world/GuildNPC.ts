@@ -220,7 +220,7 @@ export class GuildNPC {
     ctx.fillRect(x + 10, y + 11, 12, 8); // Uniform
 
     // 3. Name Tag
-    ctx.font = 'bold 8px sans-serif';
+    ctx.font = 'bold 8.5px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillStyle = '#f8fafc';
     ctx.strokeStyle = '#000000';
@@ -232,7 +232,7 @@ export class GuildNPC {
     if (isNear) {
       const bob = Math.sin(Date.now() / 200) * 2;
       ctx.fillStyle = '#fbbf24';
-      ctx.font = 'bold 9px sans-serif';
+      ctx.font = 'bold 9.5px sans-serif';
       ctx.strokeText('💬 [A] Uji Bakat Role', x + 16, y - 16 + bob);
       ctx.fillText('💬 [A] Uji Bakat Role', x + 16, y - 16 + bob);
     }

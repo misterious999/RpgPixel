@@ -80,7 +80,7 @@ export class CanvasText {
         }
         line += '...';
       }
-      ctx.fillText(line, x, y + i * lineHeight);
+      ctx.fillText(line, Math.round(x), Math.round(y + i * lineHeight));
     }
 
     return renderCount * lineHeight;

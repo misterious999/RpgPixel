@@ -48,6 +48,11 @@ export class Game {
   private virtualWidth: number = CONSTANTS.INTERNAL_WIDTH;
   private virtualHeight: number = CONSTANTS.INTERNAL_HEIGHT;
 
+  // Logical Screen Dimensions & High-DPI Retina/HD+ resolution
+  private screenWidth: number = 800;
+  private screenHeight: number = 400;
+  private dpr: number = 1;
+
   // DOM elements for HUD
   private fpsEl: HTMLElement | null;
   private coordsEl: HTMLElement | null;
@@ -94,17 +99,17 @@ export class Game {
       if (this.onboardingUI.state !== 'PLAYING') return true;
 
       // -1. Premium In-Game Notification / Confirm Modal (Top Priority)
-      if (NotificationModal.handleTouch(touchX, touchY, this.canvas.width, this.canvas.height)) {
+      if (NotificationModal.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight)) {
         return true;
       }
 
       // 0. Control Settings Modal
-      if (this.controlSettingsModal.handleTouch(touchX, touchY, this.canvas.width, this.canvas.height)) {
+      if (this.controlSettingsModal.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight)) {
         return true;
       }
 
       // Fullscreen Button (⛶)
-      const fsBtn = { x: this.canvas.width - 138, y: 10, size: 34 };
+      const fsBtn = { x: this.screenWidth - 138, y: 10, size: 34 };
       if (
         touchX >= fsBtn.x &&
         touchX <= fsBtn.x + fsBtn.size &&
@@ -117,7 +122,7 @@ export class Game {
 
       // Install App Button (📲) if installable
       if (PwaService.isInstallable) {
-        const instBtn = { x: this.canvas.width - 232, y: 10, w: 86, h: 34 };
+        const instBtn = { x: this.screenWidth - 232, y: 10, w: 86, h: 34 };
         if (
           touchX >= instBtn.x &&
           touchX <= instBtn.x + instBtn.w &&
@@ -130,19 +135,19 @@ export class Game {
       }
 
       // 1. Guild Appraisal Modal
-      if (this.guildNPC.handleTouch(touchX, touchY, this.canvas.width, this.canvas.height, this.player, this.floatingText)) {
+      if (this.guildNPC.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight, this.player, this.floatingText)) {
         return true;
       }
       // 2. Auth Profile / Logout buttons
-      if (this.authUI.handleTouch(touchX, touchY, this.canvas.width)) {
+      if (this.authUI.handleTouch(touchX, touchY, this.screenWidth)) {
         return true;
       }
       // 3. Mobile Skill Bar
-      if (this.skillBarUI.handleTouch(touchX, touchY, this.canvas.width, this.canvas.height)) {
+      if (this.skillBarUI.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight)) {
         return true;
       }
       // 4. Inventory Backpack
-      return this.inventoryUI.handleTouch(touchX, touchY, this.canvas.width, this.canvas.height);
+      return this.inventoryUI.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight);
     });
 
     this.fpsEl = document.getElementById('fps-display');
@@ -229,21 +234,29 @@ export class Game {
   }
 
   public handleResize(): void {
-    const screenWidth = window.innerWidth;
-    const screenHeight = window.innerHeight;
+    const cssWidth = window.innerWidth;
+    const cssHeight = window.innerHeight;
+    // Scale canvas buffer by device pixel ratio for crystal clear Retina / HD+ rendering (capped at 3x)
+    const dpr = Math.min(window.devicePixelRatio || 1, 3);
 
-    this.canvas.width = screenWidth;
-    this.canvas.height = screenHeight;
+    this.screenWidth = cssWidth;
+    this.screenHeight = cssHeight;
+    this.dpr = dpr;
+
+    this.canvas.width = Math.round(cssWidth * dpr);
+    this.canvas.height = Math.round(cssHeight * dpr);
+    this.canvas.style.width = `${cssWidth}px`;
+    this.canvas.style.height = `${cssHeight}px`;
 
     const cfg = ControlSettingsManager.get();
     const zoomMultiplier = cfg.cameraZoom || 1.0;
 
     // Viewport ideal menargetkan ~360px vertikal agar petualangan terasa lapang & tidak sempit
-    const baseScale = Math.max(1, Math.round(screenHeight / 360));
+    const baseScale = Math.max(1, Math.round(cssHeight / 360));
     this.scale = Math.max(0.75, baseScale * zoomMultiplier);
 
-    this.virtualWidth = Math.ceil(screenWidth / this.scale);
-    this.virtualHeight = Math.ceil(screenHeight / this.scale);
+    this.virtualWidth = Math.ceil(cssWidth / this.scale);
+    this.virtualHeight = Math.ceil(cssHeight / this.scale);
 
     this.camera.resize(this.virtualWidth, this.virtualHeight);
   }
@@ -402,14 +415,18 @@ export class Game {
 
   private render(): void {
     const ctx = this.ctx;
-    const screenWidth = this.canvas.width;
-    const screenHeight = this.canvas.height;
+    const screenWidth = this.screenWidth;
+    const screenHeight = this.screenHeight;
 
-    // Clear background
+    // 1. Reset any hardware transforms before clearing the full physical canvas buffer
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
     ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, screenWidth, screenHeight);
+    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
 
-    // Disable image smoothing for crisp pixel-art
+    // 2. High-DPI Scaling: Scale context by device pixel ratio for razor-sharp HD+ rendering
+    ctx.scale(this.dpr, this.dpr);
+
+    // 3. World Rendering: Disable smoothing specifically for authentic pixel-art tiles & sprites
     ctx.imageSmoothingEnabled = false;
 
     // --- WORLD RENDERING (SCALED & TRANSLATED) ---
@@ -445,6 +462,9 @@ export class Game {
     this.floatingText.render(ctx);
 
     ctx.restore();
+
+    // 4. High-DPI UI & Text rendering: Enable smooth anti-aliased font and vector card rendering
+    ctx.imageSmoothingEnabled = true;
 
     // --- SCREEN SPACE 1:1 RENDERING ---
     if (this.onboardingUI.state === 'PLAYING') {
