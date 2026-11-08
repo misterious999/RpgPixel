@@ -71,6 +71,7 @@ export class Player {
   private animTimer: number = 0;
   private breathTimer: number = 0;
   public attackTimer: number = 0;
+  public punchHand: 'left' | 'right' = 'right';
 
   // Role-Specific Skill Casting Animation State
   public castTimer: number = 0;
@@ -337,6 +338,9 @@ export class Player {
 
     if (isAction && this.attackTimer <= 0) {
       this.attackTimer = 0.25;
+      if (this.role === 'NOVICE') {
+        this.punchHand = this.punchHand === 'right' ? 'left' : 'right';
+      }
       if (this.isStealthed) {
         this.isStealthed = false;
         this.stealthTimer = 0;
@@ -538,6 +542,17 @@ export class Player {
       ctx.stroke();
     }
 
+    // Costume attributes
+    const skinColor = this.costume.skinTone || '#fed7aa';
+    const eyeColor = this.costume.eyeColor || '#0f172a';
+    const pantsColor = this.costume.pantsColor || '#1c1917';
+    const pantsStyle = this.costume.pantsStyle || 'trousers';
+    const bootColor = this.costume.bootColor || '#451a03';
+    const bootStyle = this.costume.bootStyle || 'boots';
+    const capeStyle = this.costume.capeStyle || 'cape';
+    const capeColor = this.costume.capeColor || this.costume.accentColor;
+    const outfitStyle = this.costume.outfitStyle || 'tunic';
+
     // Animation variables
     const idleBob = !this.isMoving ? Math.sin(this.breathTimer) * 0.8 : 0;
     const walkStep = this.isMoving ? Math.sin(this.animTimer) : 0;
@@ -545,24 +560,45 @@ export class Player {
     const legOffset2 = -walkStep * 4;
     const capeFlutter = (this.isMoving ? Math.sin(this.animTimer * 1.5) * 2.5 : 0) + (isCasting ? Math.sin(castProgress * Math.PI * 4) * 3.5 : 0);
 
-    const renderY = py + idleBob + castYOffset;
+    // Punching physics for NOVICE
+    const isPunching = this.attackTimer > 0 && this.role === 'NOVICE';
+    const punchProgress = isPunching ? Math.min(1, Math.max(0, 1 - (this.attackTimer / 0.25))) : 0;
+    const punchThrust = isPunching ? Math.sin(punchProgress * Math.PI) * 11 : 0;
+    let punchLeanX = 0;
+    let punchLeanY = 0;
+    if (isPunching) {
+      if (this.direction === 'right') punchLeanX = 2;
+      else if (this.direction === 'left') punchLeanX = -2;
+      else if (this.direction === 'down') punchLeanY = 1.5;
+      else if (this.direction === 'up') punchLeanY = -1.5;
+    }
+
+    const renderX = px + punchLeanX;
+    const renderY = py + idleBob + castYOffset + punchLeanY;
 
     // Angel Wings (Drawn behind back for Healer during cast)
     if (activeRole === 'HEALER' && isCasting) {
-      this.renderAngelWings(ctx, px, renderY, castProgress);
+      this.renderAngelWings(ctx, renderX, renderY, castProgress);
     }
 
-    // 4. Flowing Cape / Mantle (Drawn behind body when facing down or moving)
-    const capeColor = this.costume.accentColor;
-    if (this.direction !== 'up') {
+    // 4. Flowing Cape / Mantle / Scarf (Drawn behind body when facing down or moving)
+    if (capeStyle !== 'none' && this.direction !== 'up') {
       ctx.fillStyle = capeColor;
-      ctx.fillRect(px + 5 + capeFlutter * 0.5, renderY + 11, 14, 15);
-      // Cape folds / shadow
-      ctx.fillStyle = 'rgba(0,0,0,0.2)';
-      ctx.fillRect(px + 10 + capeFlutter * 0.5, renderY + 13, 4, 13);
+      if (capeStyle === 'scarf') {
+        ctx.fillRect(renderX + 6 + capeFlutter * 0.5, renderY + 11, 12, 8);
+        ctx.fillRect(renderX + (this.direction === 'left' ? 14 : 3) + capeFlutter * 0.8, renderY + 13, 5, 11);
+      } else if (capeStyle === 'mantle') {
+        ctx.fillRect(renderX + 4 + capeFlutter * 0.3, renderY + 11, 16, 12);
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(renderX + 10 + capeFlutter * 0.3, renderY + 13, 4, 10);
+      } else {
+        ctx.fillRect(renderX + 5 + capeFlutter * 0.5, renderY + 11, 14, 15);
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(renderX + 10 + capeFlutter * 0.5, renderY + 13, 4, 13);
+      }
     }
 
-    // 5. Legs & Boots (Dual-tone retro shoes with soles)
+    // 5. Legs & Boots (Customizable Pants & Boots)
     let legSpreadL = 0;
     let legSpreadR = 0;
     if (isCasting && activeRole === 'ASSASSIN') {
@@ -570,157 +606,300 @@ export class Player {
       legSpreadL = -2;
       legSpreadR = 2;
     }
-    // Left Leg & Boot
-    ctx.fillStyle = '#1c1917'; // Dark pant
-    ctx.fillRect(px + 5 + legSpreadL, renderY + 20 + legOffset1, 5, 5);
-    ctx.fillStyle = '#451a03'; // Leather boot upper
-    ctx.fillRect(px + 4 + legSpreadL, renderY + 23 + legOffset1, 6, 6);
-    ctx.fillStyle = '#78350f'; // Boot knee cuff
-    ctx.fillRect(px + 4 + legSpreadL, renderY + 23 + legOffset1, 6, 2);
+    // Left Leg
+    ctx.fillStyle = pantsColor;
+    ctx.fillRect(renderX + 5 + legSpreadL, renderY + 20 + legOffset1, 5, pantsStyle === 'shorts' ? 3 : 5);
+    if (pantsStyle === 'shorts') {
+      ctx.fillStyle = skinColor;
+      ctx.fillRect(renderX + 5 + legSpreadL, renderY + 23 + legOffset1, 5, 2);
+    }
+    // Left Boot / Sabaton / Shoe
+    ctx.fillStyle = bootColor;
+    ctx.fillRect(renderX + 4 + legSpreadL, renderY + 23 + legOffset1, 6, 6);
+    if (bootStyle === 'sabatons') {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.fillRect(renderX + 5 + legSpreadL, renderY + 24 + legOffset1, 4, 2);
+    } else {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      ctx.fillRect(renderX + 4 + legSpreadL, renderY + 23 + legOffset1, 6, 2);
+    }
     ctx.fillStyle = '#0f172a'; // Sole
-    ctx.fillRect(px + 4 + legSpreadL, renderY + 28 + legOffset1, 6, 2);
+    ctx.fillRect(renderX + 4 + legSpreadL, renderY + 28 + legOffset1, 6, 2);
 
-    // Right Leg & Boot
-    ctx.fillStyle = '#1c1917';
-    ctx.fillRect(px + 14 + legSpreadR, renderY + 20 + legOffset2, 5, 5);
-    ctx.fillStyle = '#451a03';
-    ctx.fillRect(px + 14 + legSpreadR, renderY + 23 + legOffset2, 6, 6);
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(px + 14 + legSpreadR, renderY + 23 + legOffset2, 6, 2);
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(px + 14 + legSpreadR, renderY + 28 + legOffset2, 6, 2);
+    // Right Leg
+    ctx.fillStyle = pantsColor;
+    ctx.fillRect(renderX + 14 + legSpreadR, renderY + 20 + legOffset2, 5, pantsStyle === 'shorts' ? 3 : 5);
+    if (pantsStyle === 'shorts') {
+      ctx.fillStyle = skinColor;
+      ctx.fillRect(renderX + 14 + legSpreadR, renderY + 23 + legOffset2, 5, 2);
+    }
+    // Right Boot / Sabaton / Shoe
+    ctx.fillStyle = bootColor;
+    ctx.fillRect(renderX + 14 + legSpreadR, renderY + 23 + legOffset2, 6, 6);
+    if (bootStyle === 'sabatons') {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.fillRect(renderX + 15 + legSpreadR, renderY + 24 + legOffset2, 4, 2);
+    } else {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      ctx.fillRect(renderX + 14 + legSpreadR, renderY + 23 + legOffset2, 6, 2);
+    }
+    ctx.fillStyle = '#0f172a'; // Sole
+    ctx.fillRect(renderX + 14 + legSpreadR, renderY + 28 + legOffset2, 6, 2);
 
-    // 6. Torso & Tunic / Armor
-    // Base Shirt / Armor
+    // 6. Torso & Outfit / Armor
     ctx.fillStyle = this.costume.outfitColor;
-    ctx.fillRect(px + 5, renderY + 10, 14, 12);
+    ctx.fillRect(renderX + 5, renderY + 10, 14, 12);
 
-    // Armor shading / depth highlight
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
-    ctx.fillRect(px + 6, renderY + 11, 5, 8);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-    ctx.fillRect(px + 14, renderY + 11, 4, 9);
+    // Style-specific torso embellishments
+    if (outfitStyle === 'plate') {
+      // Metallic breastplate highlight & center rib
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.fillRect(renderX + 6, renderY + 11, 4, 8);
+      ctx.fillStyle = this.costume.accentColor;
+      ctx.fillRect(renderX + 11, renderY + 11, 2, 8);
+    } else if (outfitStyle === 'robe') {
+      // Flowing robe center trim
+      ctx.fillStyle = this.costume.accentColor;
+      ctx.fillRect(renderX + 11, renderY + 10, 2, 12);
+      ctx.fillRect(renderX + 7, renderY + 20, 10, 2);
+    } else if (outfitStyle === 'gi') {
+      // Martial gi cross fold
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+      ctx.fillRect(renderX + 7, renderY + 11, 3, 7);
+      ctx.fillStyle = skinColor;
+      ctx.fillRect(renderX + 11, renderY + 10, 2, 2);
+    } else if (outfitStyle === 'noble') {
+      // Noble sash & golden embroidery
+      ctx.fillStyle = this.costume.accentColor;
+      ctx.fillRect(renderX + 7, renderY + 10, 3, 11);
+      ctx.fillStyle = '#fde047';
+      ctx.fillRect(renderX + 12, renderY + 12, 2, 2);
+      ctx.fillRect(renderX + 12, renderY + 15, 2, 2);
+    } else {
+      // Tunic / Leather shading
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.18)';
+      ctx.fillRect(renderX + 6, renderY + 11, 5, 8);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+      ctx.fillRect(renderX + 14, renderY + 11, 4, 9);
+    }
 
     // Collar / Neckline trim
-    ctx.fillStyle = '#fed7aa'; // Neck
-    ctx.fillRect(px + 10, renderY + 9, 4, 2);
+    ctx.fillStyle = skinColor; // Neck
+    ctx.fillRect(renderX + 10, renderY + 9, 4, 2);
     ctx.fillStyle = this.costume.accentColor;
-    ctx.fillRect(px + 8, renderY + 10, 8, 2);
+    ctx.fillRect(renderX + 8, renderY + 10, 8, 2);
 
     // Belt & Metallic Buckle & Pouch
     ctx.fillStyle = '#292524'; // Leather belt
-    ctx.fillRect(px + 5, renderY + 18, 14, 3);
+    ctx.fillRect(renderX + 5, renderY + 18, 14, 3);
     ctx.fillStyle = '#facc15'; // Gold buckle
-    ctx.fillRect(px + 11, renderY + 18, 3, 3);
+    ctx.fillRect(renderX + 11, renderY + 18, 3, 3);
     ctx.fillStyle = '#78350f'; // Hip pouch / potion vial
-    ctx.fillRect(px + 16, renderY + 18, 3, 4);
+    ctx.fillRect(renderX + 16, renderY + 18, 3, 4);
 
     // Pauldrons (Shoulder pads)
     ctx.fillStyle = this.costume.accentColor;
-    ctx.fillRect(px + 3, renderY + 10, 3, 4);
-    ctx.fillRect(px + 18, renderY + 10, 3, 4);
+    ctx.fillRect(renderX + 3, renderY + 10, 3, 4);
+    ctx.fillRect(renderX + 18, renderY + 10, 3, 4);
 
-    // 7. Arms & Hands (Animated swing & dynamic skill casting stances)
-    let armSwingL = -walkStep * 3;
-    let armSwingR = walkStep * 3;
+    // 7. Arms & Hands (Unarmed Punching for NOVICE or weapon swing / casting stance)
+    if (isPunching) {
+      const activeHand = this.punchHand; // 'left' or 'right'
+      const fistSize = 4;
+      const armColor = this.costume.outfitColor;
+      const fistColor = skinColor;
+      const knuckleColor = '#ffffff';
 
-    if (isCasting) {
-      if (activeRole === 'MAGICIAN') {
-        // High staff elevation with both arms
-        armSwingL = -9;
-        armSwingR = -11;
-      } else if (activeRole === 'HEALER') {
-        // Devout prayer & scepter elevation
-        armSwingL = -6;
-        armSwingR = -10;
-      } else if (activeRole === 'KNIGHT') {
-        // Dynamic heavy sword slash arc
-        const swingArc = Math.sin(castProgress * Math.PI);
-        armSwingL = -4 + swingArc * 6;
-        armSwingR = -10 + swingArc * 14;
-      } else if (activeRole === 'ASSASSIN') {
-        // Cross daggers forward thrust
-        armSwingL = -6;
-        armSwingR = -6;
-      } else if (activeRole === 'NECROMANCER') {
-        // Incantation downward gesture
-        armSwingL = 3;
-        armSwingR = -3;
+      if (this.direction === 'right') {
+        if (activeHand === 'right') {
+          // Guard with left hand
+          ctx.fillStyle = armColor;
+          ctx.fillRect(renderX + 5, renderY + 13, 4, 4);
+          ctx.fillStyle = fistColor;
+          ctx.fillRect(renderX + 8, renderY + 12, 4, 4);
+
+          // Punch with right hand
+          ctx.fillStyle = armColor;
+          ctx.fillRect(renderX + 16, renderY + 13, 4 + punchThrust * 0.7, 4);
+          ctx.fillStyle = fistColor;
+          ctx.fillRect(renderX + 19 + punchThrust, renderY + 12, fistSize, fistSize);
+          ctx.fillStyle = knuckleColor;
+          ctx.fillRect(renderX + 21 + punchThrust, renderY + 13, 2, 2);
+        } else {
+          // Guard with right hand
+          ctx.fillStyle = armColor;
+          ctx.fillRect(renderX + 16, renderY + 15, 4, 4);
+          ctx.fillStyle = fistColor;
+          ctx.fillRect(renderX + 16, renderY + 17, 4, 4);
+
+          // Punch with left hand (crossover)
+          ctx.fillStyle = armColor;
+          ctx.fillRect(renderX + 14, renderY + 10, 4 + punchThrust * 0.7, 4);
+          ctx.fillStyle = fistColor;
+          ctx.fillRect(renderX + 17 + punchThrust, renderY + 9, fistSize, fistSize);
+          ctx.fillStyle = knuckleColor;
+          ctx.fillRect(renderX + 19 + punchThrust, renderY + 10, 2, 2);
+        }
+      } else if (this.direction === 'left') {
+        if (activeHand === 'left') {
+          // Guard with right hand
+          ctx.fillStyle = armColor;
+          ctx.fillRect(renderX + 15, renderY + 13, 4, 4);
+          ctx.fillStyle = fistColor;
+          ctx.fillRect(renderX + 12, renderY + 12, 4, 4);
+
+          // Punch with left hand
+          ctx.fillStyle = armColor;
+          ctx.fillRect(renderX + 4 - punchThrust * 0.7, renderY + 13, 4 + punchThrust * 0.7, 4);
+          ctx.fillStyle = fistColor;
+          ctx.fillRect(renderX + 1 - punchThrust, renderY + 12, fistSize, fistSize);
+          ctx.fillStyle = knuckleColor;
+          ctx.fillRect(renderX + 1 - punchThrust, renderY + 13, 2, 2);
+        } else {
+          // Guard with left hand
+          ctx.fillStyle = armColor;
+          ctx.fillRect(renderX + 4, renderY + 15, 4, 4);
+          ctx.fillStyle = fistColor;
+          ctx.fillRect(renderX + 4, renderY + 17, 4, 4);
+
+          // Punch with right hand (crossover)
+          ctx.fillStyle = armColor;
+          ctx.fillRect(renderX + 6 - punchThrust * 0.7, renderY + 10, 4 + punchThrust * 0.7, 4);
+          ctx.fillStyle = fistColor;
+          ctx.fillRect(renderX + 3 - punchThrust, renderY + 9, fistSize, fistSize);
+          ctx.fillStyle = knuckleColor;
+          ctx.fillRect(renderX + 3 - punchThrust, renderY + 10, 2, 2);
+        }
+      } else if (this.direction === 'down') {
+        const sideOffset = activeHand === 'right' ? 18 : 2;
+        const otherSide = activeHand === 'right' ? 2 : 18;
+        // Guard arm
+        ctx.fillStyle = armColor;
+        ctx.fillRect(renderX + otherSide, renderY + 11, 4, 4);
+        ctx.fillStyle = fistColor;
+        ctx.fillRect(renderX + otherSide, renderY + 13, 4, 4);
+
+        // Punch arm extending down
+        ctx.fillStyle = armColor;
+        ctx.fillRect(renderX + sideOffset, renderY + 12, 4, 6 + punchThrust * 0.7);
+        ctx.fillStyle = fistColor;
+        ctx.fillRect(renderX + sideOffset - 1, renderY + 17 + punchThrust, fistSize, fistSize);
+        ctx.fillStyle = knuckleColor;
+        ctx.fillRect(renderX + sideOffset, renderY + 19 + punchThrust, 3, 2);
+      } else if (this.direction === 'up') {
+        const sideOffset = activeHand === 'right' ? 18 : 2;
+        const otherSide = activeHand === 'right' ? 2 : 18;
+        // Guard arm
+        ctx.fillStyle = armColor;
+        ctx.fillRect(renderX + otherSide, renderY + 14, 4, 4);
+        ctx.fillStyle = fistColor;
+        ctx.fillRect(renderX + otherSide, renderY + 12, 4, 4);
+
+        // Punch arm extending up
+        ctx.fillStyle = armColor;
+        ctx.fillRect(renderX + sideOffset, renderY + 10 - punchThrust * 0.7, 4, 6 + punchThrust * 0.7);
+        ctx.fillStyle = fistColor;
+        ctx.fillRect(renderX + sideOffset - 1, renderY + 6 - punchThrust, fistSize, fistSize);
+        ctx.fillStyle = knuckleColor;
+        ctx.fillRect(renderX + sideOffset, renderY + 6 - punchThrust, 3, 2);
       }
+    } else {
+      let armSwingL = -walkStep * 3;
+      let armSwingR = walkStep * 3;
+
+      if (isCasting) {
+        if (activeRole === 'MAGICIAN') {
+          armSwingL = -9;
+          armSwingR = -11;
+        } else if (activeRole === 'HEALER') {
+          armSwingL = -6;
+          armSwingR = -10;
+        } else if (activeRole === 'KNIGHT') {
+          const swingArc = Math.sin(castProgress * Math.PI);
+          armSwingL = -4 + swingArc * 6;
+          armSwingR = -10 + swingArc * 14;
+        } else if (activeRole === 'ASSASSIN') {
+          armSwingL = -6;
+          armSwingR = -6;
+        } else if (activeRole === 'NECROMANCER') {
+          armSwingL = 3;
+          armSwingR = -3;
+        }
+      }
+
+      // Left Arm
+      ctx.fillStyle = this.costume.outfitColor;
+      ctx.fillRect(renderX + 2, renderY + 12 + armSwingL, 3, 6);
+      ctx.fillStyle = skinColor; // Left Hand
+      ctx.fillRect(renderX + 2, renderY + 17 + armSwingL, 3, 3);
+
+      // Right Arm
+      ctx.fillStyle = this.costume.outfitColor;
+      ctx.fillRect(renderX + 19, renderY + 12 + armSwingR, 3, 6);
+      ctx.fillStyle = skinColor; // Right Hand
+      ctx.fillRect(renderX + 19, renderY + 17 + armSwingR, 3, 3);
+
+      // 8. EQUIPPED WEAPON in Right Hand based on Role / Magician Element!
+      this.renderEquippedWeapon(ctx, renderX, renderY, armSwingR, isCasting, activeRole, castProgress);
     }
 
-    // Left Arm
-    ctx.fillStyle = this.costume.outfitColor;
-    ctx.fillRect(px + 2, renderY + 12 + armSwingL, 3, 6);
-    ctx.fillStyle = '#fed7aa'; // Left Hand
-    ctx.fillRect(px + 2, renderY + 17 + armSwingL, 3, 3);
-
-    // Right Arm
-    ctx.fillStyle = this.costume.outfitColor;
-    ctx.fillRect(px + 19, renderY + 12 + armSwingR, 3, 6);
-    ctx.fillStyle = '#fed7aa'; // Right Hand
-    ctx.fillRect(px + 19, renderY + 17 + armSwingR, 3, 3);
-
-    // 8. EQUIPPED WEAPON in Right Hand based on Role / Magician Element!
-    this.renderEquippedWeapon(ctx, px, renderY, armSwingR, isCasting, activeRole, castProgress);
-
     // 9. Cape back view (if facing UP, cape covers the back)
-    if (this.direction === 'up') {
+    if (capeStyle !== 'none' && this.direction === 'up') {
       ctx.fillStyle = capeColor;
-      ctx.fillRect(px + 5, renderY + 11, 14, 15);
+      ctx.fillRect(renderX + 5, renderY + 11, 14, 15);
       ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-      ctx.fillRect(px + 9, renderY + 12, 6, 14);
+      ctx.fillRect(renderX + 9, renderY + 12, 6, 14);
     }
 
     // 10. Head & Facial Expressions
     // Chin & Face Base
-    ctx.fillStyle = '#fed7aa';
-    ctx.fillRect(px + 6, renderY + 2, 12, 9);
+    ctx.fillStyle = skinColor;
+    ctx.fillRect(renderX + 6, renderY + 2, 12, 9);
     // Cheek blush / skin tone warmth
     ctx.fillStyle = 'rgba(244, 63, 94, 0.2)';
-    ctx.fillRect(px + 7, renderY + 7, 2, 2);
-    ctx.fillRect(px + 15, renderY + 7, 2, 2);
+    ctx.fillRect(renderX + 7, renderY + 7, 2, 2);
+    ctx.fillRect(renderX + 15, renderY + 7, 2, 2);
 
     // 11. Hair & Headgear (Layered with highlights)
-    this.renderHairAndHeadgear(ctx, px, renderY);
+    this.renderHairAndHeadgear(ctx, renderX, renderY);
 
     // 12. Eyes & Facial Direction
     if (this.direction === 'down') {
       // Eye Whites
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(px + 8, renderY + 5, 3, 3);
-      ctx.fillRect(px + 13, renderY + 5, 3, 3);
-      // Iris / Pupil (Expressive dark blue)
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(px + 9, renderY + 5, 2, 2);
-      ctx.fillRect(px + 14, renderY + 5, 2, 2);
+      ctx.fillRect(renderX + 8, renderY + 5, 3, 3);
+      ctx.fillRect(renderX + 13, renderY + 5, 3, 3);
+      // Iris / Pupil (Custom eyeColor)
+      ctx.fillStyle = eyeColor;
+      ctx.fillRect(renderX + 9, renderY + 5, 2, 2);
+      ctx.fillRect(renderX + 14, renderY + 5, 2, 2);
       // Eye highlight shine
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(px + 9, renderY + 5, 1, 1);
-      ctx.fillRect(px + 14, renderY + 5, 1, 1);
+      ctx.fillRect(renderX + 9, renderY + 5, 1, 1);
+      ctx.fillRect(renderX + 14, renderY + 5, 1, 1);
       // Mouth
       ctx.fillStyle = '#e11d48';
-      ctx.fillRect(px + 11, renderY + 9, 2, 1);
+      ctx.fillRect(renderX + 11, renderY + 9, 2, 1);
     } else if (this.direction === 'left') {
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(px + 7, renderY + 5, 3, 3);
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(px + 7, renderY + 5, 2, 2);
+      ctx.fillRect(renderX + 7, renderY + 5, 3, 3);
+      ctx.fillStyle = eyeColor;
+      ctx.fillRect(renderX + 7, renderY + 5, 2, 2);
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(px + 7, renderY + 5, 1, 1);
+      ctx.fillRect(renderX + 7, renderY + 5, 1, 1);
     } else if (this.direction === 'right') {
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(px + 14, renderY + 5, 3, 3);
-      ctx.fillStyle = '#0f172a';
-      ctx.fillRect(px + 15, renderY + 5, 2, 2);
+      ctx.fillRect(renderX + 14, renderY + 5, 3, 3);
+      ctx.fillStyle = eyeColor;
+      ctx.fillRect(renderX + 15, renderY + 5, 2, 2);
       ctx.fillStyle = '#ffffff';
-      ctx.fillRect(px + 16, renderY + 5, 1, 1);
+      ctx.fillRect(renderX + 16, renderY + 5, 1, 1);
     } else if (this.direction === 'up') {
       // Back of hair
       ctx.fillStyle = this.costume.hairColor;
-      ctx.fillRect(px + 6, renderY + 2, 12, 9);
+      ctx.fillRect(renderX + 6, renderY + 2, 12, 9);
       ctx.fillStyle = 'rgba(0,0,0,0.2)';
-      ctx.fillRect(px + 7, renderY + 7, 10, 4);
+      ctx.fillRect(renderX + 7, renderY + 7, 10, 4);
     }
 
     // Role-Specific Cast Overlays:
@@ -730,9 +909,9 @@ export class Player {
       const eyeAlpha = Math.sin(castProgress * Math.PI);
       ctx.globalAlpha = eyeAlpha;
       const eyeY = renderY + 6;
-      let eyeCenterX = px + 11;
-      if (this.direction === 'left') eyeCenterX = px + 8;
-      else if (this.direction === 'right') eyeCenterX = px + 15;
+      let eyeCenterX = renderX + 11;
+      if (this.direction === 'left') eyeCenterX = renderX + 8;
+      else if (this.direction === 'right') eyeCenterX = renderX + 15;
 
       ctx.strokeStyle = '#ef4444';
       ctx.lineWidth = 2;
@@ -754,13 +933,13 @@ export class Player {
       ctx.strokeStyle = '#facc15';
       ctx.lineWidth = 1.8;
       ctx.beginPath();
-      ctx.ellipse(px + 12, renderY - 5, 8, 2.5, 0, 0, Math.PI * 2);
+      ctx.ellipse(renderX + 12, renderY - 5, 8, 2.5, 0, 0, Math.PI * 2);
       ctx.stroke();
 
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 0.8;
       ctx.beginPath();
-      ctx.ellipse(px + 12, renderY - 5, 6.5, 1.8, 0, 0, Math.PI * 2);
+      ctx.ellipse(renderX + 12, renderY - 5, 6.5, 1.8, 0, 0, Math.PI * 2);
       ctx.stroke();
       ctx.restore();
     }
@@ -769,20 +948,24 @@ export class Player {
     if (activeRole === 'NECROMANCER' && isCasting) {
       const angle1 = castProgress * Math.PI * 4;
       const angle2 = angle1 + Math.PI;
-      this.renderSoulWisp(ctx, px + 12 + Math.cos(angle1) * 16, renderY + 14 + Math.sin(angle1) * 7);
-      this.renderSoulWisp(ctx, px + 12 + Math.cos(angle2) * 16, renderY + 14 + Math.sin(angle2) * 7);
+      this.renderSoulWisp(ctx, renderX + 12 + Math.cos(angle1) * 16, renderY + 14 + Math.sin(angle1) * 7);
+      this.renderSoulWisp(ctx, renderX + 12 + Math.cos(angle2) * 16, renderY + 14 + Math.sin(angle2) * 7);
     }
 
-    // 13. Attack Slash Swing
+    // 13. Attack Slash Swing / Punch Impact
     if (this.attackTimer > 0) {
-      ctx.strokeStyle = '#fef08a';
-      ctx.lineWidth = 3;
-      ctx.beginPath();
-      if (this.direction === 'right') ctx.arc(px + 26, renderY + 14, 16, -Math.PI * 0.35, Math.PI * 0.35);
-      else if (this.direction === 'left') ctx.arc(px - 2, renderY + 14, 16, Math.PI * 0.65, Math.PI * 1.35);
-      else if (this.direction === 'down') ctx.arc(px + 12, renderY + 28, 16, Math.PI * 0.15, Math.PI * 0.85);
-      else if (this.direction === 'up') ctx.arc(px + 12, renderY - 4, 16, Math.PI * 1.15, Math.PI * 1.85);
-      ctx.stroke();
+      if (this.role === 'NOVICE') {
+        this.renderPunchImpact(ctx, renderX, renderY, this.direction, punchProgress);
+      } else {
+        ctx.strokeStyle = '#fef08a';
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        if (this.direction === 'right') ctx.arc(renderX + 26, renderY + 14, 16, -Math.PI * 0.35, Math.PI * 0.35);
+        else if (this.direction === 'left') ctx.arc(renderX - 2, renderY + 14, 16, Math.PI * 0.65, Math.PI * 1.35);
+        else if (this.direction === 'down') ctx.arc(renderX + 12, renderY + 28, 16, Math.PI * 0.15, Math.PI * 0.85);
+        else if (this.direction === 'up') ctx.arc(renderX + 12, renderY - 4, 16, Math.PI * 1.15, Math.PI * 1.85);
+        ctx.stroke();
+      }
     }
 
     // 14. Cast Particles (Foreground sparkles, crosses, embers)
@@ -1028,7 +1211,12 @@ export class Player {
     const wx = px + 21;
     const wy = py + 16 + armSwing;
 
-    if (this.role === 'KNIGHT' || this.role === 'NOVICE') {
+    if (this.role === 'NOVICE') {
+      // Novice has no weapon equipped, bare fists only!
+      return;
+    }
+
+    if (this.role === 'KNIGHT') {
       // Silver Steel Broadsword
       ctx.fillStyle = '#64748b'; // Pommel
       ctx.fillRect(wx - 1, wy + 4, 3, 2);
@@ -1154,8 +1342,9 @@ export class Player {
 
   private renderHairAndHeadgear(ctx: CanvasRenderingContext2D, px: number, py: number): void {
     const hair = this.costume.hairColor;
+    const style = this.costume.hairStyle;
 
-    if (this.costume.hairStyle === 'short') {
+    if (style === 'short') {
       // Layered bangs with volume
       ctx.fillStyle = hair;
       ctx.fillRect(px + 5, py, 14, 5);
@@ -1169,7 +1358,7 @@ export class Player {
       ctx.fillRect(px + 7, py + 4, 2, 2);
       ctx.fillRect(px + 11, py + 4, 2, 2);
       ctx.fillRect(px + 14, py + 4, 2, 2);
-    } else if (this.costume.hairStyle === 'spiky') {
+    } else if (style === 'spiky') {
       // Dynamic anime spiky tufts
       ctx.fillStyle = hair;
       ctx.fillRect(px + 5, py - 2, 14, 7);
@@ -1182,7 +1371,7 @@ export class Player {
       // Highlight
       ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
       ctx.fillRect(px + 8, py - 1, 6, 2);
-    } else if (this.costume.hairStyle === 'long') {
+    } else if (style === 'long') {
       // Long flowing locks past shoulders
       ctx.fillStyle = hair;
       ctx.fillRect(px + 5, py, 14, 5);
@@ -1191,7 +1380,7 @@ export class Player {
       // Forehead headband
       ctx.fillStyle = this.costume.accentColor;
       ctx.fillRect(px + 6, py + 2, 12, 2);
-    } else if (this.costume.hairStyle === 'hood') {
+    } else if (style === 'hood') {
       // Deep cowl hood covering head with folded collar
       const hoodCol = this.costume.hatColor || this.costume.outfitColor;
       ctx.fillStyle = hoodCol;
@@ -1203,7 +1392,138 @@ export class Player {
       // Inner shadow of the hood
       ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
       ctx.fillRect(px + 6, py + 2, 12, 3);
+    } else if (style === 'ponytail') {
+      // Samurai / high tied ponytail
+      ctx.fillStyle = hair;
+      ctx.fillRect(px + 5, py, 14, 5);
+      ctx.fillRect(px + 4, py + 2, 3, 6);
+      ctx.fillRect(px + 17, py + 2, 3, 6);
+      // Tie band
+      ctx.fillStyle = this.costume.accentColor;
+      ctx.fillRect(px + 17, py - 2, 3, 3);
+      // Ponytail arc lock
+      ctx.fillStyle = hair;
+      ctx.fillRect(px + 19, py - 1, 4, 12);
+      ctx.fillRect(px + 21, py + 8, 3, 5);
+      // Headband
+      ctx.fillStyle = this.costume.accentColor;
+      ctx.fillRect(px + 6, py + 2, 12, 2);
+    } else if (style === 'wild') {
+      // Messy voluminous beast / elven wild locks
+      ctx.fillStyle = hair;
+      ctx.fillRect(px + 4, py - 2, 16, 7);
+      ctx.fillRect(px + 1, py, 4, 10);
+      ctx.fillRect(px + 19, py, 4, 10);
+      ctx.fillRect(px + 6, py - 4, 4, 3);
+      ctx.fillRect(px + 14, py - 5, 4, 4);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.fillRect(px + 7, py - 1, 10, 2);
+    } else if (style === 'helmet') {
+      // Heavy metal knight/gladiator helmet
+      const helmCol = this.costume.hatColor || '#475569';
+      ctx.fillStyle = helmCol;
+      ctx.fillRect(px + 4, py - 3, 16, 9);
+      ctx.fillRect(px + 3, py + 2, 4, 8);
+      ctx.fillRect(px + 17, py + 2, 4, 8);
+      // Crest plume
+      ctx.fillStyle = this.costume.accentColor;
+      ctx.fillRect(px + 10, py - 6, 4, 4);
+      // Brow visor rim
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(px + 4, py + 2, 16, 2);
+      // Eye slit
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(px + 7, py + 4, 10, 2);
+    } else if (style === 'crown') {
+      // Golden royal crown over noble hair
+      ctx.fillStyle = hair;
+      ctx.fillRect(px + 5, py, 14, 5);
+      ctx.fillRect(px + 4, py + 2, 3, 6);
+      ctx.fillRect(px + 17, py + 2, 3, 6);
+      // Gold crown
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(px + 5, py - 2, 14, 3);
+      ctx.fillRect(px + 5, py - 5, 3, 3);
+      ctx.fillRect(px + 10, py - 6, 4, 4);
+      ctx.fillRect(px + 16, py - 5, 3, 3);
+      // Jewel
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(px + 11, py - 1, 2, 2);
+    } else if (style === 'bandana') {
+      // Cloth bandana wrap with spiky tufts & knot tails
+      ctx.fillStyle = hair;
+      ctx.fillRect(px + 5, py - 2, 14, 4);
+      ctx.fillRect(px + 7, py - 4, 3, 3);
+      ctx.fillRect(px + 14, py - 4, 3, 3);
+      // Wrap
+      ctx.fillStyle = this.costume.hatColor || this.costume.accentColor;
+      ctx.fillRect(px + 4, py + 1, 16, 4);
+      // Flutter tails
+      ctx.fillRect(px + 19, py + 2, 3, 3);
+      ctx.fillRect(px + 21, py + 4, 2, 5);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.fillRect(px + 6, py + 1, 12, 1);
     }
+  }
+
+  private renderPunchImpact(ctx: CanvasRenderingContext2D, px: number, py: number, dir: string, progress: number): void {
+    if (progress <= 0 || progress >= 1) return;
+    ctx.save();
+    const impactAlpha = Math.sin(progress * Math.PI);
+    ctx.globalAlpha = impactAlpha;
+
+    let ix = px + 12;
+    let iy = py + 14;
+    if (dir === 'right') { ix = px + 28; iy = py + 14; }
+    else if (dir === 'left') { ix = px - 4; iy = py + 14; }
+    else if (dir === 'down') { ix = px + 12; iy = py + 28; }
+    else if (dir === 'up') { ix = px + 12; iy = py; }
+
+    // 1. Comic impact starburst (4-point diamond star)
+    const starSize = 5 + Math.sin(progress * Math.PI) * 5;
+    ctx.fillStyle = '#fef08a';
+    ctx.beginPath();
+    ctx.moveTo(ix, iy - starSize);
+    ctx.lineTo(ix + starSize * 0.35, iy - starSize * 0.35);
+    ctx.lineTo(ix + starSize, iy);
+    ctx.lineTo(ix + starSize * 0.35, iy + starSize * 0.35);
+    ctx.lineTo(ix, iy + starSize);
+    ctx.lineTo(ix - starSize * 0.35, iy + starSize * 0.35);
+    ctx.lineTo(ix - starSize, iy);
+    ctx.lineTo(ix - starSize * 0.35, iy - starSize * 0.35);
+    ctx.closePath();
+    ctx.fill();
+
+    // 2. Punch core spark
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(ix - 1.5, iy - 1.5, 3, 3);
+
+    // 3. Air woosh motion streaks
+    ctx.strokeStyle = '#fde047';
+    ctx.lineWidth = 1.5;
+    if (dir === 'right') {
+      ctx.beginPath();
+      ctx.moveTo(ix - 8, iy - 4); ctx.lineTo(ix + 6, iy - 5);
+      ctx.moveTo(ix - 10, iy + 4); ctx.lineTo(ix + 6, iy + 5);
+      ctx.stroke();
+    } else if (dir === 'left') {
+      ctx.beginPath();
+      ctx.moveTo(ix + 8, iy - 4); ctx.lineTo(ix - 6, iy - 5);
+      ctx.moveTo(ix + 10, iy + 4); ctx.lineTo(ix - 6, iy + 5);
+      ctx.stroke();
+    } else if (dir === 'down') {
+      ctx.beginPath();
+      ctx.moveTo(ix - 4, iy - 8); ctx.lineTo(ix - 5, iy + 6);
+      ctx.moveTo(ix + 4, iy - 10); ctx.lineTo(ix + 5, iy + 6);
+      ctx.stroke();
+    } else if (dir === 'up') {
+      ctx.beginPath();
+      ctx.moveTo(ix - 4, iy + 8); ctx.lineTo(ix - 5, iy - 6);
+      ctx.moveTo(ix + 4, iy + 10); ctx.lineTo(ix + 5, iy - 6);
+      ctx.stroke();
+    }
+
+    ctx.restore();
   }
 
   private renderMinion(ctx: CanvasRenderingContext2D, minion: Minion): void {

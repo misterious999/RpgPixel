@@ -102,52 +102,63 @@ export class OnboardingUI {
       const costume = CHARACTER_COSTUMES[this.selectedCostumeIndex];
 
       overlay.innerHTML = `
-        <div style="max-width: 520px; width: 94%; max-height: 94vh; background: #0f172a; border: 2px solid #38bdf8; border-radius: 14px; padding: 16px 20px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.85); box-sizing: border-box;">
-          <div style="font-size: 18px; font-weight: 800; color: #38bdf8; margin-bottom: 2px; letter-spacing: 0.5px;">KUSTOMISASI KARAKTER</div>
-          <div style="font-size: 10px; color: #94a3b8; margin-bottom: 12px;">Tentukan nama dan kostum pahlawanmu sebelum menjelajah dunia</div>
+        <div style="max-width: 560px; width: 94%; max-height: 94vh; background: #0f172a; border: 2px solid #38bdf8; border-radius: 14px; padding: 14px 16px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.85); box-sizing: border-box; overflow-y: auto;">
+          <div style="font-size: 17px; font-weight: 800; color: #38bdf8; margin-bottom: 2px; letter-spacing: 0.5px;">KUSTOMISASI KARAKTER</div>
+          <div style="font-size: 10px; color: #94a3b8; margin-bottom: 10px;">Detail kostum dari ujung kepala hingga kaki & gaya petualang</div>
 
-          <!-- 2-Column Landscape Layout -->
-          <div style="display: flex; gap: 16px; text-align: left; margin-bottom: 12px;">
-            <!-- Kolom Kiri: Avatar Preview & Username Input -->
-            <div style="flex: 1; display: flex; flex-direction: column; justify-content: space-between;">
-              <div style="display: flex; align-items: center; gap: 12px; margin-bottom: 10px;">
-                <div style="width: 68px; height: 68px; background: #1e293b; border: 2px solid #38bdf8; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
+          <!-- 2-Column Responsive Layout -->
+          <div style="display: flex; flex-wrap: wrap; gap: 12px; text-align: left; margin-bottom: 10px;">
+            <!-- Kolom Kiri: Avatar Preview & Specs & Username Input -->
+            <div style="flex: 1 1 200px; display: flex; flex-direction: column; gap: 8px;">
+              <div style="display: flex; align-items: center; gap: 10px; background: #1e293b; padding: 8px 10px; border-radius: 8px; border: 1px solid #334155;">
+                <div style="width: 64px; height: 64px; background: #0b1329; border: 2px solid #38bdf8; border-radius: 10px; display: flex; align-items: center; justify-content: center; flex-shrink: 0;">
                   <canvas id="preview-avatar-canvas" width="64" height="64"></canvas>
                 </div>
-                <div>
-                  <div style="font-size: 11px; font-weight: 700; color: #38bdf8;" id="costume-name">${costume.name}</div>
-                  <div style="font-size: 9px; color: #94a3b8; margin-top: 2px;">Kostum pilihan petualang</div>
+                <div style="flex: 1; min-width: 0;">
+                  <div style="font-size: 12px; font-weight: 800; color: #38bdf8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;" id="costume-name">${costume.name}</div>
+                  <div style="font-size: 9px; color: #cbd5e1; margin-top: 2px;">
+                    <div>👤 Kulit: <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${costume.skinTone || '#fed7aa'};vertical-align:middle;"></span> | Mata: <span style="display:inline-block;width:8px;height:8px;border-radius:50%;background:${costume.eyeColor || '#0f172a'};vertical-align:middle;"></span></div>
+                    <div>🛡️ ${costume.outfitStyle || 'tunic'} | 👢 ${costume.bootStyle || 'boots'}</div>
+                    <div style="color: #facc15; font-weight: 600;">🥊 Senjata: Tinju Kosong</div>
+                  </div>
                 </div>
               </div>
 
               <div>
                 <label style="font-size: 10px; font-weight: bold; color: #cbd5e1; display: block; margin-bottom: 4px;">
-                  Username (Maks. 15 Karakter):
+                  Username Petualang:
                 </label>
                 <input id="input-username" type="text" maxlength="15" value="${this.username}" placeholder="Nama Petualang..." 
-                  style="width: 100%; box-sizing: border-box; padding: 8px 12px; background: #1e293b; border: 1px solid #475569; border-radius: 6px; color: #ffffff; font-size: 13px; outline: none;">
+                  style="width: 100%; box-sizing: border-box; padding: 7px 10px; background: #1e293b; border: 1px solid #475569; border-radius: 6px; color: #ffffff; font-size: 12px; outline: none;">
                 <div id="username-error" style="color: #ef4444; font-size: 9px; margin-top: 3px; display: none;">Username tidak boleh kosong!</div>
               </div>
             </div>
 
-            <!-- Kolom Kanan: Pilihan 8 Kostum & Tombol Mulai -->
-            <div style="flex: 1.2; display: flex; flex-direction: column; justify-content: space-between;">
+            <!-- Kolom Kanan: Pilihan 16 Kostum & Tombol Mulai -->
+            <div style="flex: 1 1 240px; display: flex; flex-direction: column; justify-content: space-between;">
               <div>
-                <label style="font-size: 10px; font-weight: bold; color: #cbd5e1; display: block; margin-bottom: 6px;">
-                  Pilih Gaya Kostum Karakter:
-                </label>
-                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 6px; margin-bottom: 10px;">
+                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 4px;">
+                  <label style="font-size: 10px; font-weight: bold; color: #cbd5e1;">
+                    Pilih Setelan Kostum (${CHARACTER_COSTUMES.length} Variasi):
+                  </label>
+                  <span style="font-size: 9px; color: #38bdf8; font-weight: 600;">#${this.selectedCostumeIndex + 1} / ${CHARACTER_COSTUMES.length}</span>
+                </div>
+                <div style="display: grid; grid-template-columns: repeat(4, 1fr); gap: 5px; max-height: 130px; overflow-y: auto; padding: 3px; margin-bottom: 8px; border: 1px solid #1e293b; border-radius: 6px; background: rgba(15, 23, 42, 0.6);">
                   ${CHARACTER_COSTUMES.map((c, i) => `
-                    <div class="costume-opt" data-idx="${i}" style="padding: 6px 3px; background: ${i === this.selectedCostumeIndex ? '#1e3a8a' : '#1e293b'}; border: 2px solid ${i === this.selectedCostumeIndex ? '#38bdf8' : '#334155'}; border-radius: 6px; cursor: pointer; text-align: center;">
-                      <div style="width: 14px; height: 14px; border-radius: 50%; background: ${c.outfitColor}; margin: 0 auto 3px; border: 1px solid #ffffff;"></div>
-                      <div style="font-size: 8px; font-weight: bold; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name.split(' ')[0]}</div>
+                    <div class="costume-opt" data-idx="${i}" style="padding: 4px 2px; background: ${i === this.selectedCostumeIndex ? '#1e3a8a' : '#1e293b'}; border: 1.5px solid ${i === this.selectedCostumeIndex ? '#38bdf8' : '#334155'}; border-radius: 6px; cursor: pointer; text-align: center; transition: all 0.15s ease;">
+                      <div style="display: flex; justify-content: center; gap: 2px; margin-bottom: 2px;">
+                        <span style="width: 8px; height: 8px; border-radius: 50%; background: ${c.hairColor}; border: 0.5px solid #fff;"></span>
+                        <span style="width: 8px; height: 8px; border-radius: 50%; background: ${c.outfitColor}; border: 0.5px solid #fff;"></span>
+                        <span style="width: 8px; height: 8px; border-radius: 50%; background: ${c.bootColor || '#451a03'}; border: 0.5px solid #fff;"></span>
+                      </div>
+                      <div style="font-size: 7.5px; font-weight: bold; color: #f1f5f9; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">${c.name.split(' ')[0]}</div>
                     </div>
                   `).join('')}
                 </div>
               </div>
 
               <!-- Submit Button -->
-              <button id="btn-start-game" style="width: 100%; padding: 10px; background: #22c55e; color: #ffffff; border: none; border-radius: 8px; font-size: 13px; font-weight: 800; cursor: pointer; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);">
+              <button id="btn-start-game" style="width: 100%; padding: 9px; background: #22c55e; color: #ffffff; border: none; border-radius: 8px; font-size: 13px; font-weight: 800; cursor: pointer; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);">
                 ⚔️ MULAI MENJELAJAH
               </button>
             </div>
@@ -209,6 +220,16 @@ export class OnboardingUI {
     const px = 20;
     const py = 14;
 
+    const skin = costume.skinTone || '#fed7aa';
+    const eyes = costume.eyeColor || '#0f172a';
+    const pants = costume.pantsColor || '#1c1917';
+    const pantsStyle = costume.pantsStyle || 'trousers';
+    const boots = costume.bootColor || '#451a03';
+    const bootStyle = costume.bootStyle || 'boots';
+    const cape = costume.capeColor || costume.accentColor;
+    const capeStyle = costume.capeStyle || 'cape';
+    const outfitStyle = costume.outfitStyle || 'tunic';
+
     // 1. Soft Shadow
     ctx.fillStyle = 'rgba(0,0,0,0.25)';
     ctx.beginPath();
@@ -216,83 +237,128 @@ export class OnboardingUI {
     ctx.fill();
 
     // 2. Flowing Cape Behind
-    ctx.fillStyle = costume.accentColor;
-    ctx.fillRect(px + 5, py + 12, 14, 15);
-    ctx.fillStyle = 'rgba(0,0,0,0.2)';
-    ctx.fillRect(px + 10, py + 14, 4, 13);
+    if (capeStyle !== 'none') {
+      ctx.fillStyle = cape;
+      if (capeStyle === 'scarf') {
+        ctx.fillRect(px + 6, py + 12, 12, 8);
+        ctx.fillRect(px + 3, py + 14, 5, 11);
+      } else if (capeStyle === 'mantle') {
+        ctx.fillRect(px + 4, py + 12, 16, 12);
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(px + 10, py + 14, 4, 10);
+      } else {
+        ctx.fillRect(px + 5, py + 12, 14, 15);
+        ctx.fillStyle = 'rgba(0,0,0,0.2)';
+        ctx.fillRect(px + 10, py + 14, 4, 13);
+      }
+    }
 
-    // 3. Legs & Leather Boots with soles
-    ctx.fillStyle = '#1c1917';
-    ctx.fillRect(px + 5, py + 21, 5, 5);
-    ctx.fillRect(px + 14, py + 21, 5, 5);
-    ctx.fillStyle = '#451a03';
+    // 3. Legs & Boots
+    ctx.fillStyle = pants;
+    ctx.fillRect(px + 5, py + 21, 5, pantsStyle === 'shorts' ? 3 : 5);
+    ctx.fillRect(px + 14, py + 21, 5, pantsStyle === 'shorts' ? 3 : 5);
+    if (pantsStyle === 'shorts') {
+      ctx.fillStyle = skin;
+      ctx.fillRect(px + 5, py + 24, 5, 2);
+      ctx.fillRect(px + 14, py + 24, 5, 2);
+    }
+    // Boots
+    ctx.fillStyle = boots;
     ctx.fillRect(px + 4, py + 24, 6, 6);
     ctx.fillRect(px + 14, py + 24, 6, 6);
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(px + 4, py + 24, 6, 2);
-    ctx.fillRect(px + 14, py + 24, 6, 2);
-    ctx.fillStyle = '#0f172a';
+    if (bootStyle === 'sabatons') {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.fillRect(px + 5, py + 25, 4, 2);
+      ctx.fillRect(px + 15, py + 25, 4, 2);
+    } else {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+      ctx.fillRect(px + 4, py + 24, 6, 2);
+      ctx.fillRect(px + 14, py + 24, 6, 2);
+    }
+    ctx.fillStyle = '#0f172a'; // Sole
     ctx.fillRect(px + 4, py + 29, 6, 2);
     ctx.fillRect(px + 14, py + 29, 6, 2);
 
-    // 4. Torso & Shaded Armor
+    // 4. Torso & Shaded Outfit
     ctx.fillStyle = costume.outfitColor;
     ctx.fillRect(px + 5, py + 11, 14, 12);
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
-    ctx.fillRect(px + 6, py + 12, 5, 8);
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-    ctx.fillRect(px + 14, py + 12, 4, 9);
+
+    if (outfitStyle === 'plate') {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.35)';
+      ctx.fillRect(px + 6, py + 12, 4, 8);
+      ctx.fillStyle = costume.accentColor;
+      ctx.fillRect(px + 11, py + 12, 2, 8);
+    } else if (outfitStyle === 'robe') {
+      ctx.fillStyle = costume.accentColor;
+      ctx.fillRect(px + 11, py + 11, 2, 12);
+      ctx.fillRect(px + 7, py + 21, 10, 2);
+    } else if (outfitStyle === 'gi') {
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+      ctx.fillRect(px + 7, py + 12, 3, 7);
+      ctx.fillStyle = skin;
+      ctx.fillRect(px + 11, py + 11, 2, 2);
+    } else if (outfitStyle === 'noble') {
+      ctx.fillStyle = costume.accentColor;
+      ctx.fillRect(px + 7, py + 11, 3, 11);
+      ctx.fillStyle = '#fde047';
+      ctx.fillRect(px + 12, py + 13, 2, 2);
+      ctx.fillRect(px + 12, py + 16, 2, 2);
+    } else {
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.2)';
+      ctx.fillRect(px + 6, py + 12, 5, 8);
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+      ctx.fillRect(px + 14, py + 12, 4, 9);
+    }
 
     // Neck & Collar
-    ctx.fillStyle = '#fed7aa';
+    ctx.fillStyle = skin;
     ctx.fillRect(px + 10, py + 10, 4, 2);
     ctx.fillStyle = costume.accentColor;
     ctx.fillRect(px + 8, py + 11, 8, 2);
 
-    // Belt & Gold Buckle
+    // Belt & Gold Buckle & Pouch
     ctx.fillStyle = '#292524';
     ctx.fillRect(px + 5, py + 19, 14, 3);
     ctx.fillStyle = '#facc15';
     ctx.fillRect(px + 11, py + 19, 3, 3);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(px + 16, py + 19, 3, 4);
 
     // Pauldrons (Shoulder Armor)
     ctx.fillStyle = costume.accentColor;
     ctx.fillRect(px + 3, py + 11, 3, 4);
     ctx.fillRect(px + 18, py + 11, 3, 4);
 
-    // Arms & Hands
+    // Arms & Bare Clenched Fists (Unarmed Novice Stance - NO SWORD)
     ctx.fillStyle = costume.outfitColor;
     ctx.fillRect(px + 2, py + 13, 3, 6);
     ctx.fillRect(px + 19, py + 13, 3, 6);
-    ctx.fillStyle = '#fed7aa';
+    ctx.fillStyle = skin;
     ctx.fillRect(px + 2, py + 18, 3, 3);
     ctx.fillRect(px + 19, py + 18, 3, 3);
-
-    // Equipped Sword in Hand
-    ctx.fillStyle = '#facc15'; // Guard
-    ctx.fillRect(px + 19, py + 19, 5, 2);
-    ctx.fillStyle = '#e2e8f0'; // Blade
-    ctx.fillRect(px + 20, py + 9, 3, 10);
-    ctx.fillStyle = '#ffffff';
-    ctx.fillRect(px + 21, py + 9, 1, 10);
+    // Knuckle shine
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.6)';
+    ctx.fillRect(px + 3, py + 18, 2, 1);
+    ctx.fillRect(px + 20, py + 18, 2, 1);
 
     // 5. Head & Facial Expressions
-    ctx.fillStyle = '#fed7aa';
+    ctx.fillStyle = skin;
     ctx.fillRect(px + 6, py + 3, 12, 9);
     ctx.fillStyle = 'rgba(244, 63, 94, 0.2)'; // Cheek blush
     ctx.fillRect(px + 7, py + 8, 2, 2);
     ctx.fillRect(px + 15, py + 8, 2, 2);
 
-    // Layered Hair
+    // Layered Hair & Headgear
     const hair = costume.hairColor;
-    if (costume.hairStyle === 'short') {
+    const style = costume.hairStyle;
+    if (style === 'short') {
       ctx.fillStyle = hair;
       ctx.fillRect(px + 5, py + 1, 14, 5);
       ctx.fillRect(px + 4, py + 3, 3, 6);
       ctx.fillRect(px + 17, py + 3, 3, 6);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
       ctx.fillRect(px + 7, py + 2, 7, 2);
-    } else if (costume.hairStyle === 'spiky') {
+    } else if (style === 'spiky') {
       ctx.fillStyle = hair;
       ctx.fillRect(px + 5, py - 1, 14, 7);
       ctx.fillRect(px + 3, py + 1, 3, 7);
@@ -302,14 +368,14 @@ export class OnboardingUI {
       ctx.fillRect(px + 15, py - 3, 3, 3);
       ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
       ctx.fillRect(px + 8, py, 6, 2);
-    } else if (costume.hairStyle === 'long') {
+    } else if (style === 'long') {
       ctx.fillStyle = hair;
       ctx.fillRect(px + 5, py + 1, 14, 5);
       ctx.fillRect(px + 3, py + 3, 4, 14);
       ctx.fillRect(px + 17, py + 3, 4, 14);
       ctx.fillStyle = costume.accentColor;
       ctx.fillRect(px + 6, py + 3, 12, 2);
-    } else if (costume.hairStyle === 'hood') {
+    } else if (style === 'hood') {
       const hoodCol = costume.hatColor || costume.outfitColor;
       ctx.fillStyle = hoodCol;
       ctx.fillRect(px + 4, py - 1, 16, 7);
@@ -318,13 +384,69 @@ export class OnboardingUI {
       ctx.fillRect(px + 10, py - 3, 4, 3);
       ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
       ctx.fillRect(px + 6, py + 3, 12, 3);
+    } else if (style === 'ponytail') {
+      ctx.fillStyle = hair;
+      ctx.fillRect(px + 5, py + 1, 14, 5);
+      ctx.fillRect(px + 4, py + 3, 3, 6);
+      ctx.fillRect(px + 17, py + 3, 3, 6);
+      ctx.fillStyle = costume.accentColor;
+      ctx.fillRect(px + 17, py - 1, 3, 3);
+      ctx.fillStyle = hair;
+      ctx.fillRect(px + 19, py, 4, 12);
+      ctx.fillRect(px + 21, py + 9, 3, 5);
+      ctx.fillStyle = costume.accentColor;
+      ctx.fillRect(px + 6, py + 3, 12, 2);
+    } else if (style === 'wild') {
+      ctx.fillStyle = hair;
+      ctx.fillRect(px + 4, py - 1, 16, 7);
+      ctx.fillRect(px + 1, py + 1, 4, 10);
+      ctx.fillRect(px + 19, py + 1, 4, 10);
+      ctx.fillRect(px + 6, py - 3, 4, 3);
+      ctx.fillRect(px + 14, py - 4, 4, 4);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.25)';
+      ctx.fillRect(px + 7, py, 10, 2);
+    } else if (style === 'helmet') {
+      const helmCol = costume.hatColor || '#475569';
+      ctx.fillStyle = helmCol;
+      ctx.fillRect(px + 4, py - 2, 16, 9);
+      ctx.fillRect(px + 3, py + 3, 4, 8);
+      ctx.fillRect(px + 17, py + 3, 4, 8);
+      ctx.fillStyle = costume.accentColor;
+      ctx.fillRect(px + 10, py - 5, 4, 4);
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(px + 4, py + 3, 16, 2);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(px + 7, py + 5, 10, 2);
+    } else if (style === 'crown') {
+      ctx.fillStyle = hair;
+      ctx.fillRect(px + 5, py + 1, 14, 5);
+      ctx.fillRect(px + 4, py + 3, 3, 6);
+      ctx.fillRect(px + 17, py + 3, 3, 6);
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(px + 5, py - 1, 14, 3);
+      ctx.fillRect(px + 5, py - 4, 3, 3);
+      ctx.fillRect(px + 10, py - 5, 4, 4);
+      ctx.fillRect(px + 16, py - 4, 3, 3);
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(px + 11, py, 2, 2);
+    } else if (style === 'bandana') {
+      ctx.fillStyle = hair;
+      ctx.fillRect(px + 5, py - 1, 14, 4);
+      ctx.fillRect(px + 7, py - 3, 3, 3);
+      ctx.fillRect(px + 14, py - 3, 3, 3);
+      ctx.fillStyle = costume.hatColor || costume.accentColor;
+      ctx.fillRect(px + 4, py + 2, 16, 4);
+      ctx.fillRect(px + 19, py + 3, 3, 3);
+      ctx.fillRect(px + 21, py + 5, 2, 5);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.3)';
+      ctx.fillRect(px + 6, py + 2, 12, 1);
     }
 
-    // Expressive Eyes (Shine & Pupils)
+    // Expressive Eyes with custom eyeColor
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(px + 8, py + 6, 3, 3);
     ctx.fillRect(px + 13, py + 6, 3, 3);
-    ctx.fillStyle = '#0f172a';
+    ctx.fillStyle = eyes;
     ctx.fillRect(px + 9, py + 6, 2, 2);
     ctx.fillRect(px + 14, py + 6, 2, 2);
     ctx.fillStyle = '#ffffff';

@@ -15,8 +15,19 @@ export interface CharacterCostume {
   hairColor: string;
   outfitColor: string;
   accentColor: string;
-  hairStyle: 'short' | 'spiky' | 'long' | 'hood';
+  hairStyle: 'short' | 'spiky' | 'long' | 'hood' | 'ponytail' | 'wild' | 'helmet' | 'crown' | 'bandana';
   hatColor?: string;
+  // Head-to-toe detailed customization
+  skinTone?: string;      // Warna kulit wajah & tangan
+  eyeColor?: string;      // Warna pupil iris mata
+  headgear?: 'none' | 'hood' | 'helmet' | 'crown' | 'bandana' | 'headband';
+  outfitStyle?: 'tunic' | 'plate' | 'robe' | 'gi' | 'noble' | 'leather';
+  capeStyle?: 'none' | 'cape' | 'mantle' | 'scarf';
+  capeColor?: string;
+  pantsColor?: string;
+  pantsStyle?: 'trousers' | 'shorts' | 'armored';
+  bootColor?: string;
+  bootStyle?: 'boots' | 'sabatons' | 'tabi' | 'shoes';
 }
 
 export interface Skill {
