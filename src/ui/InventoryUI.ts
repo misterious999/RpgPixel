@@ -3,6 +3,7 @@ import { ITEM_DEFINITIONS } from '../items/ItemTypes.ts';
 import { Player } from '../entities/Player.ts';
 import { FloatingTextManager } from './FloatingText.ts';
 import { CanvasText } from '../utils/CanvasText.ts';
+import { ROLE_INFO } from '../data/RolesData.ts';
 
 export class InventoryUI {
   public isOpen: boolean = false;
@@ -135,6 +136,16 @@ export class InventoryUI {
             this.useSelectedItem();
             return true;
           }
+        } else if (def && def.id === 'ADVENTURER_CARD') {
+          if (
+            touchX >= btnX &&
+            touchX <= btnX + btnWidth &&
+            touchY >= btnY &&
+            touchY <= btnY + btnHeight
+          ) {
+            this.inspectAdventurerCard();
+            return true;
+          }
         }
       }
     }
@@ -175,6 +186,17 @@ export class InventoryUI {
         this.selectedSlotIndex = null;
       }
     }
+  }
+
+  private inspectAdventurerCard(): void {
+    const roleName = ROLE_INFO[this.player.role] ? ROLE_INFO[this.player.role].name : this.player.role;
+    this.floatingText.spawn(
+      this.player.x + 10,
+      this.player.y - 14,
+      `🪪 ${this.player.username} (${roleName} Lv.${this.player.level}) - Terikat Permanen!`,
+      '#38bdf8',
+      3.0
+    );
   }
 
   public render(ctx: CanvasRenderingContext2D, screenWidth: number, screenHeight: number): void {
@@ -314,7 +336,9 @@ export class InventoryUI {
           ctx.fillStyle = '#94a3b8';
           ctx.font = '9px sans-serif';
           const catName =
-            def.category === 'consumable'
+            def.id === 'ADVENTURER_CARD'
+              ? 'Kartu Identitas Resmi'
+              : def.category === 'consumable'
               ? 'Ramuan Obat'
               : def.category === 'material'
               ? 'Material Alam'
@@ -344,7 +368,9 @@ export class InventoryUI {
           );
 
           // Effect Tag
-          const effectText = def.effectValue
+          const effectText = def.id === 'ADVENTURER_CARD'
+            ? `🪪 Pemilik: ${this.player.username} · Role: ${ROLE_INFO[this.player.role]?.name || this.player.role}`
+            : def.effectValue
             ? `✨ Efek: +${def.effectValue} HP Pulih`
             : `✨ Tipe: ${catName}`;
           ctx.fillStyle = '#38bdf8';
@@ -359,8 +385,25 @@ export class InventoryUI {
             2
           );
 
-          // Action Button if consumable
-          if (def.category === 'consumable') {
+          // Action Button
+          if (def.id === 'ADVENTURER_CARD') {
+            const btnX = col2X + 12;
+            const btnY = modalY + modalHeight - 44;
+            const btnWidth = col2W - 24;
+            const btnHeight = 32;
+
+            ctx.fillStyle = '#1e3a8a';
+            ctx.fillRect(btnX, btnY, btnWidth, btnHeight);
+            ctx.strokeStyle = '#60a5fa';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(btnX, btnY, btnWidth, btnHeight);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 11px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🪪 CEK KARTU PETUALANG', btnX + btnWidth / 2, btnY + btnHeight / 2);
+          } else if (def.category === 'consumable') {
             const btnX = col2X + 12;
             const btnY = modalY + modalHeight - 44;
             const btnWidth = col2W - 24;

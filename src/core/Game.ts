@@ -262,6 +262,7 @@ export class Game {
       username: this.player.username,
       costumeId: this.player.costume.id,
       role: this.player.role,
+      hasLockedRole: this.player.hasLockedRole,
       magicianAffinities: this.player.magicianAffinities,
       level: this.player.level,
       exp: this.player.exp,
@@ -318,7 +319,13 @@ export class Game {
         if (found) this.player.costume = found;
       }
       if (data.magicianAffinities) this.player.magicianAffinities = data.magicianAffinities;
-      if (data.role) this.player.setRole(data.role, data.magicianAffinities);
+      if (typeof data.hasLockedRole === 'boolean') this.player.hasLockedRole = data.hasLockedRole;
+      if (data.role) {
+        this.player.setRole(data.role, data.magicianAffinities, true);
+        if (data.role !== 'NOVICE') {
+          this.player.hasLockedRole = true;
+        }
+      }
       if (typeof data.isGuest === 'boolean') this.authUI.isGuest = data.isGuest;
 
       // Pulihkan slot inventaris
@@ -326,6 +333,14 @@ export class Game {
         this.player.inventory.slots = new Array(this.player.inventory.capacity).fill(null);
         for (let i = 0; i < Math.min(data.inventory.length, this.player.inventory.capacity); i++) {
           this.player.inventory.slots[i] = data.inventory[i];
+        }
+      }
+
+      // Pastikan Kartu Petualang selalu ada jika role sudah terkunci
+      if (this.player.hasLockedRole && this.player.role !== 'NOVICE') {
+        const hasCard = this.player.inventory.slots.some(s => s && s.itemId === 'ADVENTURER_CARD');
+        if (!hasCard) {
+          this.player.inventory.addItem('ADVENTURER_CARD', 1);
         }
       }
 
@@ -589,7 +604,7 @@ export class Game {
     // 2. Render Guild NPC
     const playerCenterX = this.player.x + this.player.width / 2;
     const playerCenterY = this.player.y + this.player.height / 2;
-    this.guildNPC.render(ctx, this.guildNPC.isNearPlayer(playerCenterX, playerCenterY));
+    this.guildNPC.render(ctx, this.guildNPC.isNearPlayer(playerCenterX, playerCenterY), this.player);
 
     // 3. Render Chests
     for (const chest of this.chests) {

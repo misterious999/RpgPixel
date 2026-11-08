@@ -56,13 +56,26 @@ export class AuthUI {
     if (typeof save.exp === 'number') this.player.exp = save.exp;
     if (typeof save.max_exp === 'number') this.player.maxExp = save.max_exp;
     if (save.magician_affinities) this.player.magicianAffinities = save.magician_affinities;
-    if (save.role) this.player.setRole(save.role as RoleType, save.magician_affinities);
+    if (save.role) {
+      this.player.setRole(save.role as RoleType, save.magician_affinities, true);
+      if (save.role !== 'NOVICE') {
+        this.player.hasLockedRole = true;
+      }
+    }
 
     // Restore Inventory
     if (Array.isArray(save.inventory)) {
       this.player.inventory.slots = new Array(this.player.inventory.capacity).fill(null);
       for (let i = 0; i < Math.min(save.inventory.length, this.player.inventory.capacity); i++) {
         this.player.inventory.slots[i] = save.inventory[i];
+      }
+    }
+
+    // Pastikan Kartu Petualang selalu ada jika role sudah terkunci
+    if (this.player.hasLockedRole && this.player.role !== 'NOVICE') {
+      const hasCard = this.player.inventory.slots.some(s => s && s.itemId === 'ADVENTURER_CARD');
+      if (!hasCard) {
+        this.player.inventory.addItem('ADVENTURER_CARD', 1);
       }
     }
 

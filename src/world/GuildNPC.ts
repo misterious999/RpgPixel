@@ -1,5 +1,5 @@
 import { RoleType, MagicElement, MagicianAffinities } from '../types/GameTypes.ts';
-import { ROLE_INFO, ELEMENT_INFO, getMagicianSkills } from '../data/RolesData.ts';
+import { ROLE_INFO, ELEMENT_INFO } from '../data/RolesData.ts';
 import { Player } from '../entities/Player.ts';
 import { FloatingTextManager } from '../ui/FloatingText.ts';
 import { CanvasText } from '../utils/CanvasText.ts';
@@ -13,12 +13,15 @@ export class GuildNPC {
 
   public isAppraisalOpen: boolean = false;
   private openTime: number = 0;
-  private selectedRole: RoleType = 'KNIGHT';
 
-  // Special Magician Elemental Affinity Selection state
-  public isChoosingElement: boolean = false;
-  private primaryElement: MagicElement = 'FIRE';
-  private secondaryElements: MagicElement[] = [];
+  // Ceremony State for Novices (Random Awakening by System)
+  public ceremonyState: 'READY' | 'SPINNING' | 'AWAKENED' = 'READY';
+  private spinTimer: number = 0;
+  private spinDuration: number = 1.6;
+  private rouletteIndex: number = 0;
+  private lastSpinTick: number = 0;
+  public candidateRole: RoleType = 'KNIGHT';
+  public candidateAffinities: MagicianAffinities = { primary: 'FIRE', secondaries: ['LIGHTNING'] };
 
   constructor(x: number, y: number) {
     this.x = x;
@@ -33,13 +36,35 @@ export class GuildNPC {
 
   public openAppraisal(): void {
     this.isAppraisalOpen = true;
-    this.isChoosingElement = false;
+    this.ceremonyState = 'READY';
     this.openTime = Date.now();
   }
 
   public closeAppraisal(): void {
     this.isAppraisalOpen = false;
-    this.isChoosingElement = false;
+    this.ceremonyState = 'READY';
+  }
+
+  public startAwakeningCeremony(): void {
+    this.ceremonyState = 'SPINNING';
+    this.spinTimer = 0;
+    this.lastSpinTick = Date.now();
+
+    // Roll random role completely determined by the system
+    const possibleRoles: RoleType[] = ['KNIGHT', 'MAGICIAN', 'ASSASSIN', 'HEALER', 'NECROMANCER'];
+    const chosen = possibleRoles[Math.floor(Math.random() * possibleRoles.length)];
+    this.candidateRole = chosen;
+
+    if (chosen === 'MAGICIAN') {
+      const elements: MagicElement[] = ['FIRE', 'ICE', 'LIGHTNING', 'WIND', 'EARTH'];
+      const primary = elements[Math.floor(Math.random() * elements.length)];
+      const rem = elements.filter((e) => e !== primary);
+      const secondary = rem[Math.floor(Math.random() * rem.length)];
+      this.candidateAffinities = {
+        primary,
+        secondaries: [secondary]
+      };
+    }
   }
 
   public handleTouch(
@@ -52,12 +77,11 @@ export class GuildNPC {
   ): boolean {
     if (!this.isAppraisalOpen) return false;
 
-    // Debounce to prevent click-through immediately upon pressing [A] (220ms)
+    // Debounce to prevent click-through immediately upon opening
     if (Date.now() - this.openTime < 220) {
       return true;
     }
 
-    // Landscape optimized dimensions
     const modalWidth = Math.min(540, screenWidth - 20);
     const modalHeight = Math.min(300, screenHeight - 16);
     const modalX = (screenWidth - modalWidth) / 2;
@@ -70,127 +94,82 @@ export class GuildNPC {
       touchY >= modalY + 4 &&
       touchY <= modalY + 32
     ) {
-      this.closeAppraisal();
+      // If user closes while role is awakened, finalize and award it so it's not lost
+      if (this.ceremonyState === 'AWAKENED') {
+        this.confirmAndAwardRole(player, floatingText);
+      } else {
+        this.closeAppraisal();
+      }
       return true;
     }
 
-    // --- SCREEN 2: MAGICIAN ELEMENTAL AFFINITY SELECTION ---
-    if (this.isChoosingElement) {
-      const elements: MagicElement[] = ['FIRE', 'ICE', 'LIGHTNING', 'WIND', 'EARTH'];
-      const colW = (modalWidth - 36) / 2;
-      const col1X = modalX + 14;
-      const col2X = modalX + 22 + colW;
-
-      // 1. Primary Element Selection Cards (Col 1)
-      const primaryStartY = modalY + 58;
-      const cardW = (colW - 8) / 5;
-      const cardH = 38;
-
-      for (let i = 0; i < elements.length; i++) {
-        const elem = elements[i];
-        const ex = col1X + i * cardW;
-        if (touchX >= ex && touchX <= ex + cardW && touchY >= primaryStartY && touchY <= primaryStartY + cardH) {
-          this.primaryElement = elem;
-          this.secondaryElements = this.secondaryElements.filter((e) => e !== elem);
-          return true;
-        }
-      }
-
-      // 2. Secondary Element Toggles (Col 2)
-      const secStartY = modalY + 58;
-      const secCardW = (colW - 8) / 5;
-      for (let i = 0; i < elements.length; i++) {
-        const elem = elements[i];
-        const ex = col2X + i * secCardW;
-        if (touchX >= ex && touchX <= ex + secCardW && touchY >= secStartY && touchY <= secStartY + cardH) {
-          if (elem === this.primaryElement) return true;
-          if (this.secondaryElements.includes(elem)) {
-            this.secondaryElements = this.secondaryElements.filter((e) => e !== elem);
-          } else {
-            if (this.secondaryElements.length < 2) {
-              this.secondaryElements.push(elem);
-            }
-          }
-          return true;
-        }
-      }
-
-      // Back Button
-      const backBtnW = 65;
-      const backBtnH = 32;
-      const backBtnX = modalX + 14;
-      const backBtnY = modalY + modalHeight - 40;
-      if (
-        touchX >= backBtnX &&
-        touchX <= backBtnX + backBtnW &&
-        touchY >= backBtnY &&
-        touchY <= backBtnY + backBtnH
-      ) {
-        this.isChoosingElement = false;
-        return true;
-      }
-
-      // Confirm Magician Role & Element Button
-      const btnW = colW + 80;
-      const btnH = 32;
-      const btnX = modalX + modalWidth - btnW - 14;
-      const btnY = modalY + modalHeight - 40;
+    // --- CASE A: PLAYER ALREADY HAS A LOCKED ROLE (OFFICIAL CERTIFICATE VIEW) ---
+    if (player.hasLockedRole || player.role !== 'NOVICE') {
+      // Bottom Close Button: "TUTUP (KEMBALI BERPETUALANG)"
+      const btnW = 200;
+      const btnH = 34;
+      const btnX = modalX + modalWidth - btnW - 16;
+      const btnY = modalY + modalHeight - 44;
 
       if (touchX >= btnX && touchX <= btnX + btnW && touchY >= btnY && touchY <= btnY + btnH) {
-        const affinities: MagicianAffinities = {
-          primary: this.primaryElement,
-          secondaries: [...this.secondaryElements]
-        };
-        player.setRole('MAGICIAN', affinities);
-
-        const pName = ELEMENT_INFO[this.primaryElement].name.split(' ')[0];
-        floatingText.spawn(player.x + 10, player.y - 18, `✨ Bangkit: Magician ${pName}!`, '#a855f7', 3.0);
         this.closeAppraisal();
         return true;
       }
-
       return true;
     }
 
-    // --- SCREEN 1: REGULAR ROLE SELECTION TABS ---
-    const roles: RoleType[] = ['KNIGHT', 'MAGICIAN', 'ASSASSIN', 'HEALER', 'NECROMANCER'];
-    const tabHeight = 28;
-    const tabStartY = modalY + 36;
-    const tabWidth = (modalWidth - 24) / roles.length;
+    // --- CASE B: NOVICE AWAKENING CEREMONY ---
+    if (this.ceremonyState === 'READY') {
+      // Button: "🔮 BANGKITKAN TAKDIR JIWA (ACAK OLEH SISTEM)"
+      const btnW = modalWidth - 32;
+      const btnH = 36;
+      const btnX = modalX + 16;
+      const btnY = modalY + modalHeight - 48;
 
-    for (let i = 0; i < roles.length; i++) {
-      const tx = modalX + 12 + i * tabWidth;
-      if (touchX >= tx && touchX <= tx + tabWidth && touchY >= tabStartY && touchY <= tabStartY + tabHeight) {
-        this.selectedRole = roles[i];
+      if (touchX >= btnX && touchX <= btnX + btnW && touchY >= btnY && touchY <= btnY + btnH) {
+        this.startAwakeningCeremony();
         return true;
       }
+      return true;
     }
 
-    // Confirmation Button
-    const colW = (modalWidth - 36) / 2;
-    const col2X = modalX + 22 + colW;
-    const btnW = colW - 8;
-    const btnH = 32;
-    const btnX = col2X + 4;
-    const btnY = modalY + modalHeight - 42;
+    if (this.ceremonyState === 'SPINNING') {
+      // Spinning takes 1.6s; swallow touches
+      return true;
+    }
 
-    if (touchX >= btnX && touchX <= btnX + btnW && touchY >= btnY && touchY <= btnY + btnH) {
-      if (this.selectedRole === 'MAGICIAN') {
-        this.isChoosingElement = true;
+    if (this.ceremonyState === 'AWAKENED') {
+      // Button: "🪪 TERIMA KARTU PETUALANG & MULAI PETUALANGAN"
+      const btnW = modalWidth - 32;
+      const btnH = 36;
+      const btnX = modalX + 16;
+      const btnY = modalY + modalHeight - 48;
+
+      if (touchX >= btnX && touchX <= btnX + btnW && touchY >= btnY && touchY <= btnY + btnH) {
+        this.confirmAndAwardRole(player, floatingText);
         return true;
       }
-
-      player.setRole(this.selectedRole);
-      const roleName = ROLE_INFO[this.selectedRole].name;
-      floatingText.spawn(player.x + 10, player.y - 18, `✨ Role Diperoleh: ${roleName}!`, '#facc15', 3.0);
-      this.closeAppraisal();
       return true;
     }
 
     return true;
   }
 
-  public render(ctx: CanvasRenderingContext2D, isNear: boolean): void {
+  private confirmAndAwardRole(player: Player, floatingText: FloatingTextManager): void {
+    player.setRole(this.candidateRole, this.candidateAffinities, true);
+    player.hasLockedRole = true;
+
+    // Tambahkan Kartu Petualang resmi langsung ke dalam inventaris
+    player.inventory.addItem('ADVENTURER_CARD', 1);
+
+    const roleName = ROLE_INFO[this.candidateRole].name;
+    floatingText.spawn(player.x + 10, player.y - 18, `✨ Takdir Jiwa Bangkit: ${roleName}!`, '#facc15', 3.5);
+    floatingText.spawn(player.x + 10, player.y - 32, '🪪 Menerima Kartu Petualang Resmi!', '#38bdf8', 3.5);
+
+    this.closeAppraisal();
+  }
+
+  public render(ctx: CanvasRenderingContext2D, isNear: boolean, player?: Player): void {
     const x = Math.floor(this.x);
     const y = Math.floor(this.y);
 
@@ -233,8 +212,12 @@ export class GuildNPC {
       const bob = Math.sin(Date.now() / 200) * 2;
       ctx.fillStyle = '#fbbf24';
       ctx.font = 'bold 9.5px sans-serif';
-      ctx.strokeText('💬 [A] Uji Bakat Role', x + 16, y - 16 + bob);
-      ctx.fillText('💬 [A] Uji Bakat Role', x + 16, y - 16 + bob);
+
+      const isLocked = player ? (player.hasLockedRole || player.role !== 'NOVICE') : false;
+      const promptText = isLocked ? '🪪 [A] Kartu Petualang' : '🔮 [A] Uji Takdir Jiwa (Acak)';
+
+      ctx.strokeText(promptText, x + 16, y - 16 + bob);
+      ctx.fillText(promptText, x + 16, y - 16 + bob);
     }
 
     ctx.restore();
@@ -251,10 +234,10 @@ export class GuildNPC {
     ctx.save();
 
     // 1. Dim Background
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.78)';
     ctx.fillRect(0, 0, screenWidth, screenHeight);
 
-    // 2. Modal Box (Landscape 2-Column Layout)
+    // 2. Modal Dimensions (Landscape 2-Column Layout)
     const modalWidth = Math.min(540, screenWidth - 20);
     const modalHeight = Math.min(300, screenHeight - 16);
     const modalX = (screenWidth - modalWidth) / 2;
@@ -262,22 +245,24 @@ export class GuildNPC {
 
     ctx.fillStyle = '#090d16';
     ctx.fillRect(modalX, modalY, modalWidth, modalHeight);
-    ctx.strokeStyle = '#38bdf8';
+    ctx.strokeStyle = '#facc15';
     ctx.lineWidth = 2;
     ctx.strokeRect(modalX, modalY, modalWidth, modalHeight);
 
-    // Header
+    // Top Header Banner
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(modalX, modalY, modalWidth, 34);
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 13px sans-serif';
+
+    const isLocked = player.hasLockedRole || player.role !== 'NOVICE';
+    const headerTitle = isLocked
+      ? '🪪 KARTU IDENTITAS RESMI GUILD ELAINE'
+      : '🔮 UPACARA KEBANGKITAN TAKDIR JIWA (ACAK)';
+
+    ctx.fillStyle = '#facc15';
+    ctx.font = 'bold 12.5px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(
-      this.isChoosingElement ? '🔮 AFINITAS ELEMEN MAGICIAN' : '⚖️ UJI BAKAT SERIKAT GUILD',
-      modalX + 16,
-      modalY + 17
-    );
+    ctx.fillText(headerTitle, modalX + 16, modalY + 17);
 
     // Close button (X)
     ctx.fillStyle = '#ef4444';
@@ -285,362 +270,174 @@ export class GuildNPC {
     ctx.textAlign = 'center';
     ctx.fillText('✕', modalX + modalWidth - 18, modalY + 17);
 
+    // ROUTING:
+    if (isLocked) {
+      this.renderCertificateModal(ctx, modalX, modalY, modalWidth, modalHeight, player);
+    } else {
+      this.renderAwakeningModal(ctx, modalX, modalY, modalWidth, modalHeight, player);
+    }
+
+    ctx.restore();
+  }
+
+  /**
+   * Tampilan Sertifikat & Kartu Petualang Resmi saat player sudah memiliki role terkunci permanen.
+   * User tidak dapat mengganti rolenya lagi walau mati!
+   */
+  private renderCertificateModal(
+    ctx: CanvasRenderingContext2D,
+    modalX: number,
+    modalY: number,
+    modalWidth: number,
+    modalHeight: number,
+    player: Player
+  ): void {
     const colW = (modalWidth - 36) / 2;
     const col1X = modalX + 14;
     const col2X = modalX + 22 + colW;
+    const contentY = modalY + 44;
+    const contentH = modalHeight - 56;
 
-    // --- SCREEN 2: MAGICIAN SPECIAL ELEMENTAL SELECTION ---
-    if (this.isChoosingElement) {
-      const elements: MagicElement[] = ['FIRE', 'ICE', 'LIGHTNING', 'WIND', 'EARTH'];
+    const curRole = ROLE_INFO[player.role] || ROLE_INFO.NOVICE;
 
-      // Col 1: Elemen Utama (Primary)
-      ctx.fillStyle = '#facc15';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText('🌟 1. ELEMEN UTAMA (100% Penuh):', col1X, modalY + 44);
-
-      const cardW = (colW - 8) / 5;
-      const primaryStartY = modalY + 58;
-      for (let i = 0; i < elements.length; i++) {
-        const elem = elements[i];
-        const info = ELEMENT_INFO[elem];
-        const isSelected = this.primaryElement === elem;
-        const ex = col1X + i * cardW;
-
-        ctx.fillStyle = isSelected ? info.color : '#1e293b';
-        ctx.fillRect(ex, primaryStartY, cardW - 2, 38);
-        ctx.strokeStyle = isSelected ? '#ffffff' : '#334155';
-        ctx.lineWidth = isSelected ? 2 : 1;
-        ctx.strokeRect(ex, primaryStartY, cardW - 2, 38);
-
-        ctx.font = '14px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(info.icon, ex + (cardW - 2) / 2, primaryStartY + 13);
-
-        ctx.fillStyle = isSelected ? '#ffffff' : '#94a3b8';
-        ctx.font = 'bold 8px sans-serif';
-        ctx.fillText(info.name.split(' ')[0], ex + (cardW - 2) / 2, primaryStartY + 29);
-      }
-
-      // Primary Element Active Description Card
-      const curPrimaryInfo = ELEMENT_INFO[this.primaryElement];
-      ctx.fillStyle = '#1e293b';
-      ctx.fillRect(col1X, modalY + 104, colW - 2, 140);
-      ctx.strokeStyle = curPrimaryInfo.color;
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(col1X, modalY + 104, colW - 2, 140);
-
-      ctx.fillStyle = curPrimaryInfo.color;
-      ctx.font = 'bold 11px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText(`${curPrimaryInfo.name}`, col1X + 10, modalY + 112);
-
-      ctx.fillStyle = '#cbd5e1';
-      ctx.font = '9px sans-serif';
-      const descH = CanvasText.drawWrappedText(
-        ctx,
-        curPrimaryInfo.description,
-        col1X + 10,
-        modalY + 128,
-        colW - 20,
-        12,
-        4
-      );
-
-      const traitY = Math.max(modalY + 128 + descH + 8, modalY + 180);
-      ctx.fillStyle = '#38bdf8';
-      ctx.font = 'bold 9px sans-serif';
-      ctx.fillText('✨ Keistimewaan Utama:', col1X + 10, traitY);
-      ctx.fillStyle = '#e2e8f0';
-      ctx.font = '8.5px sans-serif';
-      const traitText = CanvasText.truncate(
-        ctx,
-        `• Spesialisasi 100% Sihir ${curPrimaryInfo.name.split(' ')[0]}`,
-        colW - 20
-      );
-      ctx.fillText(traitText, col1X + 10, traitY + 16);
-
-      // Col 2: Elemen Sampingan (Secondary)
-      ctx.fillStyle = '#38bdf8';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText(`⚡ 2. ELEMEN SAMPINGAN [${this.secondaryElements.length}/2]:`, col2X, modalY + 44);
-
-      const secStartY = modalY + 58;
-      for (let i = 0; i < elements.length; i++) {
-        const elem = elements[i];
-        const info = ELEMENT_INFO[elem];
-        const isPrimary = this.primaryElement === elem;
-        const isSelectedSec = this.secondaryElements.includes(elem);
-        const ex = col2X + i * cardW;
-
-        ctx.fillStyle = isPrimary ? '#020617' : isSelectedSec ? '#0369a1' : '#1e293b';
-        ctx.fillRect(ex, secStartY, cardW - 2, 38);
-        ctx.strokeStyle = isSelectedSec ? '#38bdf8' : isPrimary ? '#334155' : '#475569';
-        ctx.lineWidth = isSelectedSec ? 2 : 1;
-        ctx.strokeRect(ex, secStartY, cardW - 2, 38);
-
-        ctx.font = '14px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(info.icon, ex + (cardW - 2) / 2, secStartY + 13);
-
-        ctx.fillStyle = isPrimary ? '#475569' : isSelectedSec ? '#ffffff' : '#94a3b8';
-        ctx.font = 'bold 7.5px sans-serif';
-        const label = isPrimary ? '(Utama)' : info.name.split(' ')[0];
-        ctx.fillText(label, ex + (cardW - 2) / 2, secStartY + 29);
-      }
-
-      // Preview Skills Built
-      const previewAffinities: MagicianAffinities = {
-        primary: this.primaryElement,
-        secondaries: this.secondaryElements
-      };
-      const skillsBuilt = getMagicianSkills(previewAffinities);
-
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText('📖 Mantra Terbentuk:', col2X, modalY + 104);
-
-      const listY = modalY + 120;
-      for (let s = 0; s < Math.min(skillsBuilt.length, 4); s++) {
-        const sk = skillsBuilt[s];
-        const sy = listY + s * 30;
-
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(col2X, sy, colW - 4, 26);
-        ctx.strokeStyle = sk.isPrimaryElement ? curPrimaryInfo.color : '#334155';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(col2X, sy, colW - 4, 26);
-
-        ctx.font = '12px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(sk.iconSymbol, col2X + 14, sy + 13);
-
-        ctx.textAlign = 'left';
-        ctx.fillStyle = sk.color;
-        ctx.font = 'bold 9px sans-serif';
-        const safeSpellName = CanvasText.truncate(ctx, sk.name, colW - 42);
-        ctx.fillText(safeSpellName, col2X + 28, sy + 8);
-
-        ctx.fillStyle = '#94a3b8';
-        ctx.font = '7.5px sans-serif';
-        const safeSpellDesc = CanvasText.truncate(ctx, sk.description, colW - 42);
-        ctx.fillText(safeSpellDesc, col2X + 28, sy + 18);
-      }
-
-      // Back Button
-      ctx.fillStyle = '#334155';
-      ctx.fillRect(col1X, modalY + modalHeight - 40, 65, 32);
-      ctx.strokeStyle = '#475569';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(col1X, modalY + modalHeight - 40, 65, 32);
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('⬅ Kembali', col1X + 32, modalY + modalHeight - 24);
-
-      // Confirm Button
-      const btnW = colW + 80;
-      const btnH = 32;
-      const btnX = modalX + modalWidth - btnW - 14;
-      const btnY = modalY + modalHeight - 40;
-
-      ctx.fillStyle = curPrimaryInfo.color;
-      ctx.fillRect(btnX, btnY, btnW, btnH);
-      ctx.strokeStyle = '#ffffff';
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(btnX, btnY, btnW, btnH);
-
-      ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 11px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      const safeIkrarText = CanvasText.truncate(
-        ctx,
-        `IKRAR MAGICIAN (${curPrimaryInfo.name.split(' ')[0]})`,
-        btnW - 12
-      );
-      ctx.fillText(safeIkrarText, btnX + btnW / 2, btnY + btnH / 2);
-
-      ctx.restore();
-      return;
-    }
-
-    // --- SCREEN 1: REGULAR ROLE APRAISAL TABS ---
-    const roles: RoleType[] = ['KNIGHT', 'MAGICIAN', 'ASSASSIN', 'HEALER', 'NECROMANCER'];
-    const tabHeight = 28;
-    const tabStartY = modalY + 36;
-    const tabWidth = (modalWidth - 24) / roles.length;
-
-    for (let i = 0; i < roles.length; i++) {
-      const r = roles[i];
-      const tx = modalX + 12 + i * tabWidth;
-      const isSelected = this.selectedRole === r;
-      const info = ROLE_INFO[r];
-
-      ctx.fillStyle = isSelected ? info.color : '#1e293b';
-      ctx.fillRect(tx, tabStartY, tabWidth - 2, tabHeight);
-
-      ctx.strokeStyle = isSelected ? '#ffffff' : '#334155';
-      ctx.lineWidth = isSelected ? 1.5 : 1;
-      ctx.strokeRect(tx, tabStartY, tabWidth - 2, tabHeight);
-
-      ctx.fillStyle = isSelected ? '#ffffff' : '#94a3b8';
-      ctx.font = 'bold 9px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(info.tag, tx + (tabWidth - 2) / 2, tabStartY + tabHeight / 2);
-    }
-
-    const curRole = ROLE_INFO[this.selectedRole];
-    const contentY = tabStartY + tabHeight + 8;
-    const contentH = modalHeight - (contentY - modalY) - 12;
-
-    // --- KOLOM 1: ROLE OVERVIEW & DESCRIPTION ---
-    ctx.fillStyle = '#1e293b';
+    // --- KOLOM 1: VISUAL KARTU PETUALANG MEWAH (PASSPORT IDENTITAS) ---
+    ctx.fillStyle = '#0f172a';
     ctx.fillRect(col1X, contentY, colW - 2, contentH);
-    ctx.strokeStyle = '#334155';
-    ctx.lineWidth = 1;
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 1.8;
     ctx.strokeRect(col1X, contentY, colW - 2, contentH);
 
+    // Card Gold Ribbon Header
+    ctx.fillStyle = '#ca8a04';
+    ctx.fillRect(col1X + 2, contentY + 2, colW - 6, 22);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('★ SERIKAT GUILD ELAINE ★', col1X + colW / 2, contentY + 13);
+
+    // Role Emblem Portrait Box
+    const portX = col1X + 12;
+    const portY = contentY + 34;
+    const portSize = 52;
+
     ctx.fillStyle = curRole.color;
-    ctx.font = 'bold 13px sans-serif';
+    ctx.fillRect(portX, portY, portSize, portSize);
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(portX, portY, portSize, portSize);
+
+    // Main Role Symbol Icon
+    const mainIcon = curRole.skills[0]?.iconSymbol || '⚔️';
+    ctx.font = '24px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(mainIcon, portX + portSize / 2, portY + portSize / 2);
+
+    // Identity Details on Right of Portrait
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText(curRole.name, col1X + 12, contentY + 10);
 
-    ctx.fillStyle = '#cbd5e1';
-    ctx.font = '9px sans-serif';
-    const roleDescH = CanvasText.drawWrappedText(
-      ctx,
-      curRole.description,
-      col1X + 12,
-      contentY + 28,
-      colW - 24,
-      12,
-      3
-    );
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 12px sans-serif';
+    const safeName = CanvasText.truncate(ctx, player.username, colW - portSize - 32);
+    ctx.fillText(safeName, portX + portSize + 10, portY + 2);
 
-    const perkStartY = contentY + 28 + Math.max(roleDescH, 24) + 6;
-    const perkSpacing = 14;
-
-    const renderPerks = (headerTitle: string, headerColor: string, bullets: string[]) => {
-      ctx.fillStyle = headerColor;
-      ctx.font = 'bold 9.5px sans-serif';
-      ctx.fillText(headerTitle, col1X + 12, perkStartY);
-
-      ctx.fillStyle = '#e2e8f0';
-      ctx.font = '8px sans-serif';
-      for (let b = 0; b < bullets.length; b++) {
-        const by = perkStartY + 14 + b * perkSpacing;
-        const text = CanvasText.truncate(ctx, bullets[b], colW - 24);
-        ctx.fillText(text, col1X + 14, by);
-      }
-    };
-
-    if (this.selectedRole === 'MAGICIAN') {
-      renderPerks('✨ Spesialisasi Magician:', '#38bdf8', [
-        '• 1 Elemen Utama (100% Full Power)',
-        '• Bebas pilih hingga 2 Elemen Sampingan',
-        '• 5 Elemen: Api, Es, Petir, Angin, Bumi',
-        '• Skill abnormal anime unik per elemen!'
-      ]);
-    } else if (this.selectedRole === 'KNIGHT') {
-      renderPerks('🛡️ Keunggulan Ksatria:', '#facc15', [
-        '• Pertahanan fisik & HP tertinggi di Guild',
-        '• Tangkal & counter serangan dg Parrying',
-        '• Melompat ke musuh dengan Leap Attack',
-        '• Ultimate: Excalibur Golden Slash!'
-      ]);
-    } else if (this.selectedRole === 'ASSASSIN') {
-      renderPerks('🗡️ Keunggulan Assassin:', '#22c55e', [
-        '• Menyusup tak terlihat dengan Stealth',
-        '• Kecepatan lari kilat & critical burst',
-        '• Racun mematikan melumpuhkan lawan',
-        '• Ultimate: Anime Shadow Flash Slice!'
-      ]);
-    } else if (this.selectedRole === 'HEALER') {
-      renderPerks('🕊️ Keunggulan Healer:', '#38bdf8', [
-        '• Pemulihan instan HP sendiri & rekan',
-        '• Perisai suci supresi kutukan & debuff',
-        '• Regenerasi mana terus-menerus',
-        '• Ultimate: Divine Sanctuary Bless!'
-      ]);
-    } else if (this.selectedRole === 'NECROMANCER') {
-      renderPerks('💀 Keunggulan Necromancer:', '#a855f7', [
-        '• Memanggil pasukan Skeleton Warrior',
-        '• Menjinakkan Shadow Spirit Bear',
-        '• Kutukan hisap nyawa lawan (Life Drain)',
-        '• Ultimate: Army of the Undead!'
-      ]);
+    ctx.fillStyle = curRole.color;
+    ctx.font = 'bold 10.5px sans-serif';
+    let roleText = curRole.name;
+    if (player.role === 'MAGICIAN') {
+      const pInfo = ELEMENT_INFO[player.magicianAffinities.primary];
+      roleText = `Magician (${pInfo.name.split(' ')[0]})`;
     }
+    const safeRoleName = CanvasText.truncate(ctx, roleText, colW - portSize - 32);
+    ctx.fillText(safeRoleName, portX + portSize + 10, portY + 18);
 
-    // --- KOLOM 2: SKILLS LIST & ACTION BUTTON ---
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '9px sans-serif';
+    ctx.fillText(`Peringkat: Lv.${player.level}`, portX + portSize + 10, portY + 34);
+
+    // Status Badge Box (Terikat Permanen Seumur Hidup)
+    const badgeY = portY + portSize + 12;
+    ctx.fillStyle = '#064e3b';
+    ctx.fillRect(col1X + 12, badgeY, colW - 26, 26);
+    ctx.strokeStyle = '#10b981';
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(col1X + 12, badgeY, colW - 26, 26);
+
+    ctx.fillStyle = '#34d399';
+    ctx.font = 'bold 8.5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('✔ STATUS: TERIKAT PERMANEN SEUMUR HIDUP', col1X + colW / 2, badgeY + 9);
+    ctx.fillStyle = '#a7f3d0';
+    ctx.font = '7.5px sans-serif';
+    ctx.fillText('Role jiwa ini tidak dapat diubah lagi walau mati.', col1X + colW / 2, badgeY + 19);
+
+    // Red Wax Seal Stamp
+    const sealX = col1X + colW - 32;
+    const sealY = contentY + contentH - 28;
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.arc(sealX, sealY, 14, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fef08a';
+    ctx.font = 'bold 7px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('GUILD', sealX, sealY - 3);
+    ctx.fillText('SEAL', sealX, sealY + 4);
+
+    // ID Tag
+    ctx.fillStyle = '#64748b';
+    ctx.font = '8px monospace';
+    ctx.textAlign = 'left';
+    ctx.fillText(`#ID-SOUL-${player.role}-${player.level}`, col1X + 12, contentY + contentH - 14);
+
+    // --- KOLOM 2: ELAINE'S DIALOGUE & KETERANGAN HUKUM GUILD ---
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(col2X, contentY, colW - 2, contentH);
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(col2X, contentY, colW - 2, contentH);
+
     ctx.fillStyle = '#facc15';
     ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText('⚡ Cabang Kemampuan (Skills):', col2X + 2, contentY + 2);
+    ctx.fillText('📜 DEKRIT RESMI SERIKAT GUILD:', col2X + 12, contentY + 10);
 
-    const skillListStartY = contentY + 18;
-    for (let sIdx = 0; sIdx < Math.min(curRole.skills.length, 4); sIdx++) {
-      const skill = curRole.skills[sIdx];
-      const sy = skillListStartY + sIdx * 32;
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '9px sans-serif';
+    const speech = `Halo, Petualang ${player.username}! Kartu Petualangmu mencatat bahwa jiwamu telah terikat secara permanen pada role ${roleText}.\n\nBerdasarkan Hukum Suci Guild, setiap jiwa petualang hanya memiliki 1 takdir sejati yang tidak dapat diubah lagi seumur hidup, bahkan jika kamu gugur dalam pertempuran.`;
 
-      ctx.fillStyle = skill.isAbnormal ? 'rgba(168, 85, 247, 0.15)' : '#1e293b';
-      ctx.fillRect(col2X, sy, colW - 2, 28);
-      ctx.strokeStyle = skill.isAbnormal ? '#a855f7' : '#334155';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(col2X, sy, colW - 2, 28);
+    const speechH = CanvasText.drawWrappedText(ctx, speech, col2X + 12, contentY + 26, colW - 24, 12, 6);
 
-      ctx.font = '13px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(skill.iconSymbol, col2X + 14, sy + 14);
+    // Skills Summary Box
+    const skY = contentY + 26 + speechH + 8;
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 9.5px sans-serif';
+    ctx.fillText('⚡ Kemampuan Jiwa Aktif:', col2X + 12, skY);
 
-      // Unlock requirement tag on the right
-      const unlockText = skill.unlockLevel === 1 ? 'Awal' : `Lv.${skill.unlockLevel}`;
-      ctx.font = 'bold 8px sans-serif';
-      const unlockW = ctx.measureText(unlockText).width;
-
-      ctx.fillStyle = player.level >= skill.unlockLevel ? '#4ade80' : '#f87171';
-      ctx.textAlign = 'right';
-      ctx.fillText(unlockText, col2X + colW - 8, sy + 8);
-
-      // Skill Name on the left (Safe truncated so it never overlaps unlock tag)
-      ctx.textAlign = 'left';
-      ctx.fillStyle = skill.isAbnormal ? '#d8b4fe' : '#f8fafc';
-      ctx.font = 'bold 9px sans-serif';
-      const maxSkillNameW = colW - 28 - unlockW - 14;
-      const safeSkillName = CanvasText.truncate(ctx, skill.name, maxSkillNameW);
-      ctx.fillText(safeSkillName, col2X + 28, sy + 8);
-
-      // Skill Description (Truncated so it never overflows card)
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '7.5px sans-serif';
-      ctx.textAlign = 'left';
-      const safeDesc = CanvasText.truncate(ctx, skill.description, colW - 36);
-      ctx.fillText(safeDesc, col2X + 28, sy + 19);
+    const skillsToShow = player.skills.slice(0, 3);
+    for (let s = 0; s < skillsToShow.length; s++) {
+      const sk = skillsToShow[s];
+      const lineY = skY + 14 + s * 14;
+      ctx.fillStyle = sk.color;
+      ctx.font = 'bold 8.5px sans-serif';
+      const skName = CanvasText.truncate(ctx, `${sk.iconSymbol} ${sk.name}`, colW - 28);
+      ctx.fillText(skName, col2X + 14, lineY);
     }
 
-    // Action Button (Bottom Right)
-    const btnW = colW - 8;
+    // Action Button: "TUTUP (KEMBALI BERPETUALANG)"
+    const btnW = colW - 24;
     const btnH = 32;
-    const btnX = col2X + 4;
-    const btnY = modalY + modalHeight - 42;
+    const btnX = col2X + 12;
+    const btnY = contentY + contentH - 38;
 
-    ctx.fillStyle = curRole.color;
+    ctx.fillStyle = '#2563eb';
     ctx.fillRect(btnX, btnY, btnW, btnH);
-    ctx.strokeStyle = '#ffffff';
+    ctx.strokeStyle = '#60a5fa';
     ctx.lineWidth = 1.5;
     ctx.strokeRect(btnX, btnY, btnW, btnH);
 
@@ -648,13 +445,295 @@ export class GuildNPC {
     ctx.font = 'bold 11px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const btnRawLabel =
-      this.selectedRole === 'MAGICIAN'
-        ? 'PILIH AFINITAS ELEMEN ➡'
-        : `BANGKITKAN ${curRole.tag} ✨`;
-    const btnLabel = CanvasText.truncate(ctx, btnRawLabel, btnW - 10);
-    ctx.fillText(btnLabel, btnX + btnW / 2, btnY + btnH / 2);
+    ctx.fillText('TUTUP & LANJUT PETUALANGAN', btnX + btnW / 2, btnY + btnH / 2);
+  }
 
-    ctx.restore();
+  /**
+   * Tampilan Upacara Acak oleh Sistem untuk Novice.
+   */
+  private renderAwakeningModal(
+    ctx: CanvasRenderingContext2D,
+    modalX: number,
+    modalY: number,
+    modalWidth: number,
+    modalHeight: number,
+    player: Player
+  ): void {
+    const roles: RoleType[] = ['KNIGHT', 'MAGICIAN', 'ASSASSIN', 'HEALER', 'NECROMANCER'];
+
+    // Update spin timer if spinning
+    if (this.ceremonyState === 'SPINNING') {
+      const now = Date.now();
+      const elapsed = (now - this.lastSpinTick) / 1000;
+      this.lastSpinTick = now;
+      this.spinTimer += elapsed;
+
+      // Cycle roulette visual index every 80ms
+      this.rouletteIndex = Math.floor(this.spinTimer * 12) % roles.length;
+
+      if (this.spinTimer >= this.spinDuration) {
+        this.ceremonyState = 'AWAKENED';
+      }
+    }
+
+    if (this.ceremonyState === 'READY') {
+      this.renderReadyState(ctx, modalX, modalY, modalWidth, modalHeight, player);
+    } else if (this.ceremonyState === 'SPINNING') {
+      this.renderSpinningState(ctx, modalX, modalY, modalWidth, modalHeight, roles);
+    } else if (this.ceremonyState === 'AWAKENED') {
+      this.renderAwakenedState(ctx, modalX, modalY, modalWidth, modalHeight, player);
+    }
+  }
+
+  private renderReadyState(
+    ctx: CanvasRenderingContext2D,
+    modalX: number,
+    modalY: number,
+    modalWidth: number,
+    modalHeight: number,
+    player: Player
+  ): void {
+    const colW = (modalWidth - 36) / 2;
+    const col1X = modalX + 14;
+    const col2X = modalX + 22 + colW;
+    const contentY = modalY + 44;
+    const contentH = modalHeight - 100;
+
+    // Col 1: Ancient Divination Pedestal & Lore
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(col1X, contentY, colW - 2, contentH);
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(col1X, contentY, colW - 2, contentH);
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('🔮 BATU TAKDIR KUNO GUILD', col1X + 12, contentY + 10);
+
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '9px sans-serif';
+    const lore = `Selamat datang di Serikat Guild, calon petualang ${player.username}!\n\nSerikat kami menggunakan Batu Takdir Kuno untuk membaca afinitas jiwa sejatimu. Takdir ini ditentukan oleh SISTEM SECARA ACAK.\n\nSetelah bangkit, kamu akan langsung menerima Kartu Petualang resmi dan role ini TERKUNCI PERMANEN seumur hidup walau kamu mati.`;
+
+    CanvasText.drawWrappedText(ctx, lore, col1X + 12, contentY + 26, colW - 24, 12, 8);
+
+    // Col 2: The 5 Soul Callings
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(col2X, contentY, colW - 2, contentH);
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(col2X, contentY, colW - 2, contentH);
+
+    ctx.fillStyle = '#facc15';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('🌟 5 KEMUNGKINAN TAKDIR JIWA:', col2X + 12, contentY + 10);
+
+    const callings = [
+      { tag: '⚔️ Knight', name: 'Ksatria Tangguh & Perisai', col: '#f97316' },
+      { tag: '🔮 Magician', name: 'Penyihir Elemen Alam', col: '#8b5cf6' },
+      { tag: '🗡️ Assassin', name: 'Pembunuh Senyap & Racun', col: '#06b6d4' },
+      { tag: '🕊️ Healer', name: 'Penyembuh Cahaya Suci', col: '#10b981' },
+      { tag: '💀 Necromancer', name: 'Penguasa Jiwa & Kerangka', col: '#a855f7' }
+    ];
+
+    for (let i = 0; i < callings.length; i++) {
+      const c = callings[i];
+      const cy = contentY + 28 + i * 22;
+
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(col2X + 10, cy, colW - 24, 18);
+      ctx.strokeStyle = '#334155';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(col2X + 10, cy, colW - 24, 18);
+
+      ctx.fillStyle = c.col;
+      ctx.font = 'bold 8.5px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(c.tag, col2X + 14, cy + 9);
+
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '7.5px sans-serif';
+      ctx.fillText(c.name, col2X + 80, cy + 9);
+    }
+
+    // Full-width Bottom Action Button: "🔮 BANGKITKAN TAKDIR JIWA (ACAK OLEH SISTEM)"
+    const btnW = modalWidth - 28;
+    const btnH = 36;
+    const btnX = modalX + 14;
+    const btnY = modalY + modalHeight - 48;
+
+    const pulse = Math.sin(Date.now() / 150) * 0.15;
+    ctx.fillStyle = '#7c3aed';
+    ctx.fillRect(btnX, btnY, btnW, btnH);
+    ctx.strokeStyle = `rgba(250, 204, 21, ${0.85 + pulse})`;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(btnX, btnY, btnW, btnH);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🔮 BANGKITKAN TAKDIR JIWA (DITENTUKAN ACAK OLEH SISTEM)', btnX + btnW / 2, btnY + btnH / 2);
+  }
+
+  private renderSpinningState(
+    ctx: CanvasRenderingContext2D,
+    modalX: number,
+    modalY: number,
+    modalWidth: number,
+    modalHeight: number,
+    roles: RoleType[]
+  ): void {
+    const centerBoxW = modalWidth - 36;
+    const centerBoxH = modalHeight - 64;
+    const boxX = modalX + 18;
+    const boxY = modalY + 44;
+
+    ctx.fillStyle = '#090d16';
+    ctx.fillRect(boxX, boxY, centerBoxW, centerBoxH);
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(boxX, boxY, centerBoxW, centerBoxH);
+
+    // Spinning Title
+    ctx.fillStyle = '#facc15';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('⚡ BATU TAKDIR SEDANG MEMBACA AFINITAS JIWAMU...', boxX + centerBoxW / 2, boxY + 16);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '9.5px sans-serif';
+    ctx.fillText('Menyelaraskan frekuensi elemen jiwa dengan takdir semesta...', boxX + centerBoxW / 2, boxY + 34);
+
+    // Carousel Cards in the Center
+    const currentActiveRole = roles[this.rouletteIndex];
+    const roleInfo = ROLE_INFO[currentActiveRole];
+
+    const cardW = 160;
+    const cardH = 90;
+    const cardX = boxX + (centerBoxW - cardW) / 2;
+    const cardY = boxY + 54;
+
+    ctx.fillStyle = roleInfo.color;
+    ctx.fillRect(cardX, cardY, cardW, cardH);
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2.5;
+    ctx.strokeRect(cardX, cardY, cardW, cardH);
+
+    const icon = roleInfo.skills[0]?.iconSymbol || '✨';
+    ctx.font = '36px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(icon, cardX + cardW / 2, cardY + 35);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 13px sans-serif';
+    ctx.fillText(`[ ${roleInfo.name.toUpperCase()} ]`, cardX + cardW / 2, cardY + 68);
+
+    // Spinning Progress Bar
+    const progW = centerBoxW - 60;
+    const progH = 8;
+    const progX = boxX + 30;
+    const progY = boxY + centerBoxH - 24;
+
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(progX, progY, progW, progH);
+    const progress = Math.min(1, this.spinTimer / this.spinDuration);
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(progX, progY, progW * progress, progH);
+  }
+
+  private renderAwakenedState(
+    ctx: CanvasRenderingContext2D,
+    modalX: number,
+    modalY: number,
+    modalWidth: number,
+    modalHeight: number,
+    player: Player
+  ): void {
+    const colW = (modalWidth - 36) / 2;
+    const col1X = modalX + 14;
+    const col2X = modalX + 22 + colW;
+    const contentY = modalY + 44;
+    const contentH = modalHeight - 96;
+
+    const roleInfo = ROLE_INFO[this.candidateRole];
+
+    // Col 1: Revealed Role Card
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(col1X, contentY, colW - 2, contentH);
+    ctx.strokeStyle = roleInfo.color;
+    ctx.lineWidth = 2;
+    ctx.strokeRect(col1X, contentY, colW - 2, contentH);
+
+    ctx.fillStyle = roleInfo.color;
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'top';
+    ctx.fillText('🌟 TAKDIR SEJATI TELAH DITENTUKAN!', col1X + colW / 2, contentY + 10);
+
+    const icon = roleInfo.skills[0]?.iconSymbol || '✨';
+    ctx.font = '36px sans-serif';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(icon, col1X + colW / 2, contentY + 48);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 14px sans-serif';
+    ctx.fillText(roleInfo.name, col1X + colW / 2, contentY + 80);
+
+    if (this.candidateRole === 'MAGICIAN') {
+      const pInfo = ELEMENT_INFO[this.candidateAffinities.primary];
+      const sInfo = ELEMENT_INFO[this.candidateAffinities.secondaries[0]];
+      ctx.fillStyle = pInfo.color;
+      ctx.font = 'bold 9px sans-serif';
+      ctx.fillText(`Elemen: ${pInfo.name.split(' ')[0]} + ${sInfo?.name.split(' ')[0] || ''}`, col1X + colW / 2, contentY + 98);
+    } else {
+      ctx.fillStyle = '#94a3b8';
+      ctx.font = '8.5px sans-serif';
+      const safeDesc = CanvasText.truncate(ctx, roleInfo.description, colW - 20);
+      ctx.fillText(safeDesc, col1X + colW / 2, contentY + 98);
+    }
+
+    // Col 2: Adventurer Card Issued Notice
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(col2X, contentY, colW - 2, contentH);
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(col2X, contentY, colW - 2, contentH);
+
+    ctx.fillStyle = '#facc15';
+    ctx.font = 'bold 10.5px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('🪪 KARTU PETUALANG RESMI DITERBITKAN!', col2X + 12, contentY + 10);
+
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = '8.5px sans-serif';
+    const notice = `Selamat, ${player.username}!\n\nBatu Takdir telah mengunci jiwamu ke dalam role ${roleInfo.name}.\n\n• Kartu Petualang resmi langsung ditambahkan ke inventarismu.\n• Role ini terikat seumur hidup dan TIDAK BISA DIGANTI LAGI walau gugur dalam pertarungan.`;
+
+    CanvasText.drawWrappedText(ctx, notice, col2X + 12, contentY + 28, colW - 24, 12, 6);
+
+    // Full-width Bottom Button: "🪪 TERIMA KARTU PETUALANG & MULAI PETUALANGAN"
+    const btnW = modalWidth - 28;
+    const btnH = 36;
+    const btnX = modalX + 14;
+    const btnY = modalY + modalHeight - 48;
+
+    ctx.fillStyle = '#16a34a';
+    ctx.fillRect(btnX, btnY, btnW, btnH);
+    ctx.strokeStyle = '#4ade80';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(btnX, btnY, btnW, btnH);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 12px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🪪 TERIMA KARTU PETUALANG & MULAI PETUALANGAN', btnX + btnW / 2, btnY + btnH / 2);
   }
 }

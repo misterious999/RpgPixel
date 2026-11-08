@@ -35,6 +35,7 @@ export class Player {
   public exp: number = 0;
   public maxExp: number = 50;
   public role: RoleType = 'NOVICE';
+  public hasLockedRole: boolean = false;
   public skills: Skill[] = [];
 
   // Special Magician Elemental Affinities
@@ -106,8 +107,15 @@ export class Player {
     this.updateSkills();
   }
 
-  public setRole(newRole: RoleType, affinities?: MagicianAffinities): void {
+  public setRole(newRole: RoleType, affinities?: MagicianAffinities, force: boolean = false): void {
+    if (this.hasLockedRole && !force && this.role !== 'NOVICE') {
+      console.warn('Role is locked permanently and cannot be changed.');
+      return;
+    }
     this.role = newRole;
+    if (newRole !== 'NOVICE') {
+      this.hasLockedRole = true;
+    }
     if (affinities) {
       this.magicianAffinities = affinities;
     }
@@ -180,6 +188,35 @@ export class Player {
     if (currentMp < cost) return false;
     this.mp = Math.max(0, currentMp - cost);
     return true;
+  }
+
+  public takeDamage(amount: number): boolean {
+    if (this.hasBarrier) {
+      amount = Math.round(amount * 0.5);
+    }
+    const damage = Math.max(1, Math.round(amount));
+    this.hp = Math.max(0, Math.round(this.hp) - damage);
+    this.hpRegenAccumulator = 0;
+    if (this.hp <= 0) {
+      this.die();
+      return true;
+    }
+    return false;
+  }
+
+  public die(): void {
+    // Respawn di Guild Plaza (dekat Resepsionis Elaine)
+    this.x = 50 * CONSTANTS.TILE_SIZE;
+    this.y = 50 * CONSTANTS.TILE_SIZE;
+    this.hp = this.maxHp;
+    this.mp = this.maxMp;
+    this.hpRegenAccumulator = 0;
+    this.mpRegenAccumulator = 0;
+    this.isStealthed = false;
+    this.stealthTimer = 0;
+    this.isBerserk = false;
+    this.berserkTimer = 0;
+    // PENTING: Role, hasLockedRole, dan Kartu Petualang tidak pernah hilang atau direset walau mati!
   }
 
   public playSkillCastAnimation(skill: Skill): void {
@@ -292,6 +329,10 @@ export class Player {
     } else {
       this.hp = this.maxHp;
       this.hpRegenAccumulator = 0;
+    }
+
+    if (this.hp <= 0) {
+      this.die();
     }
 
     if (isAction && this.attackTimer <= 0) {
