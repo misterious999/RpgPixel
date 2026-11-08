@@ -6,6 +6,7 @@ import { RoleType } from '../types/GameTypes.ts';
 import { PwaService } from '../services/PwaService.ts';
 import { NotificationModal } from './NotificationModal.ts';
 import { CanvasText } from '../utils/CanvasText.ts';
+import { CONSTANTS } from '../core/Constants.ts';
 
 export class AuthUI {
   private player: Player;
@@ -13,6 +14,7 @@ export class AuthUI {
   private floatingText: FloatingTextManager;
 
   public isGuest: boolean = false;
+  public getCurrentMap?: () => string;
   private avatarImg: HTMLImageElement | null = null;
   private isSaving: boolean = false;
   private autoSaveTimer: number = 0;
@@ -103,6 +105,11 @@ export class AuthUI {
       if (chest.isOpen) openedChestsIndices.push(idx);
     });
 
+    // Jika berada di dalam goa/dungeon saat cloud-save, simpan koordinat aman di depan pintu goa overworld
+    const isDungeon = this.getCurrentMap && this.getCurrentMap() === 'DUNGEON';
+    const spawnX = isDungeon ? 50 * CONSTANTS.TILE_SIZE + 6 : this.player.x;
+    const spawnY = isDungeon ? 35 * CONSTANTS.TILE_SIZE + 3 : this.player.y;
+
     const saveData: Partial<GameSaveData> = {
       display_name: this.player.username,
       avatar_url: user.user_metadata?.avatar_url || '',
@@ -116,8 +123,8 @@ export class AuthUI {
       max_hp: this.player.maxHp,
       mp: Math.floor(this.player.mp),
       max_mp: this.player.maxMp,
-      world_x: this.player.x,
-      world_y: this.player.y,
+      world_x: spawnX,
+      world_y: spawnY,
       inventory: this.player.inventory.slots,
       opened_chests: openedChestsIndices
     };
@@ -132,6 +139,29 @@ export class AuthUI {
     }
   }
 
+  /**
+   * Logout bersih untuk berganti akun (Google maupun Tamu)
+   */
+  public async performLogout(): Promise<void> {
+    if (!this.isGuest && SupabaseService.currentUser) {
+      try {
+        await this.saveCurrentGame();
+      } catch (e) {
+        console.warn('Error saving game before logout:', e);
+      }
+    }
+
+    try {
+      localStorage.removeItem('rpg2d_session_save');
+      localStorage.removeItem('rpg2d_guest_id');
+    } catch (e) {
+      console.warn('Error clearing local session save:', e);
+    }
+
+    await SupabaseService.logout();
+    window.location.reload();
+  }
+
   public update(deltaTime: number): void {
     if (!this.isGuest && SupabaseService.currentUser) {
       this.autoSaveTimer += deltaTime;
@@ -143,13 +173,39 @@ export class AuthUI {
   }
 
   public handleTouch(touchX: number, touchY: number, screenWidth: number): boolean {
-    const baseRight = PwaService.isInstallable ? 235 : 150;
+    const baseRight = PwaService.isInstallable ? 240 : 150;
 
     if (this.isGuest) {
-      // Guest: Option to bind account to Google
-      const bindBtnW = 100;
-      const bindBtnH = 32;
-      const bindBtnX = screenWidth - baseRight - bindBtnW;
+      // 1. Tombol Keluar untuk Akun Tamu
+      const logoutBtnW = 58;
+      const logoutBtnH = 30;
+      const logoutBtnX = screenWidth - baseRight - logoutBtnW;
+      const logoutBtnY = 12;
+
+      if (
+        touchX >= logoutBtnX &&
+        touchX <= logoutBtnX + logoutBtnW &&
+        touchY >= logoutBtnY &&
+        touchY <= logoutBtnY + logoutBtnH
+      ) {
+        NotificationModal.confirm({
+          title: 'KELUAR DARI AKUN TAMU',
+          message: 'Keluar ke menu utama? Anda dapat login dengan akun Google atau membuat petualangan baru.',
+          icon: '🚪',
+          confirmText: 'Ya, Keluar',
+          cancelText: 'Tetap Main',
+          variant: 'danger',
+          onConfirm: () => {
+            this.performLogout();
+          }
+        });
+        return true;
+      }
+
+      // 2. Guest: Option to bind account to Google
+      const bindBtnW = 96;
+      const bindBtnH = 30;
+      const bindBtnX = logoutBtnX - bindBtnW - 6;
       const bindBtnY = 12;
 
       if (
@@ -176,7 +232,7 @@ export class AuthUI {
 
     const user = SupabaseService.currentUser;
     if (user) {
-      // "💾 Simpan" button
+      // 1. "💾 Simpan" button
       const saveBtnW = 60;
       const saveBtnH = 30;
       const saveBtnX = screenWidth - baseRight - saveBtnW;
@@ -192,8 +248,8 @@ export class AuthUI {
         return true;
       }
 
-      // "Keluar" (Logout) button
-      const logoutBtnW = 50;
+      // 2. "Keluar / Ganti Akun" button
+      const logoutBtnW = 58;
       const logoutBtnH = 30;
       const logoutBtnX = saveBtnX - logoutBtnW - 6;
       const logoutBtnY = 12;
@@ -205,15 +261,14 @@ export class AuthUI {
         touchY <= logoutBtnY + logoutBtnH
       ) {
         NotificationModal.confirm({
-          title: 'KONFIRMASI KELUAR',
-          message: 'Apakah Anda yakin ingin logout? Data tersimpan terakhir di Cloud akan tetap aman.',
+          title: 'KELUAR & GANTI AKUN',
+          message: 'Apakah Anda ingin keluar untuk berganti akun? Progres permainan akan disimpan terlebih dahulu ke Cloud.',
           icon: '🚪',
-          confirmText: 'Ya, Keluar',
+          confirmText: 'Simpan & Keluar',
           cancelText: 'Tetap Main',
           variant: 'danger',
           onConfirm: () => {
-            SupabaseService.logout();
-            window.location.reload();
+            this.performLogout();
           }
         });
         return true;
@@ -225,28 +280,47 @@ export class AuthUI {
 
   public render(ctx: CanvasRenderingContext2D, screenWidth: number): void {
     ctx.save();
-    const baseRight = PwaService.isInstallable ? 235 : 150;
+    const baseRight = PwaService.isInstallable ? 240 : 150;
 
     if (this.isGuest) {
-      // --- Guest Profile Tag ---
-      const pillW = 100;
-      const pillH = 32;
-      const pillX = screenWidth - baseRight - pillW;
+      // 1. Tombol Keluar (Logout) Akun Tamu
+      const logoutBtnW = 58;
+      const logoutBtnH = 30;
+      const logoutBtnX = screenWidth - baseRight - logoutBtnW;
+      const logoutBtnY = 12;
+
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.22)';
+      ctx.fillRect(logoutBtnX, logoutBtnY, logoutBtnW, logoutBtnH);
+      ctx.strokeStyle = '#ef4444';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(logoutBtnX, logoutBtnY, logoutBtnW, logoutBtnH);
+
+      ctx.fillStyle = '#fca5a5';
+      ctx.font = 'bold 10px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🚪 Keluar', logoutBtnX + logoutBtnW / 2, logoutBtnY + logoutBtnH / 2);
+
+      // 2. Guest Profile Tag Pill
+      const pillW = 96;
+      const pillH = 30;
+      const pillX = logoutBtnX - pillW - 6;
       const pillY = 12;
 
       ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
       ctx.fillRect(pillX, pillY, pillW, pillH);
-      ctx.strokeStyle = '#64748b';
+      ctx.strokeStyle = '#f59e0b';
       ctx.lineWidth = 1;
       ctx.strokeRect(pillX, pillY, pillW, pillH);
 
       ctx.fillStyle = '#f59e0b';
       ctx.font = 'bold 9px sans-serif';
       ctx.textAlign = 'left';
-      ctx.fillText('👤 Akun Tamu', pillX + 10, pillY + 13);
+      ctx.textBaseline = 'top';
+      ctx.fillText('👤 Akun Tamu', pillX + 8, pillY + 4);
       ctx.fillStyle = '#94a3b8';
       ctx.font = '8px sans-serif';
-      ctx.fillText('Data Sementara', pillX + 10, pillY + 24);
+      ctx.fillText('Hubungkan ☁️', pillX + 8, pillY + 16);
 
       ctx.restore();
       return;
@@ -261,13 +335,13 @@ export class AuthUI {
       const saveBtnX = screenWidth - baseRight - saveBtnW;
       const saveBtnY = 12;
 
-      const logoutBtnW = 50;
+      const logoutBtnW = 58;
       const logoutBtnH = 30;
       const logoutBtnX = saveBtnX - logoutBtnW - 6;
       const logoutBtnY = 12;
 
       // 1. "Keluar" (Logout) button
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.2)';
+      ctx.fillStyle = 'rgba(239, 68, 68, 0.22)';
       ctx.fillRect(logoutBtnX, logoutBtnY, logoutBtnW, logoutBtnH);
       ctx.strokeStyle = '#ef4444';
       ctx.lineWidth = 1;
@@ -277,7 +351,7 @@ export class AuthUI {
       ctx.font = 'bold 10px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('Keluar', logoutBtnX + logoutBtnW / 2, logoutBtnY + logoutBtnH / 2);
+      ctx.fillText('🚪 Keluar', logoutBtnX + logoutBtnW / 2, logoutBtnY + logoutBtnH / 2);
 
       // 2. "💾 Simpan" Button
       ctx.fillStyle = this.isSaving ? 'rgba(56, 189, 248, 0.4)' : 'rgba(16, 185, 129, 0.25)';

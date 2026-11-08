@@ -130,6 +130,10 @@ export class Game {
 
     // Inisialisasi Auth & Onboarding flow
     this.authUI = new AuthUI(this.player, this.chests, this.floatingText);
+    this.authUI.getCurrentMap = () => this.currentMap;
+    this.controlSettingsModal.onLogoutRequested = () => {
+      this.authUI.performLogout();
+    };
     this.onboardingUI = new OnboardingUI();
 
     this.setupOnboardingFlow();

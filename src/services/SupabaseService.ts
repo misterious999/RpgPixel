@@ -60,7 +60,10 @@ export class SupabaseService {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin
+          redirectTo: window.location.origin,
+          queryParams: {
+            prompt: 'select_account'
+          }
         }
       });
       if (error) {
@@ -80,6 +83,12 @@ export class SupabaseService {
 
   public static async logout(): Promise<void> {
     try {
+      try {
+        localStorage.removeItem('rpg2d_session_save');
+        localStorage.removeItem('rpg2d_guest_id');
+      } catch (e) {
+        console.warn('Could not clear local storage save:', e);
+      }
       await supabase.auth.signOut();
       this.currentUser = null;
       for (const cb of this.onAuthChangeCallbacks) {

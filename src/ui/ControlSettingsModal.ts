@@ -6,6 +6,7 @@ import { CanvasText } from '../utils/CanvasText.ts';
 export class ControlSettingsModal {
   public isOpen: boolean = false;
   public onConfigChange?: () => void;
+  public onLogoutRequested?: () => void;
 
   private gearBtn = {
     x: 0,
@@ -145,16 +146,25 @@ export class ControlSettingsModal {
       return true;
     }
 
-    // Reset Default Button
-    const resetBtnW = 120;
-    const resetBtnH = 32;
+    // Footer Buttons: 1. Reset Default | 2. Ganti Akun / Logout | 3. Simpan & Tutup
+    const footerGap = 8;
+    const totalFooterW = modalWidth - 32;
+    const resetBtnW = Math.floor((totalFooterW - footerGap * 2) * 0.28);
+    const logoutBtnW = Math.floor((totalFooterW - footerGap * 2) * 0.36);
+    const saveBtnW = totalFooterW - footerGap * 2 - resetBtnW - logoutBtnW;
+
     const resetBtnX = modalX + 16;
-    const resetBtnY = modalY + modalHeight - 44;
+    const logoutBtnX = resetBtnX + resetBtnW + footerGap;
+    const saveBtnX = logoutBtnX + logoutBtnW + footerGap;
+    const footerBtnY = modalY + modalHeight - 44;
+    const footerBtnH = 32;
+
+    // Reset Default Button
     if (
       touchX >= resetBtnX &&
       touchX <= resetBtnX + resetBtnW &&
-      touchY >= resetBtnY &&
-      touchY <= resetBtnY + resetBtnH
+      touchY >= footerBtnY &&
+      touchY <= footerBtnY + footerBtnH
     ) {
       NotificationModal.confirm({
         title: 'RESET KONTROL DEFAULT',
@@ -171,16 +181,36 @@ export class ControlSettingsModal {
       return true;
     }
 
+    // Ganti Akun / Logout Button
+    if (
+      touchX >= logoutBtnX &&
+      touchX <= logoutBtnX + logoutBtnW &&
+      touchY >= footerBtnY &&
+      touchY <= footerBtnY + footerBtnH
+    ) {
+      NotificationModal.confirm({
+        title: 'GANTI AKUN / LOGOUT',
+        message: 'Simpan progres terakhir dan keluar untuk mengganti akun?',
+        icon: '🚪',
+        confirmText: 'Ya, Keluar',
+        cancelText: 'Batal',
+        variant: 'danger',
+        onConfirm: () => {
+          this.isOpen = false;
+          if (this.onLogoutRequested) {
+            this.onLogoutRequested();
+          }
+        }
+      });
+      return true;
+    }
+
     // Simpan & Tutup Button
-    const saveBtnW = 150;
-    const saveBtnH = 32;
-    const saveBtnX = modalX + modalWidth - saveBtnW - 16;
-    const saveBtnY = modalY + modalHeight - 44;
     if (
       touchX >= saveBtnX &&
       touchX <= saveBtnX + saveBtnW &&
-      touchY >= saveBtnY &&
-      touchY <= saveBtnY + saveBtnH
+      touchY >= footerBtnY &&
+      touchY <= footerBtnY + footerBtnH
     ) {
       this.isOpen = false;
       return true;
@@ -384,38 +414,57 @@ export class ControlSettingsModal {
     const safePwaText = CanvasText.truncate(ctx, pwaText, pwaBtnW - 10);
     ctx.fillText(safePwaText, pwaBtnX + pwaBtnW / 2, pwaBtnY + pwaBtnH / 2);
 
-    // Footer Buttons
-    // Reset Default Button
-    const resetBtnW = 120;
-    const resetBtnH = 30;
-    const resetBtnX = modalX + 16;
-    const resetBtnY = modalY + modalHeight - 40;
+    // Footer Buttons: 1. Reset Default | 2. Ganti Akun / Logout | 3. Simpan & Tutup
+    const footerGap = 8;
+    const totalFooterW = modalWidth - 32;
+    const resetBtnW = Math.floor((totalFooterW - footerGap * 2) * 0.28);
+    const logoutBtnW = Math.floor((totalFooterW - footerGap * 2) * 0.36);
+    const saveBtnW = totalFooterW - footerGap * 2 - resetBtnW - logoutBtnW;
 
+    const resetBtnX = modalX + 16;
+    const logoutBtnX = resetBtnX + resetBtnW + footerGap;
+    const saveBtnX = logoutBtnX + logoutBtnW + footerGap;
+    const footerBtnY = modalY + modalHeight - 40;
+    const footerBtnH = 30;
+
+    // 1. Reset Default Button
     ctx.fillStyle = '#1e293b';
-    ctx.fillRect(resetBtnX, resetBtnY, resetBtnW, resetBtnH);
+    ctx.fillRect(resetBtnX, footerBtnY, resetBtnW, footerBtnH);
     ctx.strokeStyle = '#475569';
     ctx.lineWidth = 1;
-    ctx.strokeRect(resetBtnX, resetBtnY, resetBtnW, resetBtnH);
+    ctx.strokeRect(resetBtnX, footerBtnY, resetBtnW, footerBtnH);
     ctx.fillStyle = '#94a3b8';
     ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('↺ Reset Default', resetBtnX + resetBtnW / 2, resetBtnY + resetBtnH / 2);
+    const safeResetText = CanvasText.truncate(ctx, '↺ Reset', resetBtnW - 8);
+    ctx.fillText(safeResetText, resetBtnX + resetBtnW / 2, footerBtnY + footerBtnH / 2);
 
-    // Simpan & Tutup Button
-    const saveBtnW = 150;
-    const saveBtnH = 30;
-    const saveBtnX = modalX + modalWidth - saveBtnW - 16;
-    const saveBtnY = modalY + modalHeight - 40;
+    // 2. Ganti Akun / Logout Button
+    ctx.fillStyle = 'rgba(239, 68, 68, 0.22)';
+    ctx.fillRect(logoutBtnX, footerBtnY, logoutBtnW, footerBtnH);
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(logoutBtnX, footerBtnY, logoutBtnW, footerBtnH);
+    ctx.fillStyle = '#fca5a5';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const safeLogoutText = CanvasText.truncate(ctx, '🚪 Ganti Akun', logoutBtnW - 8);
+    ctx.fillText(safeLogoutText, logoutBtnX + logoutBtnW / 2, footerBtnY + footerBtnH / 2);
 
+    // 3. Simpan & Tutup Button
     ctx.fillStyle = '#0284c7';
-    ctx.fillRect(saveBtnX, saveBtnY, saveBtnW, saveBtnH);
+    ctx.fillRect(saveBtnX, footerBtnY, saveBtnW, footerBtnH);
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 1.5;
-    ctx.strokeRect(saveBtnX, saveBtnY, saveBtnW, saveBtnH);
+    ctx.strokeRect(saveBtnX, footerBtnY, saveBtnW, footerBtnH);
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 11px sans-serif';
-    ctx.fillText('✓ Simpan & Tutup', saveBtnX + saveBtnW / 2, saveBtnY + saveBtnH / 2);
+    ctx.font = 'bold 10.5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const safeSaveText = CanvasText.truncate(ctx, '✓ Tutup', saveBtnW - 8);
+    ctx.fillText(safeSaveText, saveBtnX + saveBtnW / 2, footerBtnY + footerBtnH / 2);
 
     ctx.restore();
   }
