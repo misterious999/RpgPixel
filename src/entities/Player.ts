@@ -29,6 +29,8 @@ export class Player {
   public maxHp: number = 100;
   public mp: number = 60;
   public maxMp: number = 60;
+  private hpRegenAccumulator: number = 0;
+  private mpRegenAccumulator: number = 0;
   public level: number = 1;
   public exp: number = 0;
   public maxExp: number = 50;
@@ -137,21 +139,24 @@ export class Player {
   }
 
   public heal(amount: number): number {
-    const prevHp = Math.floor(this.hp);
-    this.hp = Math.min(this.maxHp, Math.floor(this.hp) + amount);
-    return Math.floor(this.hp) - prevHp;
+    const prevHp = Math.round(this.hp);
+    this.hp = Math.min(this.maxHp, Math.round(this.hp) + Math.round(amount));
+    this.hpRegenAccumulator = 0;
+    return this.hp - prevHp;
   }
 
   public restoreMp(amount: number): number {
-    const prevMp = Math.floor(this.mp);
-    this.mp = Math.min(this.maxMp, Math.floor(this.mp) + amount);
-    return Math.floor(this.mp) - prevMp;
+    const prevMp = Math.round(this.mp);
+    this.mp = Math.min(this.maxMp, Math.round(this.mp) + Math.round(amount));
+    this.mpRegenAccumulator = 0;
+    return this.mp - prevMp;
   }
 
   public consumeMp(amount: number): boolean {
-    const currentMp = Math.floor(this.mp);
-    if (currentMp < amount) return false;
-    this.mp = Math.max(0, currentMp - amount);
+    const currentMp = Math.round(this.mp);
+    const cost = Math.round(amount);
+    if (currentMp < cost) return false;
+    this.mp = Math.max(0, currentMp - cost);
     return true;
   }
 
@@ -169,16 +174,32 @@ export class Player {
 
     this.breathTimer += deltaTime * 3;
 
-    // Passive Mana Regeneration (mencegah pemain kehabisan mana permanen)
+    // Passive Mana Regeneration: akumulasi sebelum menambah 1 MP integer murni (100% bebas desimal)
     if (this.mp < this.maxMp) {
       const regenRate = (this.role === 'HEALER' || this.role === 'MAGICIAN') ? 4.5 : 2.5;
-      this.mp = Math.min(this.maxMp, this.mp + regenRate * deltaTime);
+      this.mpRegenAccumulator += regenRate * deltaTime;
+      if (this.mpRegenAccumulator >= 1.0) {
+        const add = Math.floor(this.mpRegenAccumulator);
+        this.mp = Math.min(this.maxMp, Math.round(this.mp) + add);
+        this.mpRegenAccumulator -= add;
+      }
+    } else {
+      this.mp = this.maxMp;
+      this.mpRegenAccumulator = 0;
     }
 
-    // Passive Gentle Health Regeneration
+    // Passive Health Regeneration: akumulasi sebelum menambah 1 HP integer murni
     if (this.hp < this.maxHp) {
       const hpRegenRate = this.role === 'HEALER' ? 2.5 : 1.0;
-      this.hp = Math.min(this.maxHp, this.hp + hpRegenRate * deltaTime);
+      this.hpRegenAccumulator += hpRegenRate * deltaTime;
+      if (this.hpRegenAccumulator >= 1.0) {
+        const add = Math.floor(this.hpRegenAccumulator);
+        this.hp = Math.min(this.maxHp, Math.round(this.hp) + add);
+        this.hpRegenAccumulator -= add;
+      }
+    } else {
+      this.hp = this.maxHp;
+      this.hpRegenAccumulator = 0;
     }
 
     if (isAction && this.attackTimer <= 0) {
