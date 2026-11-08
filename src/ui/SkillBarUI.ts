@@ -96,6 +96,9 @@ export class SkillBarUI {
 
     this.floatingText.spawn(px, py - 22, `[${skill.name}]`, skill.color, 1.4);
 
+    // Animasi karakter mengeluarkan skill dinamis untuk setiap role
+    this.player.playSkillCastAnimation(skill);
+
     // 1. Magician Elemental Skills
     if (skill.role === 'MAGICIAN') {
       const dirX = this.player.direction === 'right' ? 32 : (this.player.direction === 'left' ? -32 : 0);
