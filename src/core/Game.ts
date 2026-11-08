@@ -17,7 +17,8 @@ import { SupabaseService } from '../services/SupabaseService.ts';
 import { PwaService } from '../services/PwaService.ts';
 import { NotificationModal } from '../ui/NotificationModal.ts';
 import { ITEM_DEFINITIONS } from '../items/ItemTypes.ts';
-import { ROLE_INFO } from '../data/RolesData.ts';
+import { ROLE_INFO, CHARACTER_COSTUMES } from '../data/RolesData.ts';
+import { UpdateService } from '../services/UpdateService.ts';
 
 export class Game {
   private canvas: HTMLCanvasElement;
@@ -81,6 +82,24 @@ export class Game {
     this.controlSettingsModal = new ControlSettingsModal();
     this.controlSettingsModal.onConfigChange = () => this.handleResize();
 
+    // Inisialisasi UpdateService untuk auto-refresh seamless saat ada pembaruan file
+    UpdateService.init();
+    UpdateService.isSafeToReload = () => {
+      return (
+        this.onboardingUI.state === 'PLAYING' &&
+        !this.inventoryUI.isOpen &&
+        !this.guildNPC.isAppraisalOpen &&
+        !this.controlSettingsModal.isOpen &&
+        !NotificationModal.isOpen
+      );
+    };
+    UpdateService.saveGameBeforeReload = () => {
+      this.saveSessionSnapshot();
+    };
+    UpdateService.onUpdateFound = () => {
+      this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '🚀 Update versi baru terdeteksi!', '#38bdf8', 4.0);
+    };
+
     // Create Guild Receptionist Elaine near spawn
     const guildX = 51 * CONSTANTS.TILE_SIZE;
     const guildY = 48 * CONSTANTS.TILE_SIZE;
@@ -97,6 +116,18 @@ export class Game {
     // Connect touch interceptor for all UI layers
     this.input.setTouchInterceptor((touchX, touchY) => {
       if (this.onboardingUI.state !== 'PLAYING') return true;
+
+      // Update Banner (Ketuk untuk muat ulang versi baru)
+      if (UpdateService.isUpdateAvailable) {
+        const upW = 230;
+        const upH = 28;
+        const upX = (this.screenWidth - upW) / 2;
+        const upY = 12;
+        if (touchX >= upX && touchX <= upX + upW && touchY >= upY && touchY <= upY + upH) {
+          UpdateService.applyUpdateNow();
+          return true;
+        }
+      }
 
       // -1. Premium In-Game Notification / Confirm Modal (Top Priority)
       if (NotificationModal.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight)) {
@@ -161,22 +192,42 @@ export class Game {
   }
 
   private async setupOnboardingFlow(): Promise<void> {
+    // 1. Pulihkan sesi jika pengguna baru saja me-refresh dari auto-update
+    const hasSessionSave = this.restoreSessionSnapshot();
+    if (hasSessionSave) {
+      this.onboardingUI.setState('PLAYING');
+      const roleName = ROLE_INFO[this.player.role]?.name || 'Petualang';
+      this.floatingText.spawn(
+        this.player.x + 10,
+        this.player.y - 20,
+        `✨ Game diperbarui! Sesi dipulihkan (${roleName})`,
+        '#38bdf8',
+        4.0
+      );
+    }
+
     await SupabaseService.init();
 
     SupabaseService.onAuthChange(async (user) => {
       if (user) {
         this.authUI.isGuest = false;
-        // Check if user already has cloud save
-        const hasSave = await this.authUI.loadCloudSave(user.id);
-        if (hasSave) {
-          // Cloud save exists -> proceed directly to PLAYING!
-          this.onboardingUI.setState('PLAYING');
-          const roleName = ROLE_INFO[this.player.role].name;
-          this.floatingText.spawn(this.player.x + 10, this.player.y - 20, `Selamat datang kembali, ${this.player.username}! (${roleName})`, '#38bdf8', 3.0);
-        } else {
-          // New Google User -> Go to Character Creation!
-          this.onboardingUI.username = (user.user_metadata?.full_name || 'Hero').slice(0, 15);
-          this.onboardingUI.setState('CHARACTER_CREATION');
+        // Jika sudah dipulihkan dari sesi auto-update lokal, jangan timpa kecuali belum ada sesi
+        if (!hasSessionSave) {
+          const hasSave = await this.authUI.loadCloudSave(user.id);
+          if (hasSave) {
+            this.onboardingUI.setState('PLAYING');
+            const roleName = ROLE_INFO[this.player.role].name;
+            this.floatingText.spawn(
+              this.player.x + 10,
+              this.player.y - 20,
+              `Selamat datang kembali, ${this.player.username}! (${roleName})`,
+              '#38bdf8',
+              3.0
+            );
+          } else {
+            this.onboardingUI.username = (user.user_metadata?.full_name || 'Hero').slice(0, 15);
+            this.onboardingUI.setState('CHARACTER_CREATION');
+          }
         }
       }
     });
@@ -194,6 +245,104 @@ export class Game {
 
       this.floatingText.spawn(this.player.x + 10, this.player.y - 18, `Selamat datang, ${username}! Temui Pihak Guild untuk memilih Role.`, '#facc15', 3.5);
     });
+  }
+
+  /**
+   * Menyimpan snapshot progres lengkap ke localStorage sebelum refresh otomatis
+   */
+  public saveSessionSnapshot(): void {
+    if (this.onboardingUI.state !== 'PLAYING') return;
+
+    const openedChestsIndices: number[] = [];
+    this.chests.forEach((chest, idx) => {
+      if (chest.isOpen) openedChestsIndices.push(idx);
+    });
+
+    const snapshot = {
+      username: this.player.username,
+      costumeId: this.player.costume.id,
+      role: this.player.role,
+      magicianAffinities: this.player.magicianAffinities,
+      level: this.player.level,
+      exp: this.player.exp,
+      maxExp: this.player.maxExp,
+      hp: this.player.hp,
+      maxHp: this.player.maxHp,
+      mp: this.player.mp,
+      maxMp: this.player.maxMp,
+      worldX: this.player.x,
+      worldY: this.player.y,
+      inventory: this.player.inventory.slots,
+      openedChests: openedChestsIndices,
+      isGuest: this.authUI.isGuest,
+      timestamp: Date.now()
+    };
+
+    try {
+      localStorage.setItem('rpg2d_session_save', JSON.stringify(snapshot));
+    } catch (e) {
+      console.warn('Could not save session snapshot:', e);
+    }
+
+    if (!this.authUI.isGuest) {
+      this.authUI.saveCurrentGame();
+    }
+  }
+
+  /**
+   * Memulihkan snapshot progres pemain sehingga refresh tidak mengganggu permainan
+   */
+  public restoreSessionSnapshot(): boolean {
+    try {
+      const saved = localStorage.getItem('rpg2d_session_save');
+      if (!saved) return false;
+
+      const data = JSON.parse(saved);
+      // Valid selama 48 jam
+      if (!data || !data.timestamp || Date.now() - data.timestamp > 48 * 3600 * 1000) {
+        return false;
+      }
+
+      if (data.username) this.player.username = data.username;
+      if (typeof data.worldX === 'number') this.player.x = data.worldX;
+      if (typeof data.worldY === 'number') this.player.y = data.worldY;
+      if (typeof data.hp === 'number') this.player.hp = data.hp;
+      if (typeof data.maxHp === 'number') this.player.maxHp = data.maxHp;
+      if (typeof data.mp === 'number') this.player.mp = data.mp;
+      if (typeof data.maxMp === 'number') this.player.maxMp = data.maxMp;
+      if (typeof data.level === 'number') this.player.level = data.level;
+      if (typeof data.exp === 'number') this.player.exp = data.exp;
+      if (typeof data.maxExp === 'number') this.player.maxExp = data.maxExp;
+      if (typeof data.costumeId === 'number') {
+        const found = CHARACTER_COSTUMES.find((c) => c.id === data.costumeId);
+        if (found) this.player.costume = found;
+      }
+      if (data.magicianAffinities) this.player.magicianAffinities = data.magicianAffinities;
+      if (data.role) this.player.setRole(data.role, data.magicianAffinities);
+      if (typeof data.isGuest === 'boolean') this.authUI.isGuest = data.isGuest;
+
+      // Pulihkan slot inventaris
+      if (Array.isArray(data.inventory)) {
+        this.player.inventory.slots = new Array(this.player.inventory.capacity).fill(null);
+        for (let i = 0; i < Math.min(data.inventory.length, this.player.inventory.capacity); i++) {
+          this.player.inventory.slots[i] = data.inventory[i];
+        }
+      }
+
+      // Pulihkan peti yang sudah terbuka
+      if (Array.isArray(data.openedChests)) {
+        for (const idx of data.openedChests) {
+          if (this.chests[idx]) {
+            this.chests[idx].isOpen = true;
+          }
+        }
+      }
+
+      return true;
+    } catch (e) {
+      console.warn('Could not restore session save:', e);
+      return false;
+    }
   }
 
   private spawnInitialWorldObjects(): void {
@@ -526,7 +675,29 @@ export class Game {
       }
       ctx.restore();
 
-      // 14. Topmost Modal: Premium In-Game Notification / Confirm Dialog
+      // 14. Floating Auto-Update Banner (Muncul saat ada pembaruan file baru)
+      if (UpdateService.isUpdateAvailable) {
+        const upW = 236;
+        const upH = 28;
+        const upX = (screenWidth - upW) / 2;
+        const upY = 10;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(2, 132, 199, 0.95)';
+        ctx.fillRect(upX, upY, upW, upH);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(upX, upY, upW, upH);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 9.5px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🚀 Versi Baru Siap · Sentuh Muat Ulang ↻', upX + upW / 2, upY + upH / 2);
+        ctx.restore();
+      }
+
+      // 15. Topmost Modal: Premium In-Game Notification / Confirm Dialog
       NotificationModal.render(ctx, screenWidth, screenHeight);
     }
   }

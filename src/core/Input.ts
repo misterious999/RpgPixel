@@ -1,4 +1,5 @@
 import { ControlSettingsManager } from './ControlSettings.ts';
+import { UpdateService } from '../services/UpdateService.ts';
 
 export interface InputState {
   axisX: number; // -1 to 1
@@ -43,6 +44,7 @@ export class InputManager {
 
   private setupKeyboardListeners(): void {
     window.addEventListener('keydown', (e) => {
+      UpdateService.reportActivity();
       this.keys.add(e.code);
     });
 
@@ -54,6 +56,7 @@ export class InputManager {
   private setupTouchListeners(): void {
     const handleTouchStart = (e: TouchEvent) => {
       e.preventDefault();
+      UpdateService.reportActivity();
       const rect = this.canvas.getBoundingClientRect();
       const width = rect.width;
       const height = rect.height;
