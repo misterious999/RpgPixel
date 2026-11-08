@@ -266,9 +266,9 @@ export class Game {
       level: this.player.level,
       exp: this.player.exp,
       maxExp: this.player.maxExp,
-      hp: this.player.hp,
+      hp: Math.floor(this.player.hp),
       maxHp: this.player.maxHp,
-      mp: this.player.mp,
+      mp: Math.floor(this.player.mp),
       maxMp: this.player.maxMp,
       worldX: this.player.x,
       worldY: this.player.y,
@@ -546,17 +546,17 @@ export class Game {
         <div style="margin-top: 3px; display: flex; align-items: center; gap: 6px;">
           <span style="font-size: 10px; width: 20px;">HP</span>
           <div style="width: 75px; height: 6px; background: #334155; border-radius: 3px; overflow: hidden; display: inline-block;">
-            <div style="width: ${(this.player.hp / this.player.maxHp) * 100}%; height: 100%; background: #22c55e;"></div>
+            <div style="width: ${Math.min(100, Math.max(0, (this.player.hp / this.player.maxHp) * 100))}%; height: 100%; background: #22c55e;"></div>
           </div>
-          <span style="font-size: 10px;">${this.player.hp}/${this.player.maxHp}</span>
+          <span style="font-size: 10px;">${Math.floor(this.player.hp)}/${this.player.maxHp}</span>
         </div>
         <!-- MP Bar -->
         <div style="margin-top: 2px; display: flex; align-items: center; gap: 6px;">
           <span style="font-size: 10px; width: 20px;">MP</span>
           <div style="width: 75px; height: 6px; background: #334155; border-radius: 3px; overflow: hidden; display: inline-block;">
-            <div style="width: ${(this.player.mp / this.player.maxMp) * 100}%; height: 100%; background: #38bdf8;"></div>
+            <div style="width: ${Math.min(100, Math.max(0, (this.player.mp / this.player.maxMp) * 100))}%; height: 100%; background: #38bdf8;"></div>
           </div>
-          <span style="font-size: 10px;">${this.player.mp}/${this.player.maxMp}</span>
+          <span style="font-size: 10px;">${Math.floor(this.player.mp)}/${this.player.maxMp}</span>
         </div>
       `;
     }

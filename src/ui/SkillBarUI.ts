@@ -84,12 +84,11 @@ export class SkillBarUI {
       return;
     }
 
-    if (this.player.mp < skill.manaCost) {
+    if (!this.player.consumeMp(skill.manaCost)) {
       this.floatingText.spawn(this.player.x + 10, this.player.y - 12, 'Mana Tidak Cukup!', '#38bdf8');
       return;
     }
 
-    this.player.mp -= skill.manaCost;
     skill.currentCooldown = skill.cooldown;
 
     const px = this.player.x + 10;

@@ -137,15 +137,22 @@ export class Player {
   }
 
   public heal(amount: number): number {
-    const prevHp = this.hp;
-    this.hp = Math.min(this.maxHp, this.hp + amount);
-    return this.hp - prevHp;
+    const prevHp = Math.floor(this.hp);
+    this.hp = Math.min(this.maxHp, Math.floor(this.hp) + amount);
+    return Math.floor(this.hp) - prevHp;
   }
 
   public restoreMp(amount: number): number {
-    const prevMp = this.mp;
-    this.mp = Math.min(this.maxMp, this.mp + amount);
-    return this.mp - prevMp;
+    const prevMp = Math.floor(this.mp);
+    this.mp = Math.min(this.maxMp, Math.floor(this.mp) + amount);
+    return Math.floor(this.mp) - prevMp;
+  }
+
+  public consumeMp(amount: number): boolean {
+    const currentMp = Math.floor(this.mp);
+    if (currentMp < amount) return false;
+    this.mp = Math.max(0, currentMp - amount);
+    return true;
   }
 
   public getCollisionBox() {
