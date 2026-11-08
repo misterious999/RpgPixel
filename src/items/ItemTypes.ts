@@ -149,5 +149,104 @@ export const ITEM_DEFINITIONS: Record<string, ItemDefinition> = {
       ctx.fillStyle = '#fbbf24';
       ctx.fillRect(x + size * 0.66, y + size * 0.64, 2, 2);
     }
+  },
+  MANA_POTION: {
+    id: 'MANA_POTION',
+    name: 'Ramuan Mana',
+    description: 'Memulihkan 40 MP secara instan dengan ekstrak esensi sihir biru.',
+    category: 'consumable',
+    maxStack: 10,
+    effectValue: 40,
+    color: '#38bdf8',
+    renderIcon: (ctx, x, y, size) => {
+      // Bottle cork
+      ctx.fillStyle = '#a16207';
+      ctx.fillRect(x + size * 0.4, y + size * 0.1, size * 0.2, size * 0.15);
+      // Glass body
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.5, y + size * 0.6, size * 0.35, 0, Math.PI * 2);
+      ctx.fill();
+      // Blue liquid inside
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.5, y + size * 0.65, size * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+      // Cyan inner glow
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.5, y + size * 0.68, size * 0.15, 0, Math.PI * 2);
+      ctx.fill();
+      // Glass highlight
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x + size * 0.35, y + size * 0.45, size * 0.1, size * 0.15);
+    }
+  },
+  SLIME_JELLY: {
+    id: 'SLIME_JELLY',
+    name: 'Jeli Slime Gua',
+    description: 'Cairan kental kenyal dari slime goa yang berharga bagi alkemis.',
+    category: 'material',
+    maxStack: 30,
+    color: '#10b981',
+    renderIcon: (ctx, x, y, size) => {
+      ctx.fillStyle = '#059669';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.5, y + size * 0.55, size * 0.32, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#34d399';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.45, y + size * 0.45, size * 0.16, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x + size * 0.4, y + size * 0.4, size * 0.08, size * 0.08);
+    }
+  },
+  ANCIENT_BONE: {
+    id: 'ANCIENT_BONE',
+    name: 'Tulang Purba',
+    description: 'Tulang berfosil dari dungeon kuno yang menyimpan residu energi sihir.',
+    category: 'material',
+    maxStack: 25,
+    color: '#cbd5e1',
+    renderIcon: (ctx, x, y, size) => {
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.3, y + size * 0.4, size * 0.12, 0, Math.PI * 2);
+      ctx.arc(x + size * 0.3, y + size * 0.6, size * 0.12, 0, Math.PI * 2);
+      ctx.arc(x + size * 0.7, y + size * 0.4, size * 0.12, 0, Math.PI * 2);
+      ctx.arc(x + size * 0.7, y + size * 0.6, size * 0.12, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillRect(x + size * 0.3, y + size * 0.45, size * 0.4, size * 0.14);
+    }
+  },
+  DUNGEON_GEM: {
+    id: 'DUNGEON_GEM',
+    name: 'Permata Bawah Tanah',
+    description: 'Kristal ungu mistis langka dari lubuk goa terdalam. Bernilai emas tinggi.',
+    category: 'treasure',
+    maxStack: 50,
+    color: '#c084fc',
+    renderIcon: (ctx, x, y, size) => {
+      ctx.fillStyle = '#9333ea';
+      ctx.beginPath();
+      ctx.moveTo(x + size * 0.5, y + size * 0.2);
+      ctx.lineTo(x + size * 0.8, y + size * 0.45);
+      ctx.lineTo(x + size * 0.5, y + size * 0.82);
+      ctx.lineTo(x + size * 0.2, y + size * 0.45);
+      ctx.closePath();
+      ctx.fill();
+      // Facet highlight
+      ctx.fillStyle = '#e879f9';
+      ctx.beginPath();
+      ctx.moveTo(x + size * 0.5, y + size * 0.2);
+      ctx.lineTo(x + size * 0.65, y + size * 0.45);
+      ctx.lineTo(x + size * 0.5, y + size * 0.82);
+      ctx.closePath();
+      ctx.fill();
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x + size * 0.45, y + size * 0.35, size * 0.1, size * 0.1);
+    }
   }
 };

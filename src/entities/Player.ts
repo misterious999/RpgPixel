@@ -1,6 +1,7 @@
 import { CONSTANTS } from '../core/Constants.ts';
 import { InputState } from '../core/Input.ts';
 import { TileMap } from '../world/TileMap.ts';
+import { DungeonMap } from '../world/DungeonMap.ts';
 import { Inventory } from '../items/Inventory.ts';
 import { CharacterCostume, RoleType, Skill, MagicianAffinities } from '../types/GameTypes.ts';
 import { CHARACTER_COSTUMES, ROLE_INFO, getMagicianSkills, ELEMENT_INFO } from '../data/RolesData.ts';
@@ -220,6 +221,40 @@ export class Player {
     // PENTING: Role, hasLockedRole, dan Kartu Petualang tidak pernah hilang atau direset walau mati!
   }
 
+  public getAttackHitbox(): { x: number; y: number; width: number; height: number } | null {
+    if (this.attackTimer <= 0) return null;
+    const reach = 24;
+    if (this.direction === 'right') {
+      return { x: this.x + 18, y: this.y + 2, width: reach, height: 26 };
+    } else if (this.direction === 'left') {
+      return { x: this.x - reach + 4, y: this.y + 2, width: reach, height: 26 };
+    } else if (this.direction === 'down') {
+      return { x: this.x + 2, y: this.y + 18, width: 24, height: reach };
+    } else {
+      return { x: this.x + 2, y: this.y - reach + 6, width: 24, height: reach };
+    }
+  }
+
+  public getAttackDamage(): { damage: number; isCrit: boolean } {
+    let baseDmg = 12 + this.level * 2;
+    if (this.role === 'KNIGHT') {
+      baseDmg = 24 + this.level * 4;
+      if (this.isBerserk) baseDmg *= 1.5;
+    } else if (this.role === 'ASSASSIN') {
+      baseDmg = 20 + this.level * 3.5;
+      const isCrit = Math.random() < 0.35;
+      if (isCrit) return { damage: Math.round(baseDmg * 2.2), isCrit: true };
+    } else if (this.role === 'MAGICIAN') {
+      baseDmg = 16 + this.level * 3;
+    } else if (this.role === 'HEALER') {
+      baseDmg = 14 + this.level * 2.5;
+    } else if (this.role === 'NECROMANCER') {
+      baseDmg = 18 + this.level * 3;
+    }
+    const variance = (Math.random() * 0.3) - 0.15;
+    return { damage: Math.max(1, Math.round(baseDmg * (1 + variance))), isCrit: false };
+  }
+
   public playSkillCastAnimation(skill: Skill): void {
     const isAbnormal = skill.isAbnormal || skill.id.startsWith('abnormal') || skill.id === 'berserk_overdrive';
     this.castDuration = isAbnormal ? 0.75 : 0.48;
@@ -299,7 +334,7 @@ export class Player {
     };
   }
 
-  public update(deltaTime: number, input: InputState, tileMap: TileMap, obstacleChecker?: (box: { x: number; y: number; width: number; height: number }) => boolean): void {
+  public update(deltaTime: number, input: InputState, tileMap: TileMap | DungeonMap, obstacleChecker?: (box: { x: number; y: number; width: number; height: number }) => boolean): void {
     const { axisX, axisY, isSprint, isAction } = input;
 
     this.breathTimer += deltaTime * 3;

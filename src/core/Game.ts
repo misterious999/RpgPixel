@@ -19,6 +19,9 @@ import { NotificationModal } from '../ui/NotificationModal.ts';
 import { ITEM_DEFINITIONS } from '../items/ItemTypes.ts';
 import { ROLE_INFO, CHARACTER_COSTUMES } from '../data/RolesData.ts';
 import { UpdateService } from '../services/UpdateService.ts';
+import { CaveEntrance } from '../world/CaveEntrance.ts';
+import { DungeonMap } from '../world/DungeonMap.ts';
+import { Monster } from '../entities/Monster.ts';
 
 export class Game {
   private canvas: HTMLCanvasElement;
@@ -33,6 +36,17 @@ export class Game {
   private skillBarUI: SkillBarUI;
   private onboardingUI: OnboardingUI;
   private controlSettingsModal: ControlSettingsModal;
+
+  // Map & Dungeon state
+  public currentMap: 'OVERWORLD' | 'DUNGEON' = 'OVERWORLD';
+  private caveEntrance: CaveEntrance;
+  private dungeonMap: DungeonMap;
+  private dungeonMonsters: Monster[] = [];
+  private dungeonChests: Chest[] = [];
+  private dungeonWorldItems: WorldItem[] = [];
+  private mapTransitionTimer: number = 0;
+  private mapTransitionTitle: string = '';
+  private mapTransitionSubtitle: string = '';
 
   // World objects
   private worldItems: WorldItem[] = [];
@@ -104,6 +118,13 @@ export class Game {
     const guildX = 51 * CONSTANTS.TILE_SIZE;
     const guildY = 48 * CONSTANTS.TILE_SIZE;
     this.guildNPC = new GuildNPC(guildX, guildY);
+
+    // Inisialisasi Pintu Masuk Goa (Dungeon Entrance) di Overworld (Utara Kota)
+    this.caveEntrance = new CaveEntrance(49, 32);
+
+    // Inisialisasi Dungeon Bawah Tanah, Monster & Peti Rahasia
+    this.dungeonMap = new DungeonMap();
+    this.spawnInitialDungeonObjects();
 
     this.spawnInitialWorldObjects();
 
@@ -258,6 +279,11 @@ export class Game {
       if (chest.isOpen) openedChestsIndices.push(idx);
     });
 
+    const openedDungeonChestsIndices: number[] = [];
+    this.dungeonChests.forEach((chest, idx) => {
+      if (chest.isOpen) openedDungeonChestsIndices.push(idx);
+    });
+
     const snapshot = {
       username: this.player.username,
       costumeId: this.player.costume.id,
@@ -273,8 +299,10 @@ export class Game {
       maxMp: this.player.maxMp,
       worldX: this.player.x,
       worldY: this.player.y,
+      currentMap: this.currentMap,
       inventory: this.player.inventory.slots,
       openedChests: openedChestsIndices,
+      openedDungeonChests: openedDungeonChestsIndices,
       isGuest: this.authUI.isGuest,
       timestamp: Date.now()
     };
@@ -344,13 +372,31 @@ export class Game {
         }
       }
 
-      // Pulihkan peti yang sudah terbuka
+      // Pulihkan peti yang sudah terbuka di Overworld
       if (Array.isArray(data.openedChests)) {
         for (const idx of data.openedChests) {
           if (this.chests[idx]) {
             this.chests[idx].isOpen = true;
           }
         }
+      }
+
+      // Pulihkan peti yang sudah terbuka di Dungeon
+      if (Array.isArray(data.openedDungeonChests)) {
+        for (const idx of data.openedDungeonChests) {
+          if (this.dungeonChests[idx]) {
+            this.dungeonChests[idx].isOpen = true;
+          }
+        }
+      }
+
+      // Pulihkan lokasi map (Dungeon atau Overworld)
+      if (data.currentMap === 'DUNGEON') {
+        this.currentMap = 'DUNGEON';
+        this.camera.setWorldBounds(this.dungeonMap.width * CONSTANTS.TILE_SIZE, this.dungeonMap.height * CONSTANTS.TILE_SIZE);
+      } else {
+        this.currentMap = 'OVERWORLD';
+        this.camera.setWorldBounds(CONSTANTS.MAP_WIDTH * CONSTANTS.TILE_SIZE, CONSTANTS.MAP_HEIGHT * CONSTANTS.TILE_SIZE);
       }
 
       return true;
@@ -395,6 +441,89 @@ export class Game {
         new WorldItem(50 * ts + s.dx * ts + 16, 50 * ts + s.dy * ts + 16, s.item, s.count)
       );
     }
+  }
+
+  private hitMonstersInSwing: Set<string> = new Set();
+
+  private spawnInitialDungeonObjects(): void {
+    const ts = CONSTANTS.TILE_SIZE;
+
+    // 1. Peti Harta Karun Bawah Tanah (Dungeon Chests)
+    this.dungeonChests = [
+      // Peti 1: Ruang Tengkorak Kuno (West Crypt)
+      new Chest(6 * ts + 5, 15 * ts + 6, [
+        { itemId: 'GOLD_COIN', count: 160 },
+        { itemId: 'HEALTH_POTION', count: 2 },
+        { itemId: 'ANCIENT_BONE', count: 3 }
+      ]),
+      // Peti 2: Gua Kristal Mineral (East Cavern)
+      new Chest(34 * ts + 5, 15 * ts + 6, [
+        { itemId: 'GOLD_COIN', count: 180 },
+        { itemId: 'MANA_POTION', count: 3 },
+        { itemId: 'DUNGEON_GEM', count: 1 }
+      ]),
+      // Peti 3: Harta Karun Legendaris di Belakang Altar Bos (North Chamber)
+      new Chest(20 * ts + 5, 3 * ts + 6, [
+        { itemId: 'GOLD_COIN', count: 350 },
+        { itemId: 'DUNGEON_GEM', count: 3 },
+        { itemId: 'HEALTH_POTION', count: 4 },
+        { itemId: 'MANA_POTION', count: 4 }
+      ])
+    ];
+
+    // 2. Monster Penghuni Goa (Dungeon Monsters)
+    this.dungeonMonsters = [
+      // Aula Utama (Great Hall - Tengah)
+      new Monster('m_slime_1', 'SLIME', 16 * ts + 6, 20 * ts + 6),
+      new Monster('m_slime_2', 'SLIME', 24 * ts + 6, 21 * ts + 6),
+      new Monster('m_bat_1', 'BAT', 20 * ts + 5, 17 * ts + 8),
+      // Ruang Tengkorak (Bone Crypt - Barat)
+      new Monster('m_skel_1', 'SKELETON', 6 * ts + 5, 18 * ts + 3),
+      new Monster('m_skel_2', 'SKELETON', 8 * ts + 5, 22 * ts + 3),
+      // Gua Kristal (Crystal Cavern - Timur)
+      new Monster('m_bat_2', 'BAT', 32 * ts + 5, 16 * ts + 8),
+      new Monster('m_slime_3', 'SLIME', 33 * ts + 6, 22 * ts + 6),
+      // Altar Bos Goa (Abyssal Altar - Utara)
+      new Monster('m_skel_elite', 'SKELETON', 16 * ts + 5, 5 * ts + 3),
+      new Monster('m_boss_slime', 'BOSS_SLIME', 20 * ts, 5 * ts)
+    ];
+  }
+
+  public enterDungeon(): void {
+    this.currentMap = 'DUNGEON';
+    this.player.x = this.dungeonMap.entranceSpawnX;
+    this.player.y = this.dungeonMap.entranceSpawnY;
+    this.player.direction = 'up';
+
+    // Perbarui batas kamera untuk map Dungeon (40x40 tile)
+    this.camera.setWorldBounds(this.dungeonMap.width * CONSTANTS.TILE_SIZE, this.dungeonMap.height * CONSTANTS.TILE_SIZE);
+    this.camera.update(this.player.x, this.player.y);
+
+    this.triggerMapTransition('🏰 GOA BAWAH TANAH', 'Dungeon Tingkat 1');
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '⛩️ Memasuki Goa Bawah Tanah!', '#c084fc', 3.0);
+    this.saveSessionSnapshot();
+  }
+
+  public exitDungeon(): void {
+    this.currentMap = 'OVERWORLD';
+    // Tempatkan pemain tepat di depan pintu masuk goa di Dunia Luar
+    this.player.x = 50 * CONSTANTS.TILE_SIZE + 6;
+    this.player.y = 35 * CONSTANTS.TILE_SIZE + 3;
+    this.player.direction = 'down';
+
+    // Perbarui batas kamera untuk Dunia Luar (100x100 tile)
+    this.camera.setWorldBounds(CONSTANTS.MAP_WIDTH * CONSTANTS.TILE_SIZE, CONSTANTS.MAP_HEIGHT * CONSTANTS.TILE_SIZE);
+    this.camera.update(this.player.x, this.player.y);
+
+    this.triggerMapTransition('🌤️ LEMBAH SERIKAT', 'Dunia Luar (Overworld)');
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🌤️ Kembali ke Permukaan', '#facc15', 3.0);
+    this.saveSessionSnapshot();
+  }
+
+  public triggerMapTransition(title: string, subtitle: string): void {
+    this.mapTransitionTitle = title;
+    this.mapTransitionSubtitle = subtitle;
+    this.mapTransitionTimer = 3.2;
   }
 
   public handleResize(): void {
@@ -458,11 +587,24 @@ export class Game {
       return;
     }
 
+    if (this.mapTransitionTimer > 0) {
+      this.mapTransitionTimer -= deltaTime;
+    }
+
+    if (this.player.attackTimer <= 0) {
+      this.hitMonstersInSwing.clear();
+    }
+
     // 1. Process Input
     this.input.update();
 
-    // 2. Update World Animations
-    this.tileMap.update(deltaTime);
+    // 2. Update World Animations based on active map
+    if (this.currentMap === 'OVERWORLD') {
+      this.tileMap.update(deltaTime);
+      this.caveEntrance.update(deltaTime);
+    } else {
+      this.dungeonMap.update(deltaTime);
+    }
     this.skillBarUI.update(deltaTime);
 
     // 3. Update Player & Collisions
@@ -470,18 +612,33 @@ export class Game {
     const playerCenterY = this.player.y + this.player.height / 2;
 
     const obstacleChecker = (box: { x: number; y: number; width: number; height: number }) => {
-      // Chests
-      for (const chest of this.chests) {
-        const cb = chest.getCollisionBox();
-        if (box.x < cb.x + cb.width && box.x + box.width > cb.x && box.y < cb.y + cb.height && box.y + box.height > cb.y) {
+      if (this.currentMap === 'OVERWORLD') {
+        // Overworld Chests
+        for (const chest of this.chests) {
+          const cb = chest.getCollisionBox();
+          if (box.x < cb.x + cb.width && box.x + box.width > cb.x && box.y < cb.y + cb.height && box.y + box.height > cb.y) {
+            return true;
+          }
+        }
+        // Guild Desk
+        const gx = this.guildNPC.x - 4;
+        const gy = this.guildNPC.y + 14;
+        if (box.x < gx + 40 && box.x + box.width > gx && box.y < gy + 16 && box.y + box.height > gy) {
           return true;
         }
-      }
-      // Guild Desk
-      const gx = this.guildNPC.x - 4;
-      const gy = this.guildNPC.y + 14;
-      if (box.x < gx + 40 && box.x + box.width > gx && box.y < gy + 16 && box.y + box.height > gy) {
-        return true;
+        // Cave Entrance sides (rock walls)
+        const cex = this.caveEntrance.x;
+        const cey = this.caveEntrance.y;
+        if (box.x < cex + 16 && box.x + box.width > cex && box.y < cey + 60 && box.y + box.height > cey + 24) return true;
+        if (box.x < cex + 64 && box.x + box.width > cex + 48 && box.y < cey + 60 && box.y + box.height > cey + 24) return true;
+      } else {
+        // Dungeon Chests
+        for (const chest of this.dungeonChests) {
+          const cb = chest.getCollisionBox();
+          if (box.x < cb.x + cb.width && box.x + box.width > cb.x && box.y < cb.y + cb.height && box.y + box.height > cb.y) {
+            return true;
+          }
+        }
       }
       return false;
     };
@@ -491,71 +648,227 @@ export class Game {
       ? { axisX: 0, axisY: 0, isAction: false, isSprint: false }
       : this.input.state;
 
-    this.player.update(deltaTime, activeInput, this.tileMap, obstacleChecker);
+    const activeMap = this.currentMap === 'OVERWORLD' ? this.tileMap : this.dungeonMap;
+    this.player.update(deltaTime, activeInput, activeMap, obstacleChecker);
 
-    // 4. Guild Receptionist Interaction
-    if (!this.guildNPC.isAppraisalOpen && this.guildNPC.isNearPlayer(playerCenterX, playerCenterY)) {
-      if (this.input.state.isAction) {
-        this.guildNPC.openAppraisal();
-      }
-    }
-
-    // 5. Update Chests & Handle Interactions
-    for (const chest of this.chests) {
-      chest.update(deltaTime);
-      if (!chest.isOpen && chest.isNearPlayer(playerCenterX, playerCenterY)) {
+    // --- OVERWORLD SPECIFIC UPDATES ---
+    if (this.currentMap === 'OVERWORLD') {
+      // 4. Guild Receptionist Interaction
+      if (!this.guildNPC.isAppraisalOpen && this.guildNPC.isNearPlayer(playerCenterX, playerCenterY)) {
         if (this.input.state.isAction) {
-          const rewards = chest.open();
-          for (const reward of rewards) {
-            this.player.inventory.addItem(reward.itemId, reward.count);
-            const def = ITEM_DEFINITIONS[reward.itemId];
-            const name = def ? def.name : reward.itemId;
-            this.floatingText.spawn(chest.x + 11, chest.y - 12, `+${reward.count} ${name}`, '#facc15', 1.8);
+          this.guildNPC.openAppraisal();
+        }
+      }
+
+      // 5. Cave Entrance (Masuk Goa / Dungeon)
+      if (this.caveEntrance.isNearPlayer(playerCenterX, playerCenterY)) {
+        if (this.input.state.isAction) {
+          this.enterDungeon();
+          return;
+        }
+      }
+
+      // 6. Update Chests & Handle Interactions
+      for (const chest of this.chests) {
+        chest.update(deltaTime);
+        if (!chest.isOpen && chest.isNearPlayer(playerCenterX, playerCenterY)) {
+          if (this.input.state.isAction) {
+            const rewards = chest.open();
+            for (const reward of rewards) {
+              this.player.inventory.addItem(reward.itemId, reward.count);
+              const def = ITEM_DEFINITIONS[reward.itemId];
+              const name = def ? def.name : reward.itemId;
+              this.floatingText.spawn(chest.x + 11, chest.y - 12, `+${reward.count} ${name}`, '#facc15', 1.8);
+            }
+            const leveledUp = this.player.addExp(25);
+            if (leveledUp) {
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 30, `🎉 LEVEL UP! Sekarang Lv. ${this.player.level}`, '#fde047', 3.0);
+            }
+            this.authUI.saveCurrentGame();
           }
-          // Gain exp from opening chest!
-          const leveledUp = this.player.addExp(25);
-          if (leveledUp) {
-            this.floatingText.spawn(this.player.x + 10, this.player.y - 30, `🎉 LEVEL UP! Sekarang Lv. ${this.player.level}`, '#fde047', 3.0);
+        }
+      }
+
+      // 7. Update World Items (Magnet & Pickup)
+      for (let i = this.worldItems.length - 1; i >= 0; i--) {
+        const item = this.worldItems[i];
+        const pickedUp = item.update(deltaTime, playerCenterX, playerCenterY);
+        if (pickedUp) {
+          const added = this.player.inventory.addItem(item.itemId, item.count);
+          if (added > 0) {
+            const def = ITEM_DEFINITIONS[item.itemId];
+            const name = def ? def.name : item.itemId;
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `+${added} ${name}`, '#38bdf8');
+            this.worldItems.splice(i, 1);
           }
-          this.authUI.saveCurrentGame();
+        }
+      }
+    } else {
+      // --- DUNGEON SPECIFIC UPDATES ---
+      // 4. Exit Ladder to Surface
+      if (this.dungeonMap.isNearLadder(playerCenterX, playerCenterY)) {
+        if (this.input.state.isAction) {
+          this.exitDungeon();
+          return;
+        }
+      }
+
+      // 5. Dungeon Chests
+      for (const chest of this.dungeonChests) {
+        chest.update(deltaTime);
+        if (!chest.isOpen && chest.isNearPlayer(playerCenterX, playerCenterY)) {
+          if (this.input.state.isAction) {
+            const rewards = chest.open();
+            for (const reward of rewards) {
+              this.player.inventory.addItem(reward.itemId, reward.count);
+              const def = ITEM_DEFINITIONS[reward.itemId];
+              const name = def ? def.name : reward.itemId;
+              this.floatingText.spawn(chest.x + 11, chest.y - 12, `+${reward.count} ${name}`, '#facc15', 2.0);
+            }
+            const leveledUp = this.player.addExp(50);
+            if (leveledUp) {
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 30, `🎉 LEVEL UP! Sekarang Lv. ${this.player.level}`, '#fde047', 3.0);
+            }
+            this.authUI.saveCurrentGame();
+          }
+        }
+      }
+
+      // 6. Dungeon World Items
+      for (let i = this.dungeonWorldItems.length - 1; i >= 0; i--) {
+        const item = this.dungeonWorldItems[i];
+        const pickedUp = item.update(deltaTime, playerCenterX, playerCenterY);
+        if (pickedUp) {
+          const added = this.player.inventory.addItem(item.itemId, item.count);
+          if (added > 0) {
+            const def = ITEM_DEFINITIONS[item.itemId];
+            const name = def ? def.name : item.itemId;
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `+${added} ${name}`, '#38bdf8');
+            this.dungeonWorldItems.splice(i, 1);
+          }
+        }
+      }
+
+      // 7. Dungeon Monsters Update (AI, Movement & Player Attack)
+      for (const monster of this.dungeonMonsters) {
+        monster.update(
+          deltaTime,
+          playerCenterX,
+          playerCenterY,
+          (tx, ty) => this.dungeonMap.isTileSolid(tx, ty),
+          (atk) => {
+            this.player.takeDamage(atk);
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `-${atk} HP`, '#ef4444');
+            if (this.player.hp <= 0) {
+              this.exitDungeon(); // Safe respawn to town plaza
+            }
+          }
+        );
+      }
+
+      // 8. Player Melee Attack vs Monsters (Pukulan Tinju Novice / Senjata Role)
+      const attackHitbox = this.player.getAttackHitbox();
+      if (attackHitbox) {
+        for (const monster of this.dungeonMonsters) {
+          if (monster.isDead) continue;
+          if (this.hitMonstersInSwing.has(monster.id)) continue;
+
+          // AABB Hitbox Intersection
+          if (
+            attackHitbox.x < monster.x + monster.width &&
+            attackHitbox.x + attackHitbox.width > monster.x &&
+            attackHitbox.y < monster.y + monster.height &&
+            attackHitbox.y + attackHitbox.height > monster.y
+          ) {
+            this.hitMonstersInSwing.add(monster.id);
+            const { damage, isCrit } = this.player.getAttackDamage();
+            const res = monster.takeDamage(damage, playerCenterX, playerCenterY);
+            const hitText = isCrit ? `💥 CRIT -${res.damage}!` : `-${res.damage}`;
+            this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 10, hitText, isCrit ? '#facc15' : '#ffffff');
+
+            if (res.isDead) {
+              const leveledUp = this.player.addExp(monster.expReward);
+              this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 20, `+${monster.expReward} EXP!`, '#facc15', 2.0);
+
+              // Gold drop
+              this.dungeonWorldItems.push(new WorldItem(monster.x + 4, monster.y + 4, 'GOLD_COIN', monster.goldReward));
+
+              // Unique Monster Drops
+              if (monster.type === 'SLIME' && Math.random() < 0.65) {
+                this.dungeonWorldItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'SLIME_JELLY', 1));
+              } else if (monster.type === 'BAT' && Math.random() < 0.5) {
+                this.dungeonWorldItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 2));
+              } else if (monster.type === 'SKELETON') {
+                if (Math.random() < 0.7) {
+                  this.dungeonWorldItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'ANCIENT_BONE', 1));
+                }
+                if (Math.random() < 0.35) {
+                  this.dungeonWorldItems.push(new WorldItem(monster.x + 6, monster.y + 12, 'MANA_POTION', 1));
+                }
+              } else if (monster.type === 'BOSS_SLIME') {
+                this.dungeonWorldItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 2));
+                this.dungeonWorldItems.push(new WorldItem(monster.x + 24, monster.y + 14, 'HEALTH_POTION', 3));
+                this.dungeonWorldItems.push(new WorldItem(monster.x + 8, monster.y + 14, 'MANA_POTION', 3));
+                this.floatingText.spawn(monster.x + 16, monster.y - 32, '🏆 RAJA SLIME DIKALAHKAN!!', '#facc15', 3.5);
+              }
+
+              if (leveledUp) {
+                this.floatingText.spawn(this.player.x + 10, this.player.y - 30, `🎉 LEVEL UP! Sekarang Lv. ${this.player.level}`, '#fde047', 3.0);
+              }
+            }
+          }
+        }
+      }
+
+      // 9. Player Skill Effects vs Monsters (Sihir & Skill Serangan)
+      for (const effect of this.skillBarUI.visualEffects) {
+        if (['slash', 'fire', 'ice', 'lightning', 'wind', 'earth', 'abnormal'].includes(effect.type)) {
+          for (const monster of this.dungeonMonsters) {
+            if (monster.isDead) continue;
+            const dist = Math.hypot(effect.x - (monster.x + monster.width / 2), effect.y - (monster.y + monster.height / 2));
+            if (dist < effect.radius + monster.width / 2) {
+              if (monster.hurtTimer <= 0) {
+                const spellDmg = effect.type === 'abnormal' ? 65 + this.player.level * 6 : 28 + this.player.level * 3.5;
+                const res = monster.takeDamage(spellDmg, effect.x, effect.y);
+                this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 8, `✨ -${res.damage}`, effect.color);
+                if (res.isDead) {
+                  const leveledUp = this.player.addExp(monster.expReward);
+                  this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 18, `+${monster.expReward} EXP!`, '#facc15', 2.0);
+                  this.dungeonWorldItems.push(new WorldItem(monster.x + 4, monster.y + 4, 'GOLD_COIN', monster.goldReward));
+                  if (leveledUp) {
+                    this.floatingText.spawn(this.player.x + 10, this.player.y - 30, `🎉 LEVEL UP! Sekarang Lv. ${this.player.level}`, '#fde047', 3.0);
+                  }
+                }
+              }
+            }
+          }
         }
       }
     }
 
-    // 6. Update World Items (Magnet & Pickup)
-    for (let i = this.worldItems.length - 1; i >= 0; i--) {
-      const item = this.worldItems[i];
-      const pickedUp = item.update(deltaTime, playerCenterX, playerCenterY);
-      if (pickedUp) {
-        const added = this.player.inventory.addItem(item.itemId, item.count);
-        if (added > 0) {
-          const def = ITEM_DEFINITIONS[item.itemId];
-          const name = def ? def.name : item.itemId;
-          this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `+${added} ${name}`, '#38bdf8');
-          this.worldItems.splice(i, 1);
-        }
-      }
-    }
-
-    // 7. Update Floating Text Notifications
+    // 10. Update Floating Text Notifications
     this.floatingText.update(deltaTime);
 
-    // 8. Update Auth & Cloud Auto-Save
+    // 11. Update Auth & Cloud Auto-Save
     this.authUI.update(deltaTime);
 
-    // 9. Update Camera to follow player
+    // 12. Update Camera to follow player
     this.camera.update(playerCenterX, playerCenterY);
 
-    // 10. Update HUD Coordinates & Player Health/Mana Bar
+    // 13. Update HUD Coordinates & Player Health/Mana Bar
     if (this.coordsEl) {
       const tileX = Math.floor(this.player.x / CONSTANTS.TILE_SIZE);
       const tileY = Math.floor(this.player.y / CONSTANTS.TILE_SIZE);
       const roleInfo = ROLE_INFO[this.player.role];
+      const locText = this.currentMap === 'DUNGEON'
+        ? '<span style="color: #c084fc; font-weight: 700;">🏰 Goa Bawah Tanah (Dungeon Lt.1)</span>'
+        : '<span style="color: #4ade80; font-weight: 700;">🌍 Lembah Serikat (Overworld)</span>';
 
       this.coordsEl.innerHTML = `
         <div style="font-weight: 700; color: ${roleInfo.color}; margin-bottom: 2px;">
           ${this.player.username} · Lv.${this.player.level} [${roleInfo.tag}]
         </div>
+        <div>${locText}</div>
         Tile: (${tileX}, ${tileY})<br>
         <!-- HP Bar -->
         <div style="margin-top: 3px; display: flex; align-items: center; gap: 6px;">
@@ -598,32 +911,69 @@ export class Game {
     ctx.scale(this.scale, this.scale);
     ctx.translate(-Math.floor(this.camera.x), -Math.floor(this.camera.y));
 
-    // 1. Render TileMap
-    this.tileMap.render(ctx, this.camera);
-
-    // 2. Render Guild NPC
     const playerCenterX = this.player.x + this.player.width / 2;
     const playerCenterY = this.player.y + this.player.height / 2;
-    this.guildNPC.render(ctx, this.guildNPC.isNearPlayer(playerCenterX, playerCenterY), this.player);
 
-    // 3. Render Chests
-    for (const chest of this.chests) {
-      chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY));
+    if (this.currentMap === 'OVERWORLD') {
+      // 1. Render Overworld TileMap
+      this.tileMap.render(ctx, this.camera);
+
+      // 2. Render Cave / Dungeon Entrance
+      this.caveEntrance.render(ctx, this.caveEntrance.isNearPlayer(playerCenterX, playerCenterY));
+
+      // 3. Render Guild NPC
+      this.guildNPC.render(ctx, this.guildNPC.isNearPlayer(playerCenterX, playerCenterY), this.player);
+
+      // 4. Render Overworld Chests
+      for (const chest of this.chests) {
+        chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY));
+      }
+
+      // 5. Render Overworld Items
+      for (const item of this.worldItems) {
+        item.render(ctx);
+      }
+
+      // 6. Render Player
+      this.player.render(ctx);
+
+      // 7. Render Spell Effects
+      this.skillBarUI.renderWorldEffects(ctx);
+
+      // 8. Render Floating Texts
+      this.floatingText.render(ctx);
+    } else {
+      // --- DUNGEON WORLD RENDERING ---
+      // 1. Render Dungeon Map Tiles
+      this.dungeonMap.render(ctx, this.camera);
+
+      // 2. Render Dungeon Chests
+      for (const chest of this.dungeonChests) {
+        chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY));
+      }
+
+      // 3. Render Dungeon Items
+      for (const item of this.dungeonWorldItems) {
+        item.render(ctx);
+      }
+
+      // 4. Render Dungeon Monsters
+      for (const monster of this.dungeonMonsters) {
+        monster.render(ctx);
+      }
+
+      // 5. Render Player
+      this.player.render(ctx);
+
+      // 6. Render Spell Effects
+      this.skillBarUI.renderWorldEffects(ctx);
+
+      // 7. Render Floating Texts
+      this.floatingText.render(ctx);
+
+      // 8. Render Atmospheric Subterranean Torch Lighting & Fog of War
+      this.dungeonMap.renderAtmosphericLighting(ctx, this.camera, playerCenterX, playerCenterY);
     }
-
-    // 4. Render World Items
-    for (const item of this.worldItems) {
-      item.render(ctx);
-    }
-
-    // 5. Render Player
-    this.player.render(ctx);
-
-    // 6. Render Spell Effects
-    this.skillBarUI.renderWorldEffects(ctx);
-
-    // 7. Render Floating Texts
-    this.floatingText.render(ctx);
 
     ctx.restore();
 
@@ -712,7 +1062,54 @@ export class Game {
         ctx.restore();
       }
 
-      // 15. Topmost Modal: Premium In-Game Notification / Confirm Dialog
+      // 15. Dungeon Ladder Exit Prompt Bubble
+      const playerCenterX = this.player.x + this.player.width / 2;
+      const playerCenterY = this.player.y + this.player.height / 2;
+      if (this.currentMap === 'DUNGEON' && this.dungeonMap.isNearLadder(playerCenterX, playerCenterY)) {
+        ctx.save();
+        const pW = 210;
+        const pH = 26;
+        const pX = (screenWidth - pW) / 2;
+        const pY = screenHeight - 90;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillRect(pX, pY, pW, pH);
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(pX, pY, pW, pH);
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fef08a';
+        ctx.fillText('Tekan [A] Naik Tangga (Keluar Goa)', pX + pW / 2, pY + 17);
+        ctx.restore();
+      }
+
+      // 16. Map Transition Announcement Banner
+      if (this.mapTransitionTimer > 0) {
+        ctx.save();
+        const transAlpha = Math.min(1, Math.min(this.mapTransitionTimer, 1));
+        ctx.globalAlpha = transAlpha;
+        const tW = 260;
+        const tH = 44;
+        const tX = (screenWidth - tW) / 2;
+        const tY = 48;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+        ctx.fillRect(tX, tY, tW, tH);
+        ctx.strokeStyle = this.currentMap === 'DUNGEON' ? '#c084fc' : '#facc15';
+        ctx.lineWidth = 1.8;
+        ctx.strokeRect(tX, tY, tW, tH);
+
+        ctx.font = 'bold 12px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = this.currentMap === 'DUNGEON' ? '#f0abfc' : '#fef08a';
+        ctx.fillText(this.mapTransitionTitle, tX + tW / 2, tY + 18);
+
+        ctx.font = '9.5px sans-serif';
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillText(this.mapTransitionSubtitle, tX + tW / 2, tY + 34);
+        ctx.restore();
+      }
+
+      // 17. Topmost Modal: Premium In-Game Notification / Confirm Dialog
       NotificationModal.render(ctx, screenWidth, screenHeight);
     }
   }

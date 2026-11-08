@@ -90,6 +90,27 @@ export class TileMap {
         }
       }
     }
+
+    // Mountain cliff ridge flanking the Cave / Dungeon Entrance (North of plaza)
+    for (let cy = 31; cy <= 33; cy++) {
+      for (let cx = 45; cx <= 48; cx++) {
+        if (this.tiles[cy] && this.tiles[cy][cx] !== undefined) {
+          this.tiles[cy][cx] = TileType.CLIFF;
+        }
+      }
+      for (let cx = 52; cx <= 55; cx++) {
+        if (this.tiles[cy] && this.tiles[cy][cx] !== undefined) {
+          this.tiles[cy][cx] = TileType.CLIFF;
+        }
+      }
+    }
+    for (let py = 33; py <= 36; py++) {
+      for (let px = 49; px <= 51; px++) {
+        if (this.tiles[py] && this.tiles[py][px] !== undefined) {
+          this.tiles[py][px] = TileType.DIRT_PATH;
+        }
+      }
+    }
   }
 
   public isTileSolid(tileX: number, tileY: number): boolean {

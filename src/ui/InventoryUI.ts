@@ -173,7 +173,7 @@ export class InventoryUI {
       if (!this.inventory.getSlot(this.selectedSlotIndex)) {
         this.selectedSlotIndex = null;
       }
-    } else if (def.id === 'MAGIC_FLOWER') {
+    } else if (def.id === 'MAGIC_FLOWER' || def.id === 'MANA_POTION') {
       if (this.player.mp >= this.player.maxMp) {
         this.floatingText.spawn(this.player.x + 10, this.player.y - 10, 'Mana Sudah Penuh!', '#38bdf8');
         return;

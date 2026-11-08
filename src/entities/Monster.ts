@@ -1,0 +1,447 @@
+import { CONSTANTS } from '../core/Constants.ts';
+
+export type MonsterType = 'SLIME' | 'BAT' | 'SKELETON' | 'BOSS_SLIME';
+
+export interface MonsterDrop {
+  itemId: string;
+  count: number;
+}
+
+export class Monster {
+  public id: string;
+  public name: string;
+  public type: MonsterType;
+  public x: number;
+  public y: number;
+  public spawnX: number;
+  public spawnY: number;
+  public width: number;
+  public height: number;
+
+  public hp: number;
+  public maxHp: number;
+  public level: number;
+  public attackPower: number;
+  public expReward: number;
+  public goldReward: number;
+  public speed: number;
+  public aggroRange: number = 110;
+
+  public isDead: boolean = false;
+  public respawnTimer: number = 0;
+  public hurtTimer: number = 0;
+  public attackCooldown: number = 0;
+
+  public vx: number = 0;
+  public vy: number = 0;
+  public knockbackX: number = 0;
+  public knockbackY: number = 0;
+  public direction: 'left' | 'right' = 'right';
+
+  private animTimer: number = Math.random() * 10;
+  private wanderTimer: number = 0;
+  private wanderVx: number = 0;
+  private wanderVy: number = 0;
+
+  constructor(id: string, type: MonsterType, x: number, y: number) {
+    this.id = id;
+    this.type = type;
+    this.x = x;
+    this.y = y;
+    this.spawnX = x;
+    this.spawnY = y;
+
+    switch (type) {
+      case 'SLIME':
+        this.name = 'Slime Gua';
+        this.width = 20;
+        this.height = 18;
+        this.maxHp = 45;
+        this.level = 2;
+        this.attackPower = 8;
+        this.expReward = 25;
+        this.goldReward = 16;
+        this.speed = 36;
+        this.aggroRange = 100;
+        break;
+      case 'BAT':
+        this.name = 'Kelelawar Gua';
+        this.width = 22;
+        this.height = 16;
+        this.maxHp = 32;
+        this.level = 3;
+        this.attackPower = 9;
+        this.expReward = 28;
+        this.goldReward = 14;
+        this.speed = 60;
+        this.aggroRange = 120;
+        break;
+      case 'SKELETON':
+        this.name = 'Prajurit Tengkorak';
+        this.width = 22;
+        this.height = 26;
+        this.maxHp = 85;
+        this.level = 4;
+        this.attackPower = 15;
+        this.expReward = 55;
+        this.goldReward = 38;
+        this.speed = 42;
+        this.aggroRange = 115;
+        break;
+      case 'BOSS_SLIME':
+        this.name = 'Raja Slime Purba';
+        this.width = 38;
+        this.height = 34;
+        this.maxHp = 300;
+        this.level = 8;
+        this.attackPower = 24;
+        this.expReward = 280;
+        this.goldReward = 180;
+        this.speed = 32;
+        this.aggroRange = 140;
+        break;
+    }
+
+    this.hp = this.maxHp;
+  }
+
+  public takeDamage(amount: number, fromX: number, fromY: number): { isDead: boolean; damage: number } {
+    if (this.isDead) return { isDead: false, damage: 0 };
+
+    const damage = Math.max(1, Math.round(amount));
+    this.hp = Math.max(0, this.hp - damage);
+    this.hurtTimer = 0.22;
+
+    // Knockback away from hit source
+    const angle = Math.atan2((this.y + this.height / 2) - fromY, (this.x + this.width / 2) - fromX);
+    const knockForce = this.type === 'BOSS_SLIME' ? 60 : 140;
+    this.knockbackX = Math.cos(angle) * knockForce;
+    this.knockbackY = Math.sin(angle) * knockForce;
+
+    if (this.hp <= 0) {
+      this.isDead = true;
+      this.respawnTimer = this.type === 'BOSS_SLIME' ? 45 : 22;
+      return { isDead: true, damage };
+    }
+
+    return { isDead: false, damage };
+  }
+
+  public update(
+    deltaTime: number,
+    playerCenterX: number,
+    playerCenterY: number,
+    isTileSolid: (tileX: number, tileY: number) => boolean,
+    onAttackPlayer: (atk: number) => void
+  ): void {
+    if (this.isDead) {
+      this.respawnTimer -= deltaTime;
+      if (this.respawnTimer <= 0) {
+        this.isDead = false;
+        this.hp = this.maxHp;
+        this.x = this.spawnX;
+        this.y = this.spawnY;
+        this.knockbackX = 0;
+        this.knockbackY = 0;
+      }
+      return;
+    }
+
+    this.animTimer += deltaTime;
+    if (this.hurtTimer > 0) this.hurtTimer -= deltaTime;
+    if (this.attackCooldown > 0) this.attackCooldown -= deltaTime;
+
+    const myCenterX = this.x + this.width / 2;
+    const myCenterY = this.y + this.height / 2;
+    const distToPlayer = Math.hypot(myCenterX - playerCenterX, myCenterY - playerCenterY);
+
+    // 1. Knockback Decay
+    let moveX = 0;
+    let moveY = 0;
+
+    if (Math.abs(this.knockbackX) > 5 || Math.abs(this.knockbackY) > 5) {
+      moveX = this.knockbackX * deltaTime;
+      moveY = this.knockbackY * deltaTime;
+      this.knockbackX *= 0.82;
+      this.knockbackY *= 0.82;
+    } else {
+      // 2. AI Movement: Aggro Chase or Idle Wander
+      if (distToPlayer <= this.aggroRange) {
+        // Chase Player
+        const angle = Math.atan2(playerCenterY - myCenterY, playerCenterX - myCenterX);
+        moveX = Math.cos(angle) * this.speed * deltaTime;
+        moveY = Math.sin(angle) * this.speed * deltaTime;
+        this.direction = (playerCenterX < myCenterX) ? 'left' : 'right';
+
+        // Attack Player if within reach
+        const attackReach = this.type === 'BOSS_SLIME' ? 32 : 22;
+        if (distToPlayer <= attackReach && this.attackCooldown <= 0) {
+          this.attackCooldown = 1.35;
+          onAttackPlayer(this.attackPower);
+        }
+      } else {
+        // Idle Wander
+        this.wanderTimer -= deltaTime;
+        if (this.wanderTimer <= 0) {
+          this.wanderTimer = 1.5 + Math.random() * 2;
+          if (Math.random() < 0.6) {
+            const angle = Math.random() * Math.PI * 2;
+            this.wanderVx = Math.cos(angle) * (this.speed * 0.4);
+            this.wanderVy = Math.sin(angle) * (this.speed * 0.4);
+            this.direction = this.wanderVx < 0 ? 'left' : 'right';
+          } else {
+            this.wanderVx = 0;
+            this.wanderVy = 0;
+          }
+        }
+        moveX = this.wanderVx * deltaTime;
+        moveY = this.wanderVy * deltaTime;
+      }
+    }
+
+    // 3. Collision with Map Walls
+    const nextX = this.x + moveX;
+    const nextY = this.y + moveY;
+    const ts = CONSTANTS.TILE_SIZE;
+
+    // Check X move
+    const leftTileX = Math.floor(nextX / ts);
+    const rightTileX = Math.floor((nextX + this.width) / ts);
+    const topTileY = Math.floor(this.y / ts);
+    const bottomTileY = Math.floor((this.y + this.height) / ts);
+
+    let collidesX = false;
+    for (let ty = topTileY; ty <= bottomTileY; ty++) {
+      for (let tx = leftTileX; tx <= rightTileX; tx++) {
+        if (isTileSolid(tx, ty)) {
+          collidesX = true;
+          break;
+        }
+      }
+      if (collidesX) break;
+    }
+    if (!collidesX) this.x = nextX;
+
+    // Check Y move
+    const curLeftX = Math.floor(this.x / ts);
+    const curRightX = Math.floor((this.x + this.width) / ts);
+    const nextTopY = Math.floor(nextY / ts);
+    const nextBottomY = Math.floor((nextY + this.height) / ts);
+
+    let collidesY = false;
+    for (let ty = nextTopY; ty <= nextBottomY; ty++) {
+      for (let tx = curLeftX; tx <= curRightX; tx++) {
+        if (isTileSolid(tx, ty)) {
+          collidesY = true;
+          break;
+        }
+      }
+      if (collidesY) break;
+    }
+    if (!collidesY) this.y = nextY;
+  }
+
+  public render(ctx: CanvasRenderingContext2D): void {
+    if (this.isDead) return;
+
+    ctx.save();
+    const x = Math.floor(this.x);
+    const y = Math.floor(this.y);
+    const isFlashing = this.hurtTimer > 0;
+
+    // Ground Shadow
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.beginPath();
+    ctx.ellipse(x + this.width / 2, y + this.height, this.width / 2, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Render by Monster Type
+    switch (this.type) {
+      case 'SLIME':
+        this.renderSlime(ctx, x, y, isFlashing);
+        break;
+      case 'BAT':
+        this.renderBat(ctx, x, y, isFlashing);
+        break;
+      case 'SKELETON':
+        this.renderSkeleton(ctx, x, y, isFlashing);
+        break;
+      case 'BOSS_SLIME':
+        this.renderBossSlime(ctx, x, y, isFlashing);
+        break;
+    }
+
+    // Health Bar & Name Tag
+    this.renderHealthBar(ctx, x, y);
+
+    ctx.restore();
+  }
+
+  private renderSlime(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const squish = Math.sin(this.animTimer * 6) * 2;
+    const bodyW = this.width + squish;
+    const bodyH = this.height - squish;
+    const bx = x - squish / 2;
+    const by = y + squish;
+
+    // Gelatinous Slime Body
+    ctx.fillStyle = flash ? '#ffffff' : '#059669';
+    ctx.beginPath();
+    ctx.ellipse(bx + bodyW / 2, by + bodyH / 2, bodyW / 2, bodyH / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (!flash) {
+      // Inner lighter jelly core
+      ctx.fillStyle = '#34d399';
+      ctx.beginPath();
+      ctx.ellipse(bx + bodyW / 2, by + bodyH / 2 - 1, (bodyW / 2) * 0.7, (bodyH / 2) * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Slime Eyes (Looking in direction)
+      const eyeDir = this.direction === 'left' ? -2 : 2;
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(bx + bodyW / 2 - 4 + eyeDir, by + 4, 2, 3);
+      ctx.fillRect(bx + bodyW / 2 + 2 + eyeDir, by + 4, 2, 3);
+      // Eye Highlights
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(bx + bodyW / 2 - 4 + eyeDir, by + 4, 1, 1);
+      ctx.fillRect(bx + bodyW / 2 + 2 + eyeDir, by + 4, 1, 1);
+    }
+  }
+
+  private renderBat(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const flap = Math.sin(this.animTimer * 14) * 5;
+    const bx = x + this.width / 2;
+    const by = y + this.height / 2;
+
+    // Bat Wings
+    ctx.fillStyle = flash ? '#ffffff' : '#1e1b4b';
+    ctx.beginPath();
+    // Left Wing
+    ctx.moveTo(bx, by);
+    ctx.lineTo(bx - 12, by - 6 + flap);
+    ctx.lineTo(bx - 14, by + 2 - flap);
+    ctx.lineTo(bx - 6, by + 4);
+    // Right Wing
+    ctx.lineTo(bx + 6, by + 4);
+    ctx.lineTo(bx + 14, by + 2 - flap);
+    ctx.lineTo(bx + 12, by - 6 + flap);
+    ctx.closePath();
+    ctx.fill();
+
+    // Body
+    ctx.fillStyle = flash ? '#ffffff' : '#312e81';
+    ctx.beginPath();
+    ctx.ellipse(bx, by, 4, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Glowing Red Eyes
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(bx - 2, by - 2, 1.5, 1.5);
+    ctx.fillRect(bx + 1, by - 2, 1.5, 1.5);
+  }
+
+  private renderSkeleton(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const walkStep = Math.sin(this.animTimer * 6) * 2;
+    const col = flash ? '#ffffff' : '#e2e8f0';
+
+    // Ribcage & Pelvis
+    ctx.fillStyle = col;
+    ctx.fillRect(x + 7, y + 8, 8, 8);
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(x + 8, y + 10, 6, 2); // Rib gap
+
+    // Legs
+    ctx.fillStyle = col;
+    ctx.fillRect(x + 7, y + 16, 2, 8 + walkStep);
+    ctx.fillRect(x + 13, y + 16, 2, 8 - walkStep);
+
+    // Skull Head
+    ctx.fillStyle = col;
+    ctx.fillRect(x + 6, y, 10, 8);
+    // Eye Sockets (Glowing cyan)
+    ctx.fillStyle = '#06b6d4';
+    ctx.fillRect(x + 7, y + 3, 2, 2);
+    ctx.fillRect(x + 12, y + 3, 2, 2);
+
+    // Bone Sword
+    ctx.fillStyle = '#94a3b8';
+    const swordX = this.direction === 'right' ? x + 16 : x + 2;
+    ctx.fillRect(swordX, y + 6, 2, 12);
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(swordX - 1, y + 13, 4, 2);
+  }
+
+  private renderBossSlime(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const squish = Math.sin(this.animTimer * 4) * 3;
+    const bodyW = this.width + squish;
+    const bodyH = this.height - squish;
+    const bx = x - squish / 2;
+    const by = y + squish;
+
+    // Giant Purple Abyssal Slime Body
+    ctx.fillStyle = flash ? '#ffffff' : '#6b21a8';
+    ctx.beginPath();
+    ctx.ellipse(bx + bodyW / 2, by + bodyH / 2, bodyW / 2, bodyH / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (!flash) {
+      // Inner glowing core
+      ctx.fillStyle = '#a855f7';
+      ctx.beginPath();
+      ctx.ellipse(bx + bodyW / 2, by + bodyH / 2 - 2, (bodyW / 2) * 0.7, (bodyH / 2) * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Menacing Eyes
+      const eyeDir = this.direction === 'left' ? -3 : 3;
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(bx + bodyW / 2 - 8 + eyeDir, by + 8, 4, 4);
+      ctx.fillRect(bx + bodyW / 2 + 4 + eyeDir, by + 8, 4, 4);
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(bx + bodyW / 2 - 7 + eyeDir, by + 9, 2, 2);
+      ctx.fillRect(bx + bodyW / 2 + 5 + eyeDir, by + 9, 2, 2);
+
+      // Royal Golden Crown on Boss Head
+      const crownX = bx + bodyW / 2 - 8;
+      const crownY = by - 8;
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(crownX, crownY + 4, 16, 4);
+      ctx.fillRect(crownX, crownY, 3, 5);
+      ctx.fillRect(crownX + 6, crownY - 2, 4, 7);
+      ctx.fillRect(crownX + 13, crownY, 3, 5);
+      // Red Ruby
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(crownX + 7, crownY + 4, 2, 2);
+    }
+  }
+
+  private renderHealthBar(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    const isBoss = this.type === 'BOSS_SLIME';
+    const barW = isBoss ? 44 : 22;
+    const barH = isBoss ? 5 : 3;
+    const barX = x + (this.width - barW) / 2;
+    const barY = isBoss ? y - 16 : y - 7;
+
+    // Show name and health bar if boss or damaged
+    if (this.hp < this.maxHp || isBoss) {
+      // Background
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
+
+      // Health fill
+      const pct = Math.min(1, Math.max(0, this.hp / this.maxHp));
+      ctx.fillStyle = isBoss ? '#ec4899' : '#22c55e';
+      ctx.fillRect(barX, barY, Math.round(barW * pct), barH);
+
+      // Name / Level Tag
+      ctx.font = 'bold 7.5px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = isBoss ? '#facc15' : '#cbd5e1';
+      ctx.fillText(
+        isBoss ? `👑 ${this.name} [Lv.${this.level}]` : `[Lv.${this.level}] ${this.name}`,
+        x + this.width / 2,
+        barY - 3
+      );
+    }
+  }
+}
