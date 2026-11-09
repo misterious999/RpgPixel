@@ -40,6 +40,7 @@ import { CookingSystem } from '../systems/CookingSystem.ts';
 import { Pet } from '../systems/TamingSystem.ts';
 import { TitleSystem } from '../systems/TitleSystem.ts';
 import { LeaderboardUI } from '../ui/LeaderboardUI.ts';
+import { CanvasText } from '../utils/CanvasText.ts';
 
 export class Game {
   private canvas: HTMLCanvasElement;
@@ -2179,38 +2180,12 @@ export class Game {
         }
       }
 
-      // Rekrut Rekan Party Guild Receptionist Side Door at (51, 48)
-      const compHireX = 51 * CONSTANTS.TILE_SIZE + 24;
-      const compHireY = 48 * CONSTANTS.TILE_SIZE + 8;
-      if (Math.hypot(compHireX - playerCenterX, compHireY - playerCenterY) < 34 && !this.guildNPC.isAppraisalOpen) {
-        if (this.input.isActionJustPressed || this.input.state.isAction) {
-          this.input.consumeAction();
-          this.openCompanionHireModal();
-        }
-      }
-
-      // Village NPC Interaction (Quest & Ambient)
+      // Village NPC Interaction (Quest & Ambient Warga Luar Ruangan)
       if (!this.villageManager.isDialogOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen) {
         const nearNPC = this.villageManager.isNearAnyNPC(playerCenterX, playerCenterY);
         if (nearNPC && (this.input.isActionJustPressed || this.input.state.isAction)) {
           this.input.consumeAction();
           this.villageManager.openDialog(nearNPC);
-        }
-      }
-
-      // 4. Guild Receptionist Interaction
-      if (!this.guildNPC.isAppraisalOpen && this.guildNPC.isNearPlayer(playerCenterX, playerCenterY)) {
-        if (this.input.isActionJustPressed || this.input.state.isAction) {
-          this.input.consumeAction();
-          this.guildNPC.openAppraisal();
-        }
-      }
-
-      // Blacksmith Workshop Interaction
-      if (!this.blacksmithNPC.isWorkshopOpen && this.blacksmithNPC.isNearPlayer(playerCenterX, playerCenterY)) {
-        if (this.input.isActionJustPressed || this.input.state.isAction) {
-          this.input.consumeAction();
-          this.blacksmithNPC.openWorkshop(this.player.role);
         }
       }
 
@@ -3166,6 +3141,10 @@ export class Game {
               this.guildNPC.openAppraisal();
               break;
 
+            case 'COMPANION_HIRE':
+              this.openCompanionHireModal();
+              break;
+
             case 'BROKK':
               this.blacksmithNPC.openWorkshop(this.player.role);
               break;
@@ -3322,12 +3301,6 @@ export class Game {
 
       // 2.2 Render Stonewatch Cursed Iron Mine Entrance (Desa Stonewatch)
       this.renderStonewatchEntrance(ctx, playerCenterX, playerCenterY);
-
-      // 3. Render Guild NPC
-      this.guildNPC.render(ctx, this.guildNPC.isNearPlayer(playerCenterX, playerCenterY), this.player);
-
-      // Render Weaponsmith Blacksmith NPC Brokk
-      this.blacksmithNPC.render(ctx, this.blacksmithNPC.isNearPlayer(playerCenterX, playerCenterY), this.player);
 
       // 4. Render Overworld Chests
       for (const chest of this.chests) {
@@ -3860,239 +3833,52 @@ export class Game {
         ctx.restore();
       }
 
-      // 15. Dungeon Ladder Exit Prompt Bubble
+      // 15. Action Prompt Bubbles (Dynamic Width, Centered & Overflow-Proof)
       const playerCenterX = this.player.x + this.player.width / 2;
       const playerCenterY = this.player.y + this.player.height / 2;
+
       if (this.currentMap === 'DUNGEON' && this.dungeonMap.isNearLadder(playerCenterX, playerCenterY)) {
-        ctx.save();
-        const pW = 210;
-        const pH = 26;
-        const pX = (screenWidth - pW) / 2;
-        const pY = screenHeight - 90;
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-        ctx.fillRect(pX, pY, pW, pH);
-        ctx.strokeStyle = '#facc15';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(pX, pY, pW, pH);
-        ctx.font = 'bold 10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#fef08a';
-        ctx.fillText('Tekan [A] Naik Tangga (Keluar Goa)', pX + pW / 2, pY + pH / 2);
-        ctx.restore();
-      }
-
-      if (this.currentMap === 'DUNGEON' && this.dungeonMap.isNearFloor2Ladder(playerCenterX, playerCenterY)) {
-        ctx.save();
-        const pW = 230;
-        const pH = 26;
-        const pX = (screenWidth - pW) / 2;
-        const pY = screenHeight - 90;
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-        ctx.fillRect(pX, pY, pW, pH);
-        ctx.strokeStyle = '#c084fc';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(pX, pY, pW, pH);
-        ctx.font = 'bold 10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#e879f9';
-        ctx.fillText('Tekan [A] Masuk Makam Kuno Lantai 2 ▼', pX + pW / 2, pY + pH / 2);
-        ctx.restore();
-      }
-
-      if (this.currentMap === 'DUNGEON_FLOOR_2' && this.dungeonFloor2.isNearLadderUp(playerCenterX, playerCenterY)) {
-        ctx.save();
-        const pW = 210;
-        const pH = 26;
-        const pX = (screenWidth - pW) / 2;
-        const pY = screenHeight - 90;
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-        ctx.fillRect(pX, pY, pW, pH);
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(pX, pY, pW, pH);
-        ctx.font = 'bold 10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#93c5fd';
-        ctx.fillText('Tekan [A] Naik Tangga (Lantai 1) ▲', pX + pW / 2, pY + pH / 2);
-        ctx.restore();
-      }
-
-      if (this.currentMap === 'DUNGEON_FLOOR_2' && this.dungeonFloor2.isNearFloor3Portal(playerCenterX, playerCenterY)) {
-        ctx.save();
-        const pW = 230;
-        const pH = 26;
-        const pX = (screenWidth - pW) / 2;
-        const pY = screenHeight - 90;
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-        ctx.fillRect(pX, pY, pW, pH);
-        ctx.strokeStyle = '#f97316';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(pX, pY, pW, pH);
-        ctx.font = 'bold 10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#fdba74';
-        ctx.fillText('Tekan [A] Masuk Neraka Abisal Lantai 3 ▼', pX + pW / 2, pY + pH / 2);
-        ctx.restore();
-      }
-
-      if (this.currentMap === 'DUNGEON_FLOOR_3' && this.dungeonFloor3.isNearPortalUp(playerCenterX, playerCenterY)) {
-        ctx.save();
-        const pW = 210;
-        const pH = 26;
-        const pX = (screenWidth - pW) / 2;
-        const pY = screenHeight - 90;
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-        ctx.fillRect(pX, pY, pW, pH);
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(pX, pY, pW, pH);
-        ctx.font = 'bold 10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#93c5fd';
-        ctx.fillText('Tekan [A] Masuk Portal Naik (Lantai 2) ▲', pX + pW / 2, pY + pH / 2);
-        ctx.restore();
-      }
-
-      // Eldoria Entrance Prompt (Overworld)
-      const eldEntDist = Math.hypot(21 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 13 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
-      if (this.currentMap === 'OVERWORLD' && eldEntDist < 38) {
-        ctx.save();
-        const pW = 230;
-        const pH = 26;
-        const pX = (screenWidth - pW) / 2;
-        const pY = screenHeight - 90;
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-        ctx.fillRect(pX, pY, pW, pH);
-        ctx.strokeStyle = this.isEldoriaDungeonUnlocked ? '#4ade80' : '#ef4444';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(pX, pY, pW, pH);
-        ctx.font = 'bold 10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = this.isEldoriaDungeonUnlocked ? '#86efac' : '#fca5a5';
-        ctx.fillText(
-          this.isEldoriaDungeonUnlocked ? 'Tekan [A] Masuk Kuil Roh Hutan 🌿' : 'Pecahkan Teka-Teki Elder Sylas 🔒',
-          pX + pW / 2,
-          pY + pH / 2
-        );
-        ctx.restore();
-      }
-
-      // Stonewatch Entrance Prompt (Overworld)
-      const stoneEntDist = Math.hypot(85 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 58 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
-      if (this.currentMap === 'OVERWORLD' && stoneEntDist < 38) {
-        ctx.save();
-        const pW = 240;
-        const pH = 26;
-        const pX = (screenWidth - pW) / 2;
-        const pY = screenHeight - 90;
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-        ctx.fillRect(pX, pY, pW, pH);
-        ctx.strokeStyle = this.isStonewatchDungeonUnlocked ? '#f59e0b' : '#ef4444';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(pX, pY, pW, pH);
-        ctx.font = 'bold 10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = this.isStonewatchDungeonUnlocked ? '#fde68a' : '#fca5a5';
-        ctx.fillText(
-          this.isStonewatchDungeonUnlocked ? 'Tekan [A] Masuk Tambang Abisal ⚒️' : 'Pecahkan Teka-Teki Kapten Borin 🔒',
-          pX + pW / 2,
-          pY + pH / 2
-        );
-        ctx.restore();
-      }
-
-      // Eldoria Ladder Exit Prompt
-      if (this.currentMap === 'DUNGEON_ELDORIA' && this.dungeonEldoria.isNearLadderUp(playerCenterX, playerCenterY)) {
-        ctx.save();
-        const pW = 210;
-        const pH = 26;
-        const pX = (screenWidth - pW) / 2;
-        const pY = screenHeight - 90;
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-        ctx.fillRect(pX, pY, pW, pH);
-        ctx.strokeStyle = '#4ade80';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(pX, pY, pW, pH);
-        ctx.font = 'bold 10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#86efac';
-        ctx.fillText('Tekan [A] Naik Tangga (Desa Eldoria) ▲', pX + pW / 2, pY + pH / 2);
-        ctx.restore();
-      }
-
-      // Stonewatch Ladder Exit Prompt
-      if (this.currentMap === 'DUNGEON_STONEWATCH' && this.dungeonStonewatch.isNearLadderUp(playerCenterX, playerCenterY)) {
-        ctx.save();
-        const pW = 220;
-        const pH = 26;
-        const pX = (screenWidth - pW) / 2;
-        const pY = screenHeight - 90;
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-        ctx.fillRect(pX, pY, pW, pH);
-        ctx.strokeStyle = '#f59e0b';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(pX, pY, pW, pH);
-        ctx.font = 'bold 10px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillStyle = '#fde68a';
-        ctx.fillText('Tekan [A] Naik Tangga (Desa Stonewatch) ▲', pX + pW / 2, pY + pH / 2);
-        ctx.restore();
-      }
-
-      // Overworld Building Entrance Prompt
-      if (this.currentMap === 'OVERWORLD') {
+        this.renderBottomActionPrompt(ctx, 'Tekan [A] Naik Tangga (Keluar Goa) ▲', '#facc15', '#fef08a');
+      } else if (this.currentMap === 'DUNGEON' && this.dungeonMap.isNearFloor2Ladder(playerCenterX, playerCenterY)) {
+        this.renderBottomActionPrompt(ctx, 'Tekan [A] Masuk Makam Kuno Lantai 2 ▼', '#c084fc', '#e879f9');
+      } else if (this.currentMap === 'DUNGEON_FLOOR_2' && this.dungeonFloor2.isNearLadderUp(playerCenterX, playerCenterY)) {
+        this.renderBottomActionPrompt(ctx, 'Tekan [A] Naik Tangga (Lantai 1) ▲', '#38bdf8', '#93c5fd');
+      } else if (this.currentMap === 'DUNGEON_FLOOR_2' && this.dungeonFloor2.isNearFloor3Portal(playerCenterX, playerCenterY)) {
+        this.renderBottomActionPrompt(ctx, 'Tekan [A] Masuk Neraka Abisal Lantai 3 ▼', '#f97316', '#fdba74');
+      } else if (this.currentMap === 'DUNGEON_FLOOR_3' && this.dungeonFloor3.isNearPortalUp(playerCenterX, playerCenterY)) {
+        this.renderBottomActionPrompt(ctx, 'Tekan [A] Masuk Portal Naik (Lantai 2) ▲', '#38bdf8', '#93c5fd');
+      } else if (this.currentMap === 'DUNGEON_ELDORIA' && this.dungeonEldoria.isNearLadderUp(playerCenterX, playerCenterY)) {
+        this.renderBottomActionPrompt(ctx, 'Tekan [A] Naik Tangga (Desa Eldoria) ▲', '#4ade80', '#86efac');
+      } else if (this.currentMap === 'DUNGEON_STONEWATCH' && this.dungeonStonewatch.isNearLadderUp(playerCenterX, playerCenterY)) {
+        this.renderBottomActionPrompt(ctx, 'Tekan [A] Naik Tangga (Desa Stonewatch) ▲', '#f59e0b', '#fde68a');
+      } else if (this.currentMap === 'OVERWORLD') {
+        const eldEntDist = Math.hypot(21 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 13 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
+        const stoneEntDist = Math.hypot(85 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 58 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
         const nearDoor = this.buildingInteriors.getNearbyOverworldDoor(playerCenterX, playerCenterY);
-        if (nearDoor) {
-          ctx.save();
-          const pW = 240;
-          const pH = 26;
-          const pX = (screenWidth - pW) / 2;
-          const pY = screenHeight - 90;
-          ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-          ctx.fillRect(pX, pY, pW, pH);
-          ctx.strokeStyle = nearDoor.accentColor;
-          ctx.lineWidth = 1.5;
-          ctx.strokeRect(pX, pY, pW, pH);
-          ctx.font = 'bold 10px sans-serif';
-          ctx.textAlign = 'center';
-          ctx.textBaseline = 'middle';
-          ctx.fillStyle = nearDoor.accentColor;
-          ctx.fillText(`Tekan [A] Masuk ${nearDoor.name} ${nearDoor.icon}`, pX + pW / 2, pY + pH / 2);
-          ctx.restore();
-        }
-      }
 
-      // Interior Actions & Exit Prompt
-      if (this.isCurrentMapInterior()) {
+        if (nearDoor) {
+          this.renderBottomActionPrompt(ctx, `Tekan [A] Masuk ${nearDoor.name} ${nearDoor.icon}`, nearDoor.accentColor, nearDoor.accentColor);
+        } else if (eldEntDist < 38) {
+          this.renderBottomActionPrompt(
+            ctx,
+            this.isEldoriaDungeonUnlocked ? 'Tekan [A] Masuk Kuil Roh Hutan 🌿' : 'Pecahkan Teka-Teki Elder Sylas 🔒',
+            this.isEldoriaDungeonUnlocked ? '#4ade80' : '#ef4444',
+            this.isEldoriaDungeonUnlocked ? '#86efac' : '#fca5a5'
+          );
+        } else if (stoneEntDist < 38) {
+          this.renderBottomActionPrompt(
+            ctx,
+            this.isStonewatchDungeonUnlocked ? 'Tekan [A] Masuk Tambang Abisal ⚒️' : 'Pecahkan Teka-Teki Kapten Borin 🔒',
+            this.isStonewatchDungeonUnlocked ? '#f59e0b' : '#ef4444',
+            this.isStonewatchDungeonUnlocked ? '#fde68a' : '#fca5a5'
+          );
+        }
+      } else if (this.isCurrentMapInterior()) {
         const interiorId = this.getInteriorIdFromCurrentMap();
         if (interiorId) {
           const action = this.buildingInteriors.getNearbyAction(interiorId, playerCenterX, playerCenterY);
           if (action) {
-            ctx.save();
-            const pW = 250;
-            const pH = 26;
-            const pX = (screenWidth - pW) / 2;
-            const pY = screenHeight - 90;
-            ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
-            ctx.fillRect(pX, pY, pW, pH);
-            ctx.strokeStyle = action.color || '#facc15';
-            ctx.lineWidth = 1.5;
-            ctx.strokeRect(pX, pY, pW, pH);
-            ctx.font = 'bold 10px sans-serif';
-            ctx.textAlign = 'center';
-            ctx.textBaseline = 'middle';
-            ctx.fillStyle = action.color || '#fef08a';
-            ctx.fillText(action.prompt, pX + pW / 2, pY + pH / 2);
-            ctx.restore();
+            this.renderBottomActionPrompt(ctx, action.prompt, action.color || '#facc15', action.color || '#fef08a');
           }
         }
       }
@@ -4106,6 +3892,34 @@ export class Game {
       // 17. Topmost Modal: Premium In-Game Notification / Confirm Dialog
       NotificationModal.render(ctx, screenWidth, screenHeight);
     }
+  }
+
+  private renderBottomActionPrompt(
+    ctx: CanvasRenderingContext2D,
+    text: string,
+    borderColor: string,
+    textColor: string
+  ): void {
+    ctx.save();
+    ctx.font = 'bold 10px sans-serif';
+    const textW = ctx.measureText(text).width;
+    const pW = Math.min(this.screenWidth - 24, Math.max(180, textW + 28));
+    const pH = 26;
+    const pX = (this.screenWidth - pW) / 2;
+    const pY = this.screenHeight - 90;
+
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+    ctx.fillRect(pX, pY, pW, pH);
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(pX, pY, pW, pH);
+
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillStyle = textColor;
+    const safeText = CanvasText.truncate(ctx, text, pW - 14);
+    ctx.fillText(safeText, pX + pW / 2, pY + pH / 2);
+    ctx.restore();
   }
 
   private renderBuffBadge(ctx: CanvasRenderingContext2D, x: number, y: number, label: string, timerText: string, color: string): void {
@@ -4166,12 +3980,19 @@ export class Game {
     // Prompt if near
     if (isNear) {
       ctx.font = 'bold 8px sans-serif';
+      const prompt = '[A] Dapur Petualang';
+      const pw = ctx.measureText(prompt).width + 12;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+      ctx.beginPath();
+      ctx.roundRect(px + 16 - pw / 2, py - 18, pw, 14, 3);
+      ctx.fill();
+      ctx.strokeStyle = '#fdba74';
+      ctx.lineWidth = 1;
+      ctx.stroke();
       ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       ctx.fillStyle = '#fdba74';
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2;
-      ctx.strokeText('[A] Dapur Petualang', px + 16, py - 4);
-      ctx.fillText('[A] Dapur Petualang', px + 16, py - 4);
+      ctx.fillText(prompt, px + 16, py - 11);
     }
   }
 
@@ -4196,12 +4017,19 @@ export class Game {
 
     if (isNear) {
       ctx.font = 'bold 8px sans-serif';
+      const prompt = '[A] Papan Kehormatan (Top 10)';
+      const pw = ctx.measureText(prompt).width + 12;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+      ctx.beginPath();
+      ctx.roundRect(bx + 16 - pw / 2, by - 18, pw, 14, 3);
+      ctx.fill();
+      ctx.strokeStyle = '#fde047';
+      ctx.lineWidth = 1;
+      ctx.stroke();
       ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       ctx.fillStyle = '#fde047';
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2;
-      ctx.strokeText('[A] Papan Kehormatan (Top 10)', bx + 16, by - 4);
-      ctx.fillText('[A] Papan Kehormatan (Top 10)', bx + 16, by - 4);
+      ctx.fillText(prompt, bx + 16, by - 11);
     }
   }
 
@@ -4227,12 +4055,19 @@ export class Game {
 
     if (isNear) {
       ctx.font = 'bold 8px sans-serif';
+      const prompt = '[A] Adopsi Pet Auto-Loot';
+      const pw = ctx.measureText(prompt).width + 12;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+      ctx.beginPath();
+      ctx.roundRect(px + 16 - pw / 2, py - 18, pw, 14, 3);
+      ctx.fill();
+      ctx.strokeStyle = '#bae6fd';
+      ctx.lineWidth = 1;
+      ctx.stroke();
       ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       ctx.fillStyle = '#bae6fd';
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2;
-      ctx.strokeText('[A] Adopsi Pet Auto-Loot', px + 16, py - 3);
-      ctx.fillText('[A] Adopsi Pet Auto-Loot', px + 16, py - 3);
+      ctx.fillText(prompt, px + 16, py - 11);
     }
   }
 
@@ -4476,12 +4311,14 @@ export class Game {
       ctx.font = 'bold 8.5px sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      ctx.fillText(`📜 ${q.title}`, startX + 6, cy + 3);
+      const safeQTitle = CanvasText.truncate(ctx, `📜 ${q.title}`, cardW - 12);
+      ctx.fillText(safeQTitle, startX + 6, cy + 3);
 
       ctx.fillStyle = q.status === 'COMPLETED' ? '#facc15' : '#cbd5e1';
       ctx.font = 'bold 8px sans-serif';
       const statusText = q.status === 'COMPLETED' ? '✓ SIAP KLAIM' : `${q.targetName}: ${q.currentCount}/${q.requiredCount}`;
-      ctx.fillText(statusText, startX + 6, cy + 14);
+      const safeQStatus = CanvasText.truncate(ctx, statusText, cardW - 52);
+      ctx.fillText(safeQStatus, startX + 6, cy + 14);
 
       // Mini progress bar
       const pbX = startX + cardW - 46;

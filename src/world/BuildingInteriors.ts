@@ -30,7 +30,18 @@ export interface BuildingDoorDef {
 }
 
 export interface NearbyInteriorAction {
-  type: 'DOOR_EXIT' | 'ELAINE' | 'QUEST_BOARD' | 'BROKK' | 'LILY' | 'INN_BED' | 'SYLAS' | 'ARIA' | 'BORIN' | 'GRIMM';
+  type:
+    | 'DOOR_EXIT'
+    | 'ELAINE'
+    | 'QUEST_BOARD'
+    | 'COMPANION_HIRE'
+    | 'BROKK'
+    | 'LILY'
+    | 'INN_BED'
+    | 'SYLAS'
+    | 'ARIA'
+    | 'BORIN'
+    | 'GRIMM';
   prompt: string;
   color: string;
   x: number;
@@ -324,6 +335,18 @@ export class BuildingInteriors {
           y: 2.2 * ts
         };
       }
+
+      // Meja Santai Rekrut Companion Party (x=3.5*ts, y=7.5*ts)
+      const loungeDist = Math.hypot(3.5 * ts - playerCenterX, 7.5 * ts - playerCenterY);
+      if (loungeDist < 46) {
+        return {
+          type: 'COMPANION_HIRE',
+          prompt: '👥 [A] Rekrut Rekan Petualang (Lounge)',
+          color: '#38bdf8',
+          x: 3.5 * ts,
+          y: 6.8 * ts
+        };
+      }
     } else if (currentRoom === 'BLACKSMITH_SHOP') {
       // Master Brokk di anvil (x=8*ts, y=5.5*ts)
       const brokkDist = Math.hypot(8 * ts - playerCenterX, 5.5 * ts - playerCenterY);
@@ -451,31 +474,43 @@ export class BuildingInteriors {
       ctx.globalAlpha = 1.0;
 
       // 2. Plang Papan Nama Toko/Bangunan Mengambang di Atas Pintu
+      ctx.font = 'bold 8px sans-serif';
+      const doorLabel = `${def.icon} Masuk`;
+      const badgeW = ctx.measureText(doorLabel).width + 16;
       ctx.fillStyle = '#0f172a';
       ctx.beginPath();
-      ctx.roundRect(dx - 12, dy - 18, 56, 16, 4);
+      ctx.roundRect(dx + 16 - badgeW / 2, dy - 18, badgeW, 16, 4);
       ctx.fill();
       ctx.strokeStyle = def.accentColor;
       ctx.lineWidth = 1.5;
       ctx.stroke();
 
       ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 8px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText(`${def.icon} Masuk`, dx + 16, dy - 10);
+      ctx.fillText(doorLabel, dx + 16, dy - 10);
 
       // 3. Prompt Interaksi Mengambang saat Pemain Mendekat
       if (isNear) {
         const bob = Math.sin(this.animTimer * 2) * 2;
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 9.5px sans-serif';
-        ctx.strokeStyle = '#000000';
-        ctx.lineWidth = 2.5;
+        ctx.font = 'bold 8.5px sans-serif';
         const promptText = `[A] Masuk ${def.tag}`;
-        ctx.strokeText(promptText, dx + 16, dy - 28 + bob);
+        const ptw = ctx.measureText(promptText).width + 16;
+        const pbx = dx + 16 - ptw / 2;
+        const pby = dy - 34 + bob;
+
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+        ctx.beginPath();
+        ctx.roundRect(pbx, pby, ptw, 16, 4);
+        ctx.fill();
+        ctx.strokeStyle = def.accentColor;
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.fillStyle = def.accentColor;
-        ctx.fillText(promptText, dx + 16, dy - 28 + bob);
+        ctx.fillText(promptText, dx + 16, pby + 8);
       }
     }
 
@@ -906,15 +941,21 @@ export class BuildingInteriors {
     ctx.fillStyle = outfitColor;
     ctx.fillRect(x - 6, y + 6, 12, 10);
 
-    // Name Tag
-    ctx.font = 'bold 8px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'bottom';
-    ctx.strokeStyle = '#000000';
-    ctx.lineWidth = 2;
-    ctx.strokeText(nameTag, x, y - 8);
+    // Name Tag Pill Badge
+    ctx.font = 'bold 7.5px sans-serif';
+    const tagW = ctx.measureText(nameTag).width + 10;
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    ctx.beginPath();
+    ctx.roundRect(x - tagW / 2, y - 20, tagW, 12, 3);
+    ctx.fill();
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
+    ctx.lineWidth = 0.8;
+    ctx.stroke();
+
     ctx.fillStyle = '#f8fafc';
-    ctx.fillText(nameTag, x, y - 8);
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(nameTag, x, y - 14);
 
     ctx.restore();
   }

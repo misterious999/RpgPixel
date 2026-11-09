@@ -389,15 +389,17 @@ export class GuildNPC {
 
       // Quest Badge & Title
       ctx.fillStyle = q.themeColor;
-      ctx.font = 'bold 9.5px sans-serif';
+      ctx.font = 'bold 9px sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      ctx.fillText(`[${q.badge}] ${q.title}`, cx + 8, cy + 6);
+      const safeQTitle = CanvasText.truncate(ctx, `[${q.badge}] ${q.title}`, colW - 16);
+      ctx.fillText(safeQTitle, cx + 8, cy + 6);
 
       // Target Objective & Count
       ctx.fillStyle = '#cbd5e1';
-      ctx.font = '9px sans-serif';
-      ctx.fillText(`Target: ${q.targetName} (${q.currentCount}/${q.requiredCount})`, cx + 8, cy + 20);
+      ctx.font = '8.5px sans-serif';
+      const safeQTarget = CanvasText.truncate(ctx, `Target: ${q.targetName} (${q.currentCount}/${q.requiredCount})`, colW - 16);
+      ctx.fillText(safeQTarget, cx + 8, cy + 20);
 
       // Progress Bar
       const pBarW = colW - 16;
@@ -410,8 +412,9 @@ export class GuildNPC {
 
       // Rewards line
       ctx.fillStyle = '#eab308';
-      ctx.font = '8.5px sans-serif';
-      ctx.fillText(`Hadiah: +${q.rewardGold} Emas · +${q.rewardExp} EXP`, cx + 8, cy + 42);
+      ctx.font = '8px sans-serif';
+      const safeQRewards = CanvasText.truncate(ctx, `Hadiah: +${q.rewardGold} Emas · +${q.rewardExp} EXP`, colW - 16);
+      ctx.fillText(safeQRewards, cx + 8, cy + 42);
 
       // Button at bottom
       const btnX = cx + 8;
@@ -730,9 +733,12 @@ export class GuildNPC {
       ctx.textBaseline = 'middle';
       ctx.fillText(c.tag, col2X + 14, cy + 9);
 
+      const tagW = ctx.measureText(c.tag).width;
+      const remainingW = Math.max(20, (colW - 24) - tagW - 14);
       ctx.fillStyle = '#94a3b8';
       ctx.font = '7.5px sans-serif';
-      ctx.fillText(c.name, col2X + 80, cy + 9);
+      const safeCallingName = CanvasText.truncate(ctx, c.name, remainingW);
+      ctx.fillText(safeCallingName, col2X + 18 + tagW, cy + 9);
     }
 
     // Full-width Bottom Action Button: "🔮 BANGKITKAN TAKDIR JIWA (ACAK OLEH SISTEM)"
@@ -749,10 +755,11 @@ export class GuildNPC {
     ctx.strokeRect(btnX, btnY, btnW, btnH);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 12px sans-serif';
+    ctx.font = btnW < 340 ? 'bold 10px sans-serif' : 'bold 11px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('🔮 BANGKITKAN TAKDIR JIWA (DITENTUKAN ACAK OLEH SISTEM)', btnX + btnW / 2, btnY + btnH / 2);
+    const safeAwakenBtn = CanvasText.truncate(ctx, '🔮 BANGKITKAN TAKDIR JIWA (ACAK OLEH SISTEM)', btnW - 14);
+    ctx.fillText(safeAwakenBtn, btnX + btnW / 2, btnY + btnH / 2);
   }
 
   private renderSpinningState(
@@ -906,9 +913,10 @@ export class GuildNPC {
     ctx.strokeRect(btnX, btnY, btnW, btnH);
 
     ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 12px sans-serif';
+    ctx.font = btnW < 340 ? 'bold 10px sans-serif' : 'bold 11px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('🪪 TERIMA KARTU PETUALANG & MULAI PETUALANGAN', btnX + btnW / 2, btnY + btnH / 2);
+    const safeAcceptBtn = CanvasText.truncate(ctx, '🪪 TERIMA KARTU PETUALANG & MULAI PETUALANGAN', btnW - 14);
+    ctx.fillText(safeAcceptBtn, btnX + btnW / 2, btnY + btnH / 2);
   }
 }

@@ -529,31 +529,37 @@ export class BlacksmithNPC {
 
     // Weapon Title & Name
     ctx.fillStyle = weapon.themeColor;
-    ctx.font = 'bold 13px sans-serif';
+    ctx.font = 'bold 12.5px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText(weapon.name, infoX, contentY);
+    const safeWName = CanvasText.truncate(ctx, weapon.name, infoW - 8);
+    ctx.fillText(safeWName, infoX, contentY);
 
     ctx.fillStyle = '#94a3b8';
-    ctx.font = 'italic 9.5px sans-serif';
-    ctx.fillText(weapon.title, infoX, contentY + 16);
+    ctx.font = 'italic 9px sans-serif';
+    const safeWTitle = CanvasText.truncate(ctx, weapon.title, infoW - 8);
+    ctx.fillText(safeWTitle, infoX, contentY + 16);
 
-    // Stat Chips (ATK, HP, MP, Crit)
-    const statsY = contentY + 34;
-    let statOffset = 0;
+    // Stat Chips (ATK, HP, MP, Crit) - with auto-wrapping to next row if needed
+    let chipX = infoX;
+    let chipY = contentY + 32;
 
     const drawChip = (label: string, bg: string, border: string, textCol: string) => {
-      ctx.font = 'bold 9.5px sans-serif';
-      const tw = ctx.measureText(label).width + 12;
+      ctx.font = 'bold 9px sans-serif';
+      const tw = ctx.measureText(label).width + 10;
+      if (chipX + tw > infoX + infoW && chipX > infoX) {
+        chipX = infoX;
+        chipY += 20;
+      }
       ctx.fillStyle = bg;
-      ctx.fillRect(infoX + statOffset, statsY, tw, 20);
+      ctx.fillRect(chipX, chipY, tw, 17);
       ctx.strokeStyle = border;
       ctx.lineWidth = 1;
-      ctx.strokeRect(infoX + statOffset, statsY, tw, 20);
+      ctx.strokeRect(chipX, chipY, tw, 17);
       ctx.fillStyle = textCol;
       ctx.textBaseline = 'middle';
-      ctx.fillText(label, infoX + statOffset + 6, statsY + 10);
-      statOffset += tw + 6;
+      ctx.fillText(label, chipX + 5, chipY + 8.5);
+      chipX += tw + 4;
     };
 
     drawChip(`⚔️ ATK +${weapon.atkBonus}`, 'rgba(239, 68, 68, 0.25)', '#ef4444', '#fca5a5');
@@ -562,64 +568,71 @@ export class BlacksmithNPC {
     if (weapon.critBonus) drawChip(`⚡ CRIT +${Math.round(weapon.critBonus * 100)}%`, 'rgba(234, 179, 8, 0.25)', '#eab308', '#fef08a');
 
     // Special Perk Box
-    const perkY = statsY + 26;
+    const perkY = Math.max(contentY + 54, chipY + 22);
     ctx.fillStyle = 'rgba(30, 41, 59, 0.7)';
-    ctx.fillRect(infoX, perkY, infoW, 26);
+    ctx.fillRect(infoX, perkY, infoW, 24);
     ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
-    ctx.strokeRect(infoX, perkY, infoW, 26);
+    ctx.strokeRect(infoX, perkY, infoW, 24);
     ctx.fillStyle = '#f8fafc';
-    ctx.font = '9px sans-serif';
+    ctx.font = '8.5px sans-serif';
     ctx.textBaseline = 'middle';
     const safePerk = CanvasText.truncate(ctx, weapon.specialPerk, infoW - 10);
-    ctx.fillText(safePerk, infoX + 6, perkY + 13);
+    ctx.fillText(safePerk, infoX + 6, perkY + 12);
 
     // Requirement Checklist (Gold for Rare, Dungeon Items for Custom)
-    const reqY = perkY + 32;
+    const reqY = perkY + 28;
     if (weapon.tier === 'RARE' && weapon.goldCost) {
       const pGold = player.inventory.getItemCount('GOLD_COIN');
       const hasEnough = pGold >= weapon.goldCost;
 
       ctx.fillStyle = '#cbd5e1';
-      ctx.font = 'bold 9.5px sans-serif';
+      ctx.font = 'bold 9px sans-serif';
       ctx.textBaseline = 'top';
       ctx.fillText('Biaya Pembelian Langsung:', infoX, reqY);
 
       ctx.fillStyle = hasEnough ? '#4ade80' : '#ef4444';
-      ctx.font = 'bold 11px sans-serif';
-      ctx.fillText(`💰 ${weapon.goldCost} Koin Emas (Milikmu: ${pGold})`, infoX, reqY + 16);
+      ctx.font = 'bold 10.5px sans-serif';
+      ctx.fillText(`💰 ${weapon.goldCost} Koin Emas (Milikmu: ${pGold})`, infoX, reqY + 14);
     } else if (weapon.tier === 'CUSTOM' && weapon.recipe) {
       ctx.fillStyle = '#cbd5e1';
-      ctx.font = 'bold 9.5px sans-serif';
+      ctx.font = 'bold 9px sans-serif';
       ctx.textBaseline = 'top';
       ctx.fillText('Bahan Khusus Dungeon:', infoX, reqY);
 
-      // Draw horizontal recipe items checklist
+      // Draw recipe items checklist with auto wrapping
       let rx = infoX;
+      let ry = reqY + 14;
       for (const req of weapon.recipe) {
         const count = player.inventory.getItemCount(req.itemId);
         const itemDef = ITEM_DEFINITIONS[req.itemId];
         const isOk = count >= req.count;
+        const boxW = 76;
+
+        if (rx + boxW > infoX + infoW && rx > infoX) {
+          rx = infoX;
+          ry += 22;
+        }
 
         ctx.fillStyle = isOk ? 'rgba(34, 197, 94, 0.2)' : 'rgba(239, 68, 68, 0.2)';
-        ctx.fillRect(rx, reqY + 16, 80, 20);
+        ctx.fillRect(rx, ry, boxW, 18);
         ctx.strokeStyle = isOk ? '#22c55e' : '#ef4444';
-        ctx.strokeRect(rx, reqY + 16, 80, 20);
+        ctx.strokeRect(rx, ry, boxW, 18);
 
         ctx.fillStyle = isOk ? '#86efac' : '#fca5a5';
-        ctx.font = 'bold 8.5px sans-serif';
+        ctx.font = 'bold 8px sans-serif';
         ctx.textBaseline = 'middle';
         const label = `${itemDef?.name.slice(0, 5) || req.itemId}: ${count}/${req.count}`;
-        ctx.fillText(label, rx + 4, reqY + 26);
+        ctx.fillText(label, rx + 4, ry + 9);
 
-        rx += 84;
+        rx += boxW + 4;
       }
     }
 
     // Bottom Action Button (Buy / Craft / Equip)
-    const actBtnW = 200;
-    const actBtnH = 32;
+    const actBtnW = Math.min(190, modalWidth - 32);
+    const actBtnH = 30;
     const actBtnX = modalX + modalWidth - actBtnW - 16;
-    const actBtnY = modalY + modalHeight - actBtnH - 12;
+    const actBtnY = modalY + modalHeight - actBtnH - 10;
 
     const isOwned = player.unlockedWeaponIds.includes(weapon.id);
     const isEquipped = player.equippedWeaponId === weapon.id;

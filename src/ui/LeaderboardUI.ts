@@ -188,11 +188,11 @@ export class LeaderboardUI {
             ">
               #${e.rank}
             </div>
-            <div>
-              <div style="font-weight: bold; font-size: 13px; color: ${e.isPlayer ? '#38bdf8' : '#ffffff'};">
+            <div style="max-width: 220px;">
+              <div style="font-weight: bold; font-size: 13px; color: ${e.isPlayer ? '#38bdf8' : '#ffffff'}; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                 ${e.badge} ${e.name} ${e.isPlayer ? '<span style="font-size: 10px; color: #facc15;">[Anda]</span>' : ''}
               </div>
-              <div style="font-size: 10.5px; color: #94a3b8;">
+              <div style="font-size: 10.5px; color: #94a3b8; white-space: nowrap; overflow: hidden; text-overflow: ellipsis;">
                 Lv.${e.level} • ${e.title}
               </div>
             </div>

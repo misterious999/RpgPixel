@@ -24,6 +24,7 @@ export interface VillageNPCData {
   loreText: string;
   actionPrompt: string;
   isCat?: boolean;
+  isInsideBuilding?: boolean;
 }
 
 export class VillageManager {
@@ -159,7 +160,8 @@ export class VillageManager {
         avatarIcon: '🌻',
         greetingText: 'Halo petualang! Apakah kamu mencium semerbak mawar ini?',
         loreText: 'Bunga matahari dan mawar di kebun desa mekar indah karena berkah air mancur suci serikat. Semoga harimu menyenangkan dan penuh keberuntungan!',
-        actionPrompt: '🌻 [A] Sapa Lily'
+        actionPrompt: '🌻 [A] Sapa Lily',
+        isInsideBuilding: true
       },
       {
         id: 'bucky',
@@ -231,7 +233,8 @@ export class VillageManager {
         avatarIcon: '🧝‍♂️',
         greetingText: 'Salam damai dalam keheningan pohon purba, Petualang muda.',
         loreText: 'Kuil Roh Hutan di tebing utara kami terkunci oleh mantra segel leluhur. Jawablah teka-teki kuno untuk membuktikan kebijaksanaanmu dan membuka pintu kuil!',
-        actionPrompt: '🧝‍♂️ [A] Teka-Teki Kuil'
+        actionPrompt: '🧝‍♂️ [A] Teka-Teki Kuil',
+        isInsideBuilding: true
       },
       {
         id: 'aria_herbalist',
@@ -248,7 +251,8 @@ export class VillageManager {
         avatarIcon: '🍃',
         greetingText: 'Aroma bunga mistis hutan Eldoria sangat menyegarkan pikiran, bukan?',
         loreText: 'Tanah Eldoria diberkati oleh roh alam semesta. Bunga mistis yang tumbuh di sini adalah bahan terbaik untuk ramuan penyembuh luka.',
-        actionPrompt: '🍃 [A] Sapa Aria'
+        actionPrompt: '🍃 [A] Sapa Aria',
+        isInsideBuilding: true
       },
 
       // --- NPC DESA STONEWATCH (DESA BENTENG TAMBANG KURCACI) ---
@@ -268,7 +272,8 @@ export class VillageManager {
         avatarIcon: '⛏️',
         greetingText: 'Klang! Kling! Selamat datang di Benteng Tambang Stonewatch!',
         loreText: 'Tambang Terkutuk di tebing utara terkunci oleh mekanisme sandi batu aksara kurcaci. Pecahkan teka-teki nenek moyang tambang jika kau berani memasukinya!',
-        actionPrompt: '⛏️ [A] Teka-Teki Tambang'
+        actionPrompt: '⛏️ [A] Teka-Teki Tambang',
+        isInsideBuilding: true
       },
       {
         id: 'grimm_miner',
@@ -285,7 +290,8 @@ export class VillageManager {
         avatarIcon: '⚒️',
         greetingText: 'Panasnya tungku peleburan ini membakar bijih mentah menjadi baja perkasa!',
         loreText: 'Di kedalaman tambang terkutuk terdapat bijih besi gelap langka dan kristal obsidian abisal. Hanya senjata bertempa baja yang sanggup bertahan!',
-        actionPrompt: '⚒️ [A] Sapa Grimm'
+        actionPrompt: '⚒️ [A] Sapa Grimm',
+        isInsideBuilding: true
       },
 
       // --- NPC LAPANGAN LATIHAN DESA SERENA ---
@@ -315,6 +321,7 @@ export class VillageManager {
 
   public isNearAnyNPC(playerCenterX: number, playerCenterY: number): VillageNPCData | null {
     for (const npc of this.npcs) {
+      if (npc.isInsideBuilding) continue;
       const cx = npc.x + npc.width / 2;
       const cy = npc.y + npc.height / 2;
       if (Math.hypot(cx - playerCenterX, cy - playerCenterY) < 38) {
@@ -767,6 +774,7 @@ export class VillageManager {
 
     // 12. RENDER SELURUH NPC DESA (Quest, Ambient, & Riddle)
     for (const npc of this.npcs) {
+      if (npc.isInsideBuilding) continue;
       this.renderNPC(ctx, npc, playerCenterX, playerCenterY);
     }
 
@@ -1094,16 +1102,20 @@ export class VillageManager {
     // Top Header Ribbon
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(modalX + 2, modalY + 2, modalWidth - 4, 30);
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 12px sans-serif';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`${npc.avatarIcon} ${npc.name}`, modalX + 14, modalY + 17);
 
     ctx.fillStyle = npc.accentColor;
-    ctx.font = 'bold 9.5px sans-serif';
+    ctx.font = 'bold 9px sans-serif';
     ctx.textAlign = 'right';
-    ctx.fillText(`[${npc.title}]`, modalX + modalWidth - 40, modalY + 17);
+    ctx.textBaseline = 'middle';
+    const safeTitle = CanvasText.truncate(ctx, `[${npc.title}]`, modalWidth * 0.45);
+    ctx.fillText(safeTitle, modalX + modalWidth - 36, modalY + 17);
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 11.5px sans-serif';
+    ctx.textAlign = 'left';
+    const maxNameW = modalWidth - ctx.measureText(safeTitle).width - 56;
+    const safeName = CanvasText.truncate(ctx, `${npc.avatarIcon} ${npc.name}`, maxNameW);
+    ctx.fillText(safeName, modalX + 14, modalY + 17);
 
     // Close button (X)
     ctx.fillStyle = '#ef4444';
@@ -1116,9 +1128,9 @@ export class VillageManager {
     ctx.fillText('✕', modalX + modalWidth - 18, modalY + 17);
 
     // Content: Portrait Left, Speech & Quest Right
-    const portSize = 64;
-    const portX = modalX + 16;
-    const portY = modalY + 44;
+    const portSize = Math.min(56, modalWidth * 0.16);
+    const portX = modalX + 14;
+    const portY = modalY + 40;
 
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(portX, portY, portSize, portSize);
@@ -1126,78 +1138,85 @@ export class VillageManager {
     ctx.lineWidth = 1.5;
     ctx.strokeRect(portX, portY, portSize, portSize);
 
-    ctx.font = '34px sans-serif';
+    ctx.font = '30px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(npc.avatarIcon, portX + portSize / 2, portY + portSize / 2);
 
     // Speech Text on Right
-    const textX = portX + portSize + 14;
-    const textW = modalWidth - portSize - 44;
-    let textY = modalY + 44;
+    const textX = portX + portSize + 12;
+    const textW = modalWidth - portSize - 38;
+    let textY = modalY + 40;
 
     ctx.fillStyle = '#fef08a';
-    ctx.font = 'italic bold 10.5px sans-serif';
+    ctx.font = 'italic bold 10px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    CanvasText.drawWrappedText(ctx, `"${npc.greetingText}"`, textX, textY, textW, 14, 2);
-    textY += 32;
+    const greetH = CanvasText.drawWrappedText(ctx, `"${npc.greetingText}"`, textX, textY, textW, 13, 2);
+    textY += greetH + 4;
 
     ctx.fillStyle = '#cbd5e1';
-    ctx.font = '10px sans-serif';
-    CanvasText.drawWrappedText(ctx, npc.loreText, textX, textY, textW, 13, 4);
+    ctx.font = '9.5px sans-serif';
+    const maxLoreLines = (npc.roleType === 'RIDDLE' || npc.roleType === 'QUEST') ? 2 : 4;
+    CanvasText.drawWrappedText(ctx, npc.loreText, textX, textY, textW, 12.5, maxLoreLines);
 
     // --- QUEST NPC PANEL KHUSUS ---
     if (npc.roleType === 'QUEST' && npc.questId) {
       const q = this.questManager.quests.find((item) => item.id === npc.questId);
       if (q) {
-        const qBoxY = modalY + 138;
-        const qBoxW = modalWidth - 32;
-        const qBoxX = modalX + 16;
+        const qBoxY = modalY + 116;
+        const qBoxW = modalWidth - 28;
+        const qBoxX = modalX + 14;
+        const qBoxH = 58;
 
         ctx.fillStyle = '#1e293b';
-        ctx.fillRect(qBoxX, qBoxY, qBoxW, 58);
+        ctx.fillRect(qBoxX, qBoxY, qBoxW, qBoxH);
         ctx.strokeStyle = q.themeColor;
         ctx.lineWidth = 1.2;
-        ctx.strokeRect(qBoxX, qBoxY, qBoxW, 58);
+        ctx.strokeRect(qBoxX, qBoxY, qBoxW, qBoxH);
 
         // Quest Title & Badge
         ctx.fillStyle = '#f8fafc';
-        ctx.font = 'bold 11px sans-serif';
+        ctx.font = 'bold 10px sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText(`📜 Misi: ${q.title}`, qBoxX + 10, qBoxY + 8);
+        ctx.textBaseline = 'top';
+        const safeQTitle = CanvasText.truncate(ctx, `📜 Misi: ${q.title}`, qBoxW - 130);
+        ctx.fillText(safeQTitle, qBoxX + 8, qBoxY + 8);
 
         let statusText = 'TERSEDIA';
         let statusColor = '#38bdf8';
         if (q.status === 'ACTIVE') {
-          statusText = `SEDANG BERJALAN (${q.currentCount}/${q.requiredCount})`;
+          statusText = `BERJALAN (${q.currentCount}/${q.requiredCount})`;
           statusColor = '#facc15';
         } else if (q.status === 'COMPLETED') {
-          statusText = '★ SELESAI! SIAP KLAIM HADIAH';
+          statusText = '★ SIAP KLAIM';
           statusColor = '#4ade80';
         } else if (q.status === 'TURNED_IN') {
-          statusText = '✓ TELAH DISELESAIKAN';
+          statusText = '✓ SELESAI';
           statusColor = '#94a3b8';
         }
 
         ctx.fillStyle = statusColor;
-        ctx.font = 'bold 9.5px sans-serif';
+        ctx.font = 'bold 9px sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText(`[${statusText}]`, qBoxX + qBoxW - 10, qBoxY + 8);
+        ctx.fillText(`[${statusText}]`, qBoxX + qBoxW - 8, qBoxY + 8);
 
         // Quest Target & Rewards
         ctx.fillStyle = '#94a3b8';
-        ctx.font = '9px sans-serif';
+        ctx.font = '8.5px sans-serif';
         ctx.textAlign = 'left';
-        ctx.fillText(`Target: Basmi ${q.requiredCount} ${q.targetName}`, qBoxX + 10, qBoxY + 24);
+        const safeQTarget = CanvasText.truncate(ctx, `Target: Basmi ${q.requiredCount} ${q.targetName}`, qBoxW - 16);
+        ctx.fillText(safeQTarget, qBoxX + 8, qBoxY + 24);
+
         ctx.fillStyle = '#fde047';
-        ctx.fillText(`Hadiah: +${q.rewardGold} Emas, +${q.rewardExp} EXP`, qBoxX + 10, qBoxY + 38);
+        const safeQReward = CanvasText.truncate(ctx, `Hadiah: +${q.rewardGold} Emas · +${q.rewardExp} EXP`, qBoxW - 16);
+        ctx.fillText(safeQReward, qBoxX + 8, qBoxY + 38);
 
         // Action Button: Terima / Klaim / Tutup
-        const btnW = 160;
-        const btnH = 30;
+        const btnW = Math.min(180, modalWidth - 40);
+        const btnH = 28;
         const btnX = modalX + (modalWidth - btnW) / 2;
-        const btnY = modalY + modalHeight - 42;
+        const btnY = modalY + modalHeight - 38;
 
         let btnLabel = 'TERIMA MISI INI';
         let btnBg = '#16a34a';
@@ -1224,7 +1243,7 @@ export class VillageManager {
         ctx.strokeRect(btnX, btnY, btnW, btnH);
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 11px sans-serif';
+        ctx.font = 'bold 10px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(btnLabel, btnX + btnW / 2, btnY + btnH / 2);
@@ -1236,9 +1255,9 @@ export class VillageManager {
 
       if (isAlreadyUnlocked) {
         // Status Terbuka
-        const boxX = modalX + 16;
-        const boxY = modalY + 138;
-        const boxW = modalWidth - 32;
+        const boxX = modalX + 14;
+        const boxY = modalY + 116;
+        const boxW = modalWidth - 28;
         ctx.fillStyle = '#064e3b';
         ctx.fillRect(boxX, boxY, boxW, 52);
         ctx.strokeStyle = '#34d399';
@@ -1246,32 +1265,35 @@ export class VillageManager {
         ctx.strokeRect(boxX, boxY, boxW, 52);
 
         ctx.fillStyle = '#fef08a';
-        ctx.font = 'bold 11px sans-serif';
+        ctx.font = 'bold 10.5px sans-serif';
         ctx.textAlign = 'center';
-        ctx.fillText('✨ PINTU GERBANG DUNGEON TELAH TERBUKA!', boxX + boxW / 2, boxY + 20);
+        ctx.textBaseline = 'top';
+        ctx.fillText('✨ PINTU GERBANG DUNGEON TELAH TERBUKA!', boxX + boxW / 2, boxY + 12);
         ctx.fillStyle = '#a7f3d0';
-        ctx.font = '9.5px sans-serif';
-        ctx.fillText('Segel telah terpecahkan! Dekati tebing pintu gerbang untuk menjelajah.', boxX + boxW / 2, boxY + 36);
+        ctx.font = '9px sans-serif';
+        const safeOpenDesc = CanvasText.truncate(ctx, 'Segel telah terpecahkan! Masuki gerbang untuk menjelajah.', boxW - 16);
+        ctx.fillText(safeOpenDesc, boxX + boxW / 2, boxY + 30);
 
         // Tombol Tutup
-        const btnW = 180;
-        const btnH = 30;
+        const btnW = Math.min(180, modalWidth - 40);
+        const btnH = 28;
         const btnX = modalX + (modalWidth - btnW) / 2;
-        const btnY = modalY + modalHeight - 42;
+        const btnY = modalY + modalHeight - 38;
         ctx.fillStyle = '#065f46';
         ctx.fillRect(btnX, btnY, btnW, btnH);
         ctx.strokeStyle = '#34d399';
         ctx.lineWidth = 1.5;
         ctx.strokeRect(btnX, btnY, btnW, btnH);
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 11px sans-serif';
+        ctx.font = 'bold 10.5px sans-serif';
+        ctx.textBaseline = 'middle';
         ctx.fillText('✓ MENGERTI / JELAJAHI', btnX + btnW / 2, btnY + btnH / 2);
       } else {
         // Tampilkan Box Teka-Teki Kuno & 3 Pilihan Jawaban
-        const riddleBoxX = modalX + 16;
-        const riddleBoxY = modalY + 124;
-        const riddleBoxW = modalWidth - 32;
-        const riddleBoxH = 34;
+        const riddleBoxX = modalX + 14;
+        const riddleBoxY = modalY + 112;
+        const riddleBoxW = modalWidth - 28;
+        const riddleBoxH = 36;
 
         ctx.fillStyle = '#1e293b';
         ctx.fillRect(riddleBoxX, riddleBoxY, riddleBoxW, riddleBoxH);
@@ -1285,14 +1307,14 @@ export class VillageManager {
           : '📜 "Lahir di perut bumi, ditempa di bara api, perisai kurcaci. Apakah aku?"';
 
         ctx.fillStyle = '#fef08a';
-        ctx.font = 'italic bold 9.5px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText(riddleVerse, riddleBoxX + riddleBoxW / 2, riddleBoxY + riddleBoxH / 2);
+        ctx.font = 'italic bold 9px sans-serif';
+        ctx.textAlign = 'left';
+        ctx.textBaseline = 'top';
+        CanvasText.drawWrappedText(ctx, riddleVerse, riddleBoxX + 8, riddleBoxY + 5, riddleBoxW - 16, 12, 2);
 
-        const optW = modalWidth - 32;
-        const optH = 26;
-        const optX = modalX + 16;
+        const optW = modalWidth - 28;
+        const optH = 24;
+        const optX = modalX + 14;
 
         const options = isEldoria
           ? [
@@ -1301,13 +1323,13 @@ export class VillageManager {
               'C) ⚔️ Pedang Baja Milik Ksatria'
             ]
           : [
-              'A) ⚒️ Batangan Besi Abisal Ditempa (Logam Kurcaci)',
+              'A) ⚒️ Batangan Besi Abisal (Logam Kurcaci)',
               'B) 💰 Tumpukan Koin Emas Tambang',
               'C) 🔥 Kobaran Api Tungku Peleburan'
             ];
 
         for (let i = 0; i < 3; i++) {
-          const optY = modalY + 164 + i * 32;
+          const optY = modalY + 154 + i * 28;
           ctx.fillStyle = '#1e293b';
           ctx.fillRect(optX, optY, optW, optH);
           ctx.strokeStyle = i === 0 ? '#38bdf8' : '#475569';
@@ -1315,18 +1337,19 @@ export class VillageManager {
           ctx.strokeRect(optX, optY, optW, optH);
 
           ctx.fillStyle = '#f8fafc';
-          ctx.font = 'bold 9.5px sans-serif';
+          ctx.font = 'bold 9px sans-serif';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'middle';
-          ctx.fillText(options[i], optX + 10, optY + optH / 2);
+          const safeOpt = CanvasText.truncate(ctx, options[i], optW - 16);
+          ctx.fillText(safeOpt, optX + 8, optY + optH / 2);
         }
       }
     } else {
       // Ambient NPC: Button Tutup / Mengerti
-      const btnW = 140;
-      const btnH = 30;
+      const btnW = Math.min(150, modalWidth - 40);
+      const btnH = 28;
       const btnX = modalX + (modalWidth - btnW) / 2;
-      const btnY = modalY + modalHeight - 44;
+      const btnY = modalY + modalHeight - 38;
 
       ctx.fillStyle = '#1e293b';
       ctx.fillRect(btnX, btnY, btnW, btnH);
