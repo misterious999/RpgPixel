@@ -1,4 +1,5 @@
 import { CONSTANTS } from '../core/Constants.ts';
+import type { Minion } from './Player.ts';
 
 export type MonsterType = 'SLIME' | 'BAT' | 'SKELETON' | 'BOSS_SLIME' | 'FOREST_SLIME' | 'WILD_WOLF' | 'GOBLIN';
 export type MonsterTier = 'LOW' | 'MID' | 'HIGH' | 'BOSS';
@@ -186,7 +187,9 @@ export class Monster {
     playerCenterX: number,
     playerCenterY: number,
     isTileSolid: (tileX: number, tileY: number) => boolean,
-    onAttackPlayer: (atk: number) => void
+    onAttackPlayer: (atk: number) => void,
+    minions?: Minion[],
+    onAttackMinion?: (minion: Minion, atk: number) => void
   ): void {
     if (this.isDead) {
       this.respawnTimer -= deltaTime;
@@ -229,36 +232,73 @@ export class Monster {
         moveX = Math.cos(backAngle) * this.speed * deltaTime * 0.85;
         moveY = Math.sin(backAngle) * this.speed * deltaTime * 0.85;
         this.direction = (this.spawnX < this.x) ? 'left' : 'right';
-      } else if (distToPlayer <= this.aggroRange) {
-        // 2. AI Movement: Aggro Chase
-        const angle = Math.atan2(playerCenterY - myCenterY, playerCenterX - myCenterX);
-        moveX = Math.cos(angle) * this.speed * deltaTime;
-        moveY = Math.sin(angle) * this.speed * deltaTime;
-        this.direction = (playerCenterX < myCenterX) ? 'left' : 'right';
-
-        // Attack Player if within reach
-        const attackReach = this.type === 'BOSS_SLIME' ? 32 : 22;
-        if (distToPlayer <= attackReach && this.attackCooldown <= 0) {
-          this.attackCooldown = 1.35;
-          onAttackPlayer(this.attackPower);
-        }
       } else {
-        // Idle Wander
-        this.wanderTimer -= deltaTime;
-        if (this.wanderTimer <= 0) {
-          this.wanderTimer = 1.5 + Math.random() * 2;
-          if (Math.random() < 0.6) {
-            const angle = Math.random() * Math.PI * 2;
-            this.wanderVx = Math.cos(angle) * (this.speed * 0.4);
-            this.wanderVy = Math.sin(angle) * (this.speed * 0.4);
-            this.direction = this.wanderVx < 0 ? 'left' : 'right';
-          } else {
-            this.wanderVx = 0;
-            this.wanderVy = 0;
+        // Cek apakah ada pet/minion aktif di sekitar monster
+        let targetMinion: Minion | null = null;
+        let closestMinionDist = Infinity;
+
+        if (minions && minions.length > 0) {
+          for (const m of minions) {
+            if (m.hp <= 0) continue;
+            const mCenterX = m.x + 8;
+            const mCenterY = m.y + 12;
+            const dist = Math.hypot(myCenterX - mCenterX, myCenterY - mCenterY);
+            // Deteksi pet dalam jangkauan aggro monster atau radius engagement (140px)
+            if (dist <= Math.max(this.aggroRange, 140) && dist < closestMinionDist) {
+              closestMinionDist = dist;
+              targetMinion = m;
+            }
           }
         }
-        moveX = this.wanderVx * deltaTime;
-        moveY = this.wanderVy * deltaTime;
+
+        const attackReach = this.type === 'BOSS_SLIME' ? 32 : 22;
+
+        // PRIORITAS UTAMA: Menyerang pet/summon terlebih dahulu jika ada di dekatnya!
+        if (targetMinion) {
+          const mCenterX = targetMinion.x + 8;
+          const mCenterY = targetMinion.y + 12;
+          const angle = Math.atan2(mCenterY - myCenterY, mCenterX - myCenterX);
+          moveX = Math.cos(angle) * this.speed * deltaTime;
+          moveY = Math.sin(angle) * this.speed * deltaTime;
+          this.direction = (mCenterX < myCenterX) ? 'left' : 'right';
+
+          // Serang Pet / Minion saat berada dalam jangkauan
+          if (closestMinionDist <= attackReach && this.attackCooldown <= 0) {
+            this.attackCooldown = 1.35;
+            if (onAttackMinion) {
+              onAttackMinion(targetMinion, this.attackPower);
+            }
+          }
+        } else if (distToPlayer <= this.aggroRange) {
+          // PRIORITAS KEDUA: Menyerang player jika tidak ada pet/summon di sekitarnya
+          const angle = Math.atan2(playerCenterY - myCenterY, playerCenterX - myCenterX);
+          moveX = Math.cos(angle) * this.speed * deltaTime;
+          moveY = Math.sin(angle) * this.speed * deltaTime;
+          this.direction = (playerCenterX < myCenterX) ? 'left' : 'right';
+
+          // Attack Player if within reach
+          if (distToPlayer <= attackReach && this.attackCooldown <= 0) {
+            this.attackCooldown = 1.35;
+            onAttackPlayer(this.attackPower);
+          }
+        } else {
+          // Idle Wander
+          this.wanderTimer -= deltaTime;
+          if (this.wanderTimer <= 0) {
+            this.wanderTimer = 1.5 + Math.random() * 2;
+            if (Math.random() < 0.6) {
+              const angle = Math.random() * Math.PI * 2;
+              this.wanderVx = Math.cos(angle) * (this.speed * 0.4);
+              this.wanderVy = Math.sin(angle) * (this.speed * 0.4);
+              this.direction = this.wanderVx < 0 ? 'left' : 'right';
+            } else {
+              this.wanderVx = 0;
+              this.wanderVy = 0;
+            }
+          }
+          moveX = this.wanderVx * deltaTime;
+          moveY = this.wanderVy * deltaTime;
+        }
       }
     }
 

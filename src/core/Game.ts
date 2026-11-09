@@ -1054,7 +1054,7 @@ export class Game {
         }
       }
 
-      // 8. Overworld Monsters Update (AI, Movement & Player Attack)
+      // 8. Overworld Monsters Update (AI, Movement & Player/Pet Attack)
       for (const monster of this.overworldMonsters) {
         monster.update(
           deltaTime,
@@ -1072,6 +1072,10 @@ export class Game {
               this.player.y = 50 * CONSTANTS.TILE_SIZE + 3;
               this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur dan sadar kembali di Kota!', '#ef4444', 3.5);
             }
+          },
+          this.player.minions,
+          (minion, atk) => {
+            this.handleMonsterAttackMinion(monster, minion, atk);
           }
         );
       }
@@ -1185,7 +1189,7 @@ export class Game {
         }
       }
 
-      // 7. Dungeon Monsters Update (AI, Movement & Player Attack)
+      // 7. Dungeon Monsters Update (AI, Movement & Player/Pet Attack)
       for (const monster of this.dungeonMonsters) {
         monster.update(
           deltaTime,
@@ -1202,6 +1206,10 @@ export class Game {
               this.exitDungeon(true); // Safe respawn to town plaza
               this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur di Dungeon dan dipulangkan ke Kota!', '#ef4444', 3.5);
             }
+          },
+          this.player.minions,
+          (minion, atk) => {
+            this.handleMonsterAttackMinion(monster, minion, atk);
           }
         );
       }
@@ -1877,6 +1885,23 @@ export class Game {
           minion.x += Math.cos(followAngle) * Math.min(distToFormation, followSpeed);
           minion.y += Math.sin(followAngle) * Math.min(distToFormation, followSpeed);
         }
+      }
+    }
+  }
+
+  private handleMonsterAttackMinion(monster: Monster, minion: any, atk: number): void {
+    if (minion.hp <= 0) return;
+    minion.hp = Math.max(0, minion.hp - atk);
+    this.floatingText.spawn(minion.x + 6, minion.y - 10, `-${atk}`, '#f87171');
+    AudioEngine.playPlayerHurt();
+    this.spawnHitSparks(minion.x + 6, minion.y + 10, false);
+    this.camera.shake(2.0, 0.10);
+
+    if (minion.hp <= 0) {
+      this.floatingText.spawn(minion.x + 6, minion.y - 18, `☠️ ${minion.name} gugur!`, '#ef4444', 2.0);
+      const idx = this.player.minions.indexOf(minion);
+      if (idx !== -1) {
+        this.player.minions.splice(idx, 1);
       }
     }
   }
