@@ -6,7 +6,7 @@ import { AudioEngine } from '../audio/AudioEngine.ts';
 export interface VisualEffect {
   x: number;
   y: number;
-  type: 'slash' | 'fire' | 'ice' | 'lightning' | 'wind' | 'earth' | 'heal' | 'summon' | 'barrier' | 'abnormal';
+  type: 'slash' | 'fire' | 'ice' | 'lightning' | 'wind' | 'earth' | 'heal' | 'summon' | 'barrier' | 'abnormal' | 'shockwave' | 'grasp' | 'devour';
   timer: number;
   maxTimer: number;
   radius: number;
@@ -225,6 +225,7 @@ export class SkillBarUI {
 
     // 2. Non-Magician Skills
     switch (skill.id) {
+      // --- KNIGHT SKILLS ---
       case 'slash':
         this.visualEffects.push({
           x: px,
@@ -236,31 +237,81 @@ export class SkillBarUI {
           color: '#f97316'
         });
         break;
+
       case 'shield_bash':
+        this.visualEffects.push({
+          x: px + (this.player.direction === 'right' ? 20 : (this.player.direction === 'left' ? -20 : 0)),
+          y: py + (this.player.direction === 'down' ? 20 : (this.player.direction === 'up' ? -20 : 0)),
+          type: 'shockwave',
+          timer: 0.35,
+          maxTimer: 0.35,
+          radius: 32,
+          color: '#fb923c'
+        });
+        this.floatingText.spawn(px, py - 26, '🛡️ SHIELD BASH!', '#fb923c', 1.8);
+        break;
+
       case 'leap_attack':
+        this.visualEffects.push({
+          x: px + (this.player.direction === 'right' ? 32 : (this.player.direction === 'left' ? -32 : 0)),
+          y: py + (this.player.direction === 'down' ? 32 : (this.player.direction === 'up' ? -32 : 0)),
+          type: 'shockwave',
+          timer: 0.45,
+          maxTimer: 0.45,
+          radius: 46,
+          color: '#ef4444'
+        });
+        this.floatingText.spawn(px, py - 30, '💥 EARTH LEAP SHOCKWAVE!', '#ef4444', 2.0);
+        break;
+
+      case 'parrying':
+        this.player.isBerserk = true;
+        this.player.berserkTimer = 6.0;
+        this.player.hasBarrier = true;
+        this.player.barrierTimer = 4.0;
         this.visualEffects.push({
           x: px,
           y: py,
-          type: 'barrier',
-          timer: 0.4,
-          maxTimer: 0.4,
-          radius: 35,
-          color: '#fb923c'
+          type: 'slash',
+          timer: 0.3,
+          maxTimer: 0.3,
+          radius: 34,
+          color: '#fde047'
         });
-        break;
-      case 'parrying':
-      case 'berserk_overdrive':
-        this.player.isBerserk = true;
-        this.player.berserkTimer = 8.0;
-        this.floatingText.spawn(px, py - 32, '💥 BERSERK OVERDRIVE ACTIVATED!', '#dc2626', 2.0);
+        this.floatingText.spawn(px, py - 32, '⚡ PARRYING COUNTER POSTURE!', '#fde047', 2.0);
         break;
 
+      case 'berserk_overdrive':
+        this.player.isBerserk = true;
+        this.player.berserkTimer = 10.0;
+        this.visualEffects.push({
+          x: px,
+          y: py,
+          type: 'abnormal',
+          timer: 0.8,
+          maxTimer: 0.8,
+          radius: 50,
+          color: '#dc2626'
+        });
+        this.floatingText.spawn(px, py - 32, '🔥 BERSERK OVERDRIVE ACTIVATED!', '#dc2626', 2.2);
+        break;
+
+      // --- ASSASSIN SKILLS ---
       case 'stealth':
         this.player.isStealthed = true;
         this.player.stealthTimer = 7.0;
-        this.floatingText.spawn(px, py - 30, '👤 SILENT STEALTH', '#06b6d4', 2.0);
+        this.visualEffects.push({
+          x: px,
+          y: py,
+          type: 'summon',
+          timer: 0.4,
+          maxTimer: 0.4,
+          radius: 26,
+          color: '#06b6d4'
+        });
+        this.floatingText.spawn(px, py - 30, '👤 SILENT STEALTH (+60% SPEED)', '#06b6d4', 2.0);
         break;
-      case 'critical_strike':
+
       case 'poison_blade':
         this.visualEffects.push({
           x: px,
@@ -271,8 +322,71 @@ export class SkillBarUI {
           radius: 32,
           color: '#22c55e'
         });
+        this.floatingText.spawn(px, py - 26, '🧪 TOXIC DAGGER STRIKE!', '#22c55e', 1.8);
         break;
 
+      case 'critical_strike':
+        this.visualEffects.push({
+          x: px,
+          y: py,
+          type: 'slash',
+          timer: 0.4,
+          maxTimer: 0.4,
+          radius: 38,
+          color: '#f43f5e'
+        });
+        this.floatingText.spawn(px, py - 30, '🗡️ ASSASSINATE BURST CRITICAL!', '#f43f5e', 2.0);
+        break;
+
+      case 'shadow_clone':
+        if (this.player.minions.filter(m => m.type === 'shadow').length < 2) {
+          const shadowMinion = {
+            id: 'shadow_' + Date.now() + '_' + Math.random(),
+            x: this.player.x + (Math.random() > 0.5 ? 20 : -20),
+            y: this.player.y,
+            type: 'shadow' as const,
+            name: 'Klon Bayangan',
+            hp: 130 + this.player.level * 16,
+            maxHp: 130 + this.player.level * 16,
+            attackPower: 22 + this.player.level * 3.6,
+            attackCooldown: 0.2,
+            attackTimer: 0,
+            direction: this.player.direction === 'left' ? ('left' as const) : ('right' as const),
+            targetMonsterId: null,
+            speed: 84,
+            lifeTimer: 25.0
+          };
+          this.player.minions.push(shadowMinion);
+          this.visualEffects.push({
+            x: px,
+            y: py,
+            type: 'summon',
+            timer: 0.6,
+            maxTimer: 0.6,
+            radius: 30,
+            color: '#06b6d4'
+          });
+          this.floatingText.spawn(px, py - 26, '👥 Klon Bayangan Membantu Bertarung!', '#06b6d4', 2.0);
+        } else {
+          this.floatingText.spawn(px, py - 20, 'Batas Klon Penuh (Maks 2)!', '#94a3b8');
+        }
+        break;
+
+      case 'godspeed_reflexes':
+        this.player.godspeedTimer = 8.0;
+        this.visualEffects.push({
+          x: px,
+          y: py,
+          type: 'abnormal',
+          timer: 0.7,
+          maxTimer: 0.7,
+          radius: 46,
+          color: '#a855f7'
+        });
+        this.floatingText.spawn(px, py - 32, '⚡ GODSPEED REFLEXES! (AUTO-DODGE & SPEED BOOST)', '#a855f7', 2.5);
+        break;
+
+      // --- HEALER SKILLS ---
       case 'holy_heal':
         this.player.heal(45);
         this.visualEffects.push({
@@ -284,7 +398,25 @@ export class SkillBarUI {
           radius: 28,
           color: '#4ade80'
         });
+        this.floatingText.spawn(px, py - 26, '+45 HP Pulih!', '#4ade80', 1.8);
         break;
+
+      case 'purification':
+        this.player.heal(30);
+        this.player.restoreMp(15);
+        this.player.isBerserk = false;
+        this.visualEffects.push({
+          x: px,
+          y: py,
+          type: 'heal',
+          timer: 0.7,
+          maxTimer: 0.7,
+          radius: 34,
+          color: '#34d399'
+        });
+        this.floatingText.spawn(px, py - 28, '🌿 SACRED CLEANSE (STATUS PULIH)!', '#34d399', 2.0);
+        break;
+
       case 'divine_barrier':
         this.player.hasBarrier = true;
         this.player.barrierTimer = 10.0;
@@ -294,19 +426,59 @@ export class SkillBarUI {
           type: 'barrier',
           timer: 0.5,
           maxTimer: 0.5,
-          radius: 30,
+          radius: 32,
           color: '#facc15'
         });
+        this.floatingText.spawn(px, py - 26, '🛡️ DIVINE AEGIS BARRIER AKTIF!', '#facc15', 2.0);
         break;
 
+      case 'angel_blessing':
+        this.player.angelBlessingTimer = 10.0;
+        this.visualEffects.push({
+          x: px,
+          y: py,
+          type: 'heal',
+          timer: 0.85,
+          maxTimer: 0.85,
+          radius: 36,
+          color: '#38bdf8'
+        });
+        this.floatingText.spawn(px, py - 30, '🕊️ ANGEL BLESSING (REGEN AKTIF 10 DETIK)!', '#38bdf8', 2.2);
+        break;
+
+      case 'miracle_rebirth':
+        this.player.miracleRebirthReady = true;
+        this.visualEffects.push({
+          x: px,
+          y: py,
+          type: 'abnormal',
+          timer: 1.0,
+          maxTimer: 1.0,
+          radius: 54,
+          color: '#f43f5e'
+        });
+        this.floatingText.spawn(px, py - 34, '💖 MIRACLE REBIRTH SIAP (AUTO-REVIVE ON)!', '#f43f5e', 2.5);
+        break;
+
+      // --- NECROMANCER SKILLS ---
       case 'raise_skeleton':
-        if (this.player.minions.length < 3) {
-          this.player.minions.push({
+        if (this.player.minions.filter(m => m.type === 'skeleton').length < 3) {
+          const newSkeleton = {
+            id: 'skel_' + Date.now() + '_' + Math.random(),
             x: this.player.x - 20,
             y: this.player.y,
-            type: 'skeleton',
-            name: 'Skeleton Minion'
-          });
+            type: 'skeleton' as const,
+            name: 'Prajurit Kerangka',
+            hp: 90 + this.player.level * 14,
+            maxHp: 90 + this.player.level * 14,
+            attackPower: 18 + this.player.level * 3.4,
+            attackCooldown: 0.2,
+            attackTimer: 0,
+            direction: this.player.direction === 'left' ? ('left' as const) : ('right' as const),
+            targetMonsterId: null,
+            speed: 74
+          };
+          this.player.minions.push(newSkeleton);
           this.visualEffects.push({
             x: px - 20,
             y: py,
@@ -316,23 +488,87 @@ export class SkillBarUI {
             radius: 30,
             color: '#a855f7'
           });
-          this.floatingText.spawn(px, py - 25, '💀 Prajurit Kerangka Bangkit!', '#c084fc', 2.0);
+          this.floatingText.spawn(px, py - 25, '💀 Prajurit Kerangka Bangkit Siap Menyerang!', '#c084fc', 2.0);
         } else {
-          this.floatingText.spawn(px, py - 20, 'Batas Minion Penuh (Maks 3)!', '#94a3b8');
+          this.floatingText.spawn(px, py - 20, 'Batas Kerangka Penuh (Maks 3)!', '#94a3b8');
         }
         break;
+
+      case 'ghostly_grasp':
+        this.visualEffects.push({
+          x: px + (this.player.direction === 'right' ? 32 : (this.player.direction === 'left' ? -32 : 0)),
+          y: py + (this.player.direction === 'down' ? 32 : (this.player.direction === 'up' ? -32 : 0)),
+          type: 'grasp',
+          timer: 0.6,
+          maxTimer: 0.6,
+          radius: 38,
+          color: '#818cf8'
+        });
+        this.floatingText.spawn(px, py - 28, '✋ GHOSTLY GRASP!', '#818cf8', 2.0);
+        break;
+
       case 'soul_drain':
-        this.player.heal(25);
-        this.player.restoreMp(20);
+        this.player.heal(30);
+        this.player.restoreMp(25);
         this.visualEffects.push({
           x: px,
           y: py,
-          type: 'heal',
-          timer: 0.6,
-          maxTimer: 0.6,
-          radius: 32,
+          type: 'devour',
+          timer: 0.65,
+          maxTimer: 0.65,
+          radius: 36,
           color: '#9333ea'
         });
+        this.floatingText.spawn(px, py - 26, '🩸 SOUL LIFE DRAIN (+HP & +MP)!', '#c084fc', 2.0);
+        break;
+
+      case 'summon_bear':
+        if (this.player.minions.filter(m => m.type === 'bear').length < 1) {
+          const newBear = {
+            id: 'bear_' + Date.now(),
+            x: this.player.x + (this.player.direction === 'right' ? 26 : -26),
+            y: this.player.y,
+            type: 'bear' as const,
+            name: 'Roh Beruang Purba',
+            hp: 240 + this.player.level * 28,
+            maxHp: 240 + this.player.level * 28,
+            attackPower: 32 + this.player.level * 5.0,
+            attackCooldown: 0.3,
+            attackTimer: 0,
+            direction: 'right' as const,
+            targetMonsterId: null,
+            speed: 58
+          };
+          this.player.minions.push(newBear);
+          this.visualEffects.push({
+            x: px + 24,
+            y: py,
+            type: 'summon',
+            timer: 0.9,
+            maxTimer: 0.9,
+            radius: 42,
+            color: '#e879f9'
+          });
+          this.floatingText.spawn(px, py - 28, '🐻 Roh Beruang Purba Mengawalmu!', '#e879f9', 2.4);
+        } else {
+          this.floatingText.spawn(px, py - 20, 'Roh Beruang Sudah Aktif!', '#94a3b8');
+        }
+        break;
+
+      case 'predator_gluttony':
+        this.player.heal(55);
+        this.player.restoreMp(45);
+        this.player.predatorBuffTimer = 12.0;
+        this.visualEffects.push({
+          x: px,
+          y: py,
+          type: 'devour',
+          timer: 1.1,
+          maxTimer: 1.1,
+          radius: 68,
+          color: '#9333ea'
+        });
+        this.floatingText.spawn(px, py - 35, '👁️ PREDATOR: GLUTTONY SOUL DEVOUR!! (+35% ATK)', '#9333ea', 2.5);
         break;
     }
   }
@@ -349,6 +585,54 @@ export class SkillBarUI {
         ctx.beginPath();
         ctx.arc(fx.x, fx.y, fx.radius, 0, Math.PI * 1.5);
         ctx.stroke();
+      } else if (fx.type === 'shockwave') {
+        // Shockwave Ring Expanding
+        ctx.strokeStyle = fx.color;
+        ctx.lineWidth = 3;
+        ctx.beginPath();
+        ctx.arc(fx.x, fx.y, fx.radius * (1 - alpha * 0.2), 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = fx.color;
+        ctx.globalAlpha = alpha * 0.25;
+        ctx.beginPath();
+        ctx.arc(fx.x, fx.y, fx.radius * 0.7, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (fx.type === 'grasp') {
+        // Ghostly Skeletal Hands from Ground
+        ctx.fillStyle = fx.color;
+        ctx.beginPath();
+        ctx.arc(fx.x, fx.y, fx.radius * 0.8, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#c084fc';
+        ctx.lineWidth = 2;
+        for (let i = -2; i <= 2; i++) {
+          ctx.beginPath();
+          ctx.moveTo(fx.x + i * 8, fx.y + 10);
+          ctx.lineTo(fx.x + i * 8 - 3, fx.y - 12);
+          ctx.lineTo(fx.x + i * 8 + 3, fx.y - 16);
+          ctx.stroke();
+        }
+      } else if (fx.type === 'devour') {
+        // Cosmic Gluttony Devour Black Hole / Soul Vortex
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.beginPath();
+        ctx.arc(fx.x, fx.y, fx.radius * (1 - alpha * 0.2), 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = fx.color;
+        ctx.lineWidth = 3.5;
+        ctx.beginPath();
+        ctx.arc(fx.x, fx.y, fx.radius * 0.9, 0, Math.PI * 2);
+        ctx.stroke();
+        // Spiraling soul tendrils
+        ctx.strokeStyle = '#c084fc';
+        ctx.lineWidth = 2;
+        const spin = Date.now() * 0.006;
+        for (let s = 0; s < 4; s++) {
+          const a = spin + (s * Math.PI / 2);
+          ctx.beginPath();
+          ctx.arc(fx.x, fx.y, fx.radius * 0.6, a, a + 1.2);
+          ctx.stroke();
+        }
       } else if (fx.type === 'fire') {
         ctx.fillStyle = fx.color;
         ctx.beginPath();

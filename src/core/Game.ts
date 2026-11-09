@@ -684,6 +684,11 @@ export class Game {
     this.player.y = this.dungeonMap.entranceSpawnY;
     this.player.direction = 'up';
 
+    for (const minion of this.player.minions) {
+      minion.x = this.player.x - 16;
+      minion.y = this.player.y;
+    }
+
     AudioEngine.playMapTransition(true);
     AudioEngine.playBgm('DUNGEON');
 
@@ -712,6 +717,11 @@ export class Game {
       this.player.y = 35 * CONSTANTS.TILE_SIZE + 3;
     }
     this.player.direction = 'down';
+
+    for (const minion of this.player.minions) {
+      minion.x = this.player.x - 16;
+      minion.y = this.player.y;
+    }
 
     AudioEngine.playMapTransition(false);
     AudioEngine.playBgm('OVERWORLD');
@@ -1097,13 +1107,18 @@ export class Game {
 
       // 10. Player Skill Effects vs Overworld Monsters
       for (const effect of this.skillBarUI.visualEffects) {
-        if (['slash', 'fire', 'ice', 'lightning', 'wind', 'earth', 'abnormal'].includes(effect.type)) {
+        if (['slash', 'fire', 'ice', 'lightning', 'wind', 'earth', 'abnormal', 'shockwave', 'grasp', 'devour'].includes(effect.type)) {
           for (const monster of this.overworldMonsters) {
             if (monster.isDead) continue;
             const dist = Math.hypot(effect.x - (monster.x + monster.width / 2), effect.y - (monster.y + monster.height / 2));
             if (dist < effect.radius + monster.width / 2) {
               if (monster.hurtTimer <= 0) {
-                const spellDmg = effect.type === 'abnormal' ? 65 + this.player.level * 6 : 28 + this.player.level * 3.5;
+                let spellDmg = 28 + this.player.level * 3.5;
+                if (effect.type === 'abnormal' || effect.type === 'devour') {
+                  spellDmg = 72 + this.player.level * 6.5;
+                } else if (effect.type === 'grasp' || effect.type === 'shockwave') {
+                  spellDmg = 34 + this.player.level * 4.0;
+                }
                 const res = monster.takeDamage(spellDmg, effect.x, effect.y);
                 AudioEngine.playHit(false);
                 this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, true);
@@ -1117,6 +1132,9 @@ export class Game {
           }
         }
       }
+
+      // 10.5 Minion AI Combat & Escort Update (Prajurit Kerangka, Roh Beruang, Klon Bayangan)
+      this.updateMinions(deltaTime, this.overworldMonsters);
     } else {
       // --- DUNGEON SPECIFIC UPDATES ---
       // 4. Exit Ladder to Surface
@@ -1220,13 +1238,18 @@ export class Game {
 
       // 9. Player Skill Effects vs Monsters (Sihir & Skill Serangan)
       for (const effect of this.skillBarUI.visualEffects) {
-        if (['slash', 'fire', 'ice', 'lightning', 'wind', 'earth', 'abnormal'].includes(effect.type)) {
+        if (['slash', 'fire', 'ice', 'lightning', 'wind', 'earth', 'abnormal', 'shockwave', 'grasp', 'devour'].includes(effect.type)) {
           for (const monster of this.dungeonMonsters) {
             if (monster.isDead) continue;
             const dist = Math.hypot(effect.x - (monster.x + monster.width / 2), effect.y - (monster.y + monster.height / 2));
             if (dist < effect.radius + monster.width / 2) {
               if (monster.hurtTimer <= 0) {
-                const spellDmg = effect.type === 'abnormal' ? 65 + this.player.level * 6 : 28 + this.player.level * 3.5;
+                let spellDmg = 28 + this.player.level * 3.5;
+                if (effect.type === 'abnormal' || effect.type === 'devour') {
+                  spellDmg = 72 + this.player.level * 6.5;
+                } else if (effect.type === 'grasp' || effect.type === 'shockwave') {
+                  spellDmg = 34 + this.player.level * 4.0;
+                }
                 const res = monster.takeDamage(spellDmg, effect.x, effect.y);
                 AudioEngine.playHit(false);
                 this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, true);
@@ -1240,6 +1263,9 @@ export class Game {
           }
         }
       }
+
+      // 9.5 Minion AI Combat & Escort Update (Prajurit Kerangka, Roh Beruang, Klon Bayangan)
+      this.updateMinions(deltaTime, this.dungeonMonsters);
     }
 
     // 10. Update Floating Text Notifications
@@ -1745,5 +1771,113 @@ export class Game {
     ctx.fillText(this.mapTransitionSubtitle, cardX + cardW / 2, cardY + 35);
 
     ctx.restore();
+  }
+
+  private updateMinions(deltaTime: number, activeMonsters: Monster[]): void {
+    const minions = this.player.minions;
+    if (minions.length === 0) return;
+
+    const playerCenterX = this.player.x + this.player.width / 2;
+    const playerCenterY = this.player.y + this.player.height / 2;
+
+    for (let i = minions.length - 1; i >= 0; i--) {
+      const minion = minions[i];
+
+      // Update cooldowns & animations
+      if (minion.attackCooldown > 0) minion.attackCooldown -= deltaTime;
+      if (minion.attackTimer > 0) minion.attackTimer -= deltaTime;
+
+      if (typeof minion.lifeTimer === 'number') {
+        minion.lifeTimer -= deltaTime;
+        if (minion.lifeTimer <= 0) {
+          this.floatingText.spawn(minion.x, minion.y - 12, `💨 ${minion.name} menghilang`, '#94a3b8');
+          minions.splice(i, 1);
+          continue;
+        }
+      }
+
+      if (minion.hp <= 0) {
+        this.floatingText.spawn(minion.x, minion.y - 12, `☠️ ${minion.name} gugur!`, '#ef4444');
+        minions.splice(i, 1);
+        continue;
+      }
+
+      // Find closest alive monster within aggro range
+      let targetMonster: Monster | null = null;
+      let closestDist = 160;
+
+      for (const monster of activeMonsters) {
+        if (monster.isDead) continue;
+        const mCenterX = monster.x + monster.width / 2;
+        const mCenterY = monster.y + monster.height / 2;
+        const distToMinion = Math.hypot(mCenterX - minion.x, mCenterY - minion.y);
+        const distToPlayer = Math.hypot(mCenterX - playerCenterX, mCenterY - playerCenterY);
+
+        if (distToPlayer < 260 && distToMinion < closestDist) {
+          closestDist = distToMinion;
+          targetMonster = monster;
+        }
+      }
+
+      if (targetMonster) {
+        // --- COMBAT PURSUIT & ATTACK ---
+        const mCenterX = targetMonster.x + targetMonster.width / 2;
+        const mCenterY = targetMonster.y + targetMonster.height / 2;
+        const angle = Math.atan2(mCenterY - minion.y, mCenterX - minion.x);
+
+        minion.direction = mCenterX < minion.x ? 'left' : 'right';
+        const reach = minion.type === 'bear' ? 28 : (minion.type === 'shadow' ? 24 : 22);
+
+        if (closestDist > reach) {
+          // Rush to monster
+          const moveSpeed = minion.speed * deltaTime;
+          minion.x += Math.cos(angle) * moveSpeed;
+          minion.y += Math.sin(angle) * moveSpeed;
+        } else {
+          // Inside attack reach! Attack!
+          if (minion.attackCooldown <= 0) {
+            minion.attackCooldown = minion.type === 'bear' ? 1.35 : (minion.type === 'shadow' ? 0.75 : 1.05);
+            minion.attackTimer = 0.28;
+
+            let baseDmg = minion.attackPower;
+            const isCrit = Math.random() < 0.22;
+            const finalDmg = isCrit ? Math.round(baseDmg * 1.6) : Math.round(baseDmg);
+
+            const res = targetMonster.takeDamage(finalDmg, minion.x, minion.y);
+            AudioEngine.playHit(isCrit);
+            this.spawnHitSparks(mCenterX, mCenterY, isCrit);
+            this.camera.shake(isCrit ? 3.0 : 1.6, 0.08);
+
+            const hitColor = minion.type === 'skeleton' ? '#c084fc' : (minion.type === 'bear' ? '#f472b6' : '#38bdf8');
+            const icon = minion.type === 'skeleton' ? '💀' : (minion.type === 'bear' ? '🐾' : '🗡️');
+            const hitText = isCrit ? `💥 CRIT -${res.damage}!` : `${icon} -${res.damage}`;
+            this.floatingText.spawn(mCenterX, targetMonster.y - 12, hitText, isCrit ? '#facc15' : hitColor);
+
+            if (res.isDead) {
+              this.handleMonsterDefeated(targetMonster);
+            }
+          }
+        }
+      } else {
+        // --- ESCORT / ORBITING FORMATION ---
+        const angleOffset = (i * (Math.PI * 2 / Math.max(1, minions.length))) + (Date.now() * 0.0015);
+        const formationDistance = 26 + (i * 6);
+        const targetX = playerCenterX + Math.cos(angleOffset) * formationDistance - 6;
+        const targetY = playerCenterY + Math.sin(angleOffset) * formationDistance - 6;
+
+        const distToFormation = Math.hypot(targetX - minion.x, targetY - minion.y);
+        minion.direction = playerCenterX < minion.x ? 'left' : 'right';
+
+        if (distToFormation > 220) {
+          minion.x = playerCenterX - 14;
+          minion.y = playerCenterY;
+        } else if (distToFormation > 14) {
+          const followAngle = Math.atan2(targetY - minion.y, targetX - minion.x);
+          const followSpeed = (minion.speed * 1.15) * deltaTime;
+          minion.x += Math.cos(followAngle) * Math.min(distToFormation, followSpeed);
+          minion.y += Math.sin(followAngle) * Math.min(distToFormation, followSpeed);
+        }
+      }
+    }
   }
 }

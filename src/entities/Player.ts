@@ -11,10 +11,20 @@ import { AudioEngine } from '../audio/AudioEngine.ts';
 export type Direction = 'down' | 'up' | 'left' | 'right';
 
 export interface Minion {
+  id: string;
   x: number;
   y: number;
   type: 'skeleton' | 'bear' | 'shadow';
   name: string;
+  hp: number;
+  maxHp: number;
+  attackPower: number;
+  attackCooldown: number;
+  attackTimer: number;
+  direction: 'left' | 'right';
+  targetMonsterId: string | null;
+  speed: number;
+  lifeTimer?: number;
 }
 
 export class Player {
@@ -70,6 +80,10 @@ export class Player {
   public berserkTimer: number = 0;
   public hasBarrier: boolean = false;
   public barrierTimer: number = 0;
+  public godspeedTimer: number = 0;
+  public angelBlessingTimer: number = 0;
+  public miracleRebirthReady: boolean = false;
+  public predatorBuffTimer: number = 0;
 
   // Minions
   public minions: Minion[] = [];
@@ -222,6 +236,10 @@ export class Player {
   }
 
   public takeDamage(amount: number): boolean {
+    if (this.godspeedTimer > 0) {
+      // Auto-dodge semua serangan dengan Godspeed Reflexes
+      return false;
+    }
     if (this.hasBarrier) {
       amount = Math.round(amount * 0.5);
     }
@@ -229,6 +247,12 @@ export class Player {
     this.hp = Math.max(0, Math.round(this.hp) - damage);
     this.hpRegenAccumulator = 0;
     if (this.hp <= 0) {
+      if (this.miracleRebirthReady) {
+        this.miracleRebirthReady = false;
+        this.hp = this.maxHp;
+        this.mp = this.maxMp;
+        return false;
+      }
       this.die();
       return true;
     }
@@ -292,6 +316,10 @@ export class Player {
     } else {
       // NOVICE
       baseDmg = 12 + this.level * 2 + weaponAtk;
+    }
+
+    if (this.predatorBuffTimer > 0) {
+      baseDmg *= 1.35;
     }
 
     const isCrit = weaponCrit > 0 && Math.random() < weaponCrit;
@@ -477,6 +505,17 @@ export class Player {
       this.barrierTimer -= deltaTime;
       if (this.barrierTimer <= 0) this.hasBarrier = false;
     }
+    if (this.godspeedTimer > 0) {
+      this.godspeedTimer -= deltaTime;
+    }
+    if (this.angelBlessingTimer > 0) {
+      this.angelBlessingTimer -= deltaTime;
+      this.heal(8 * deltaTime);
+      this.restoreMp(6 * deltaTime);
+    }
+    if (this.predatorBuffTimer > 0) {
+      this.predatorBuffTimer -= deltaTime;
+    }
 
     this.isMoving = Math.abs(axisX) > 0.05 || Math.abs(axisY) > 0.05;
 
@@ -493,6 +532,7 @@ export class Player {
       if (isSprint) speed *= CONSTANTS.PLAYER_SPRINT_MULTIPLIER;
       if (this.isStealthed) speed *= 1.4;
       if (this.isBerserk) speed *= 1.6;
+      if (this.godspeedTimer > 0) speed *= 1.8;
 
       const moveX = axisX * speed * deltaTime;
       const moveY = axisY * speed * deltaTime;
@@ -540,15 +580,6 @@ export class Player {
       }
     } else {
       this.animTimer = 0;
-    }
-
-    // Minion follow logic
-    for (let i = 0; i < this.minions.length; i++) {
-      const minion = this.minions[i];
-      const targetX = this.x - (i + 1) * 16;
-      const targetY = this.y + 4;
-      minion.x += (targetX - minion.x) * 0.08;
-      minion.y += (targetY - minion.y) * 0.08;
     }
   }
 
@@ -1781,27 +1812,174 @@ export class Player {
   private renderMinion(ctx: CanvasRenderingContext2D, minion: Minion): void {
     const mx = Math.floor(minion.x);
     const my = Math.floor(minion.y);
+    const isRight = minion.direction !== 'left';
 
     ctx.save();
+
     if (minion.type === 'skeleton') {
-      ctx.fillStyle = 'rgba(0,0,0,0.3)';
+      // 1. Minion shadow
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
       ctx.beginPath();
-      ctx.ellipse(mx + 6, my + 14, 5, 2, 0, 0, Math.PI * 2);
+      ctx.ellipse(mx + 6, my + 18, 6, 2.5, 0, 0, Math.PI * 2);
       ctx.fill();
 
+      // 2. Bone Skull
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(mx + 2, my + 2, 8, 7);
+      // Jaw
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(mx + 3, my + 8, 6, 2);
+
+      // Glowing Necromancy Eyes
+      ctx.fillStyle = '#c084fc';
+      ctx.shadowColor = '#a855f7';
+      ctx.shadowBlur = 4;
+      if (isRight) {
+        ctx.fillRect(mx + 5, my + 4, 2, 2);
+        ctx.fillRect(mx + 8, my + 4, 2, 2);
+      } else {
+        ctx.fillRect(mx + 3, my + 4, 2, 2);
+        ctx.fillRect(mx + 6, my + 4, 2, 2);
+      }
+      ctx.shadowBlur = 0;
+
+      // 3. Spine & Ribs
       ctx.fillStyle = '#e2e8f0';
-      ctx.fillRect(mx + 3, my + 2, 6, 6);
-      ctx.fillRect(mx + 4, my + 8, 4, 6);
-      ctx.fillRect(mx + 3, my + 14, 2, 4);
-      ctx.fillRect(mx + 7, my + 14, 2, 4);
-
-      ctx.fillStyle = '#a855f7';
-      ctx.fillRect(mx + 4, my + 4, 1, 1);
-      ctx.fillRect(mx + 7, my + 4, 1, 1);
-
+      ctx.fillRect(mx + 4, my + 10, 4, 5);
       ctx.fillStyle = '#94a3b8';
-      ctx.fillRect(mx + 10, my + 6, 2, 8);
+      ctx.fillRect(mx + 3, my + 11, 6, 1);
+      ctx.fillRect(mx + 3, my + 13, 6, 1);
+
+      // 4. Legs
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(mx + 3, my + 15, 2, 4);
+      ctx.fillRect(mx + 7, my + 15, 2, 4);
+
+      // 5. Bone Sword
+      const swordX = isRight ? mx + 11 : mx - 1;
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(swordX, my + 7, 2, 9);
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillRect(swordX - 1, my + 10, 4, 1.5);
+
+      // 6. Attack Slash Arc Animation
+      if (minion.attackTimer > 0) {
+        const slashX = isRight ? mx + 15 : mx - 3;
+        const slashAngle = isRight ? 0 : Math.PI;
+        ctx.strokeStyle = '#c084fc';
+        ctx.lineWidth = 2.4;
+        ctx.shadowColor = '#a855f7';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.arc(slashX, my + 9, 13, slashAngle - 0.75, slashAngle + 0.75);
+        ctx.stroke();
+        ctx.shadowBlur = 0;
+      }
+
+      // 7. Mini HP Bar
+      const hpPct = Math.min(1, Math.max(0, minion.hp / minion.maxHp));
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(mx - 1, my - 4, 14, 2);
+      ctx.fillStyle = '#c084fc';
+      ctx.fillRect(mx - 1, my - 4, Math.round(14 * hpPct), 2);
+
+    } else if (minion.type === 'bear') {
+      // Roh Beruang Purba (Ethereal Spirit Bear)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.4)';
+      ctx.beginPath();
+      ctx.ellipse(mx + 10, my + 20, 12, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Translucent ethereal spirit body
+      ctx.fillStyle = 'rgba(168, 85, 247, 0.85)';
+      ctx.shadowColor = '#e879f9';
+      ctx.shadowBlur = 6;
+      ctx.beginPath();
+      ctx.roundRect(mx, my + 4, 20, 14, 4);
+      ctx.fill();
+
+      // Bear head & muzzle
+      const headX = isRight ? mx + 14 : mx - 6;
+      ctx.fillStyle = '#c084fc';
+      ctx.beginPath();
+      ctx.roundRect(headX, my + 2, 11, 10, 3);
+      ctx.fill();
+
+      // Spirit eyes
+      ctx.fillStyle = '#fdf4ff';
+      ctx.fillRect(isRight ? headX + 7 : headX + 2, my + 5, 2, 2);
+
+      // Heavy Paws
+      ctx.fillStyle = '#9333ea';
+      ctx.fillRect(mx + 2, my + 16, 4, 4);
+      ctx.fillRect(mx + 14, my + 16, 4, 4);
+      ctx.shadowBlur = 0;
+
+      // Attack Claw Swipes
+      if (minion.attackTimer > 0) {
+        const clawX = isRight ? mx + 24 : mx - 6;
+        ctx.strokeStyle = '#f472b6';
+        ctx.lineWidth = 2;
+        for (let c = -1; c <= 1; c++) {
+          ctx.beginPath();
+          ctx.moveTo(clawX + (isRight ? 0 : 6), my + 6 + c * 4);
+          ctx.lineTo(clawX + (isRight ? 8 : -2), my + 13 + c * 4);
+          ctx.stroke();
+        }
+      }
+
+      // Mini HP Bar
+      const hpPct = Math.min(1, Math.max(0, minion.hp / minion.maxHp));
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(mx + 1, my - 4, 18, 2.5);
+      ctx.fillStyle = '#e879f9';
+      ctx.fillRect(mx + 1, my - 4, Math.round(18 * hpPct), 2.5);
+
+    } else if (minion.type === 'shadow') {
+      // Klon Bayangan (Assassin Shadow Clone)
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+      ctx.beginPath();
+      ctx.ellipse(mx + 6, my + 17, 6, 2.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.globalAlpha = 0.78;
+      // Dark ninja body
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(mx + 2, my + 2, 8, 8);
+      ctx.fillRect(mx + 3, my + 10, 6, 6);
+      ctx.fillRect(mx + 3, my + 16, 2, 3);
+      ctx.fillRect(mx + 7, my + 16, 2, 3);
+
+      // Glowing Cyan Ninja Scarf & Eyes
+      ctx.fillStyle = '#06b6d4';
+      ctx.fillRect(mx + 2, my + 8, 8, 2);
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(isRight ? mx + 6 : mx + 3, my + 5, 2, 1.5);
+
+      // Daggers
+      ctx.fillStyle = '#67e8f9';
+      const dagX = isRight ? mx + 10 : mx;
+      ctx.fillRect(dagX, my + 10, 2, 6);
+
+      // Attack Cross-Slash
+      if (minion.attackTimer > 0) {
+        const slashX = isRight ? mx + 14 : mx - 2;
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.8;
+        ctx.beginPath();
+        ctx.moveTo(slashX - 4, my + 5); ctx.lineTo(slashX + 6, my + 15);
+        ctx.moveTo(slashX + 6, my + 5); ctx.lineTo(slashX - 4, my + 15);
+        ctx.stroke();
+      }
+
+      // Mini HP Bar
+      const hpPct = Math.min(1, Math.max(0, minion.hp / minion.maxHp));
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(mx - 1, my - 4, 14, 2);
+      ctx.fillStyle = '#06b6d4';
+      ctx.fillRect(mx - 1, my - 4, Math.round(14 * hpPct), 2);
     }
+
     ctx.restore();
   }
 }
