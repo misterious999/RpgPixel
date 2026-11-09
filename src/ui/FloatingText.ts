@@ -41,7 +41,6 @@ export class FloatingTextManager {
       const msg = this.messages[i];
       msg.lifetime -= deltaTime;
       // Smooth anime float upwards with easing
-      const progress = 1 - msg.lifetime / msg.maxLifetime;
       const floatSpeed = msg.isCrit ? 26 : 20;
       msg.y -= deltaTime * floatSpeed;
 

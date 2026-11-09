@@ -147,6 +147,22 @@ export class DungeonFloor2 {
     return t === Floor2TileType.WALL || t === Floor2TileType.PILLAR;
   }
 
+  public checkCollision(rect: { x: number; y: number; width: number; height: number }): boolean {
+    const leftTile = Math.floor(rect.x / this.tileSize);
+    const rightTile = Math.floor((rect.x + rect.width - 0.01) / this.tileSize);
+    const topTile = Math.floor(rect.y / this.tileSize);
+    const bottomTile = Math.floor((rect.y + rect.height - 0.01) / this.tileSize);
+
+    for (let ty = topTile; ty <= bottomTile; ty++) {
+      for (let tx = leftTile; tx <= rightTile; tx++) {
+        if (this.isTileSolid(tx, ty)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   public render(ctx: CanvasRenderingContext2D, camera: Camera): void {
     const ts = this.tileSize;
     const startCol = Math.max(0, Math.floor(camera.x / ts));
@@ -200,8 +216,7 @@ export class DungeonFloor2 {
       ctx.fillStyle = '#450a0a';
       ctx.fillRect(px, py, ts, ts);
 
-      // Rotating Magma vortex
-      const rot = this.animTimer * 3;
+      // Magma vortex
       const grad = ctx.createRadialGradient(px + 16, py + 16, 2, px + 16, py + 16, 15);
       grad.addColorStop(0, '#fef08a');
       grad.addColorStop(0.5, '#ea580c');

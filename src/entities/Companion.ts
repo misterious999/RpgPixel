@@ -115,7 +115,7 @@ export class Companion {
     }
   }
 
-  public takeDamage(amount: number, fromX: number, fromY: number): void {
+  public takeDamage(amount: number, _fromX?: number, _fromY?: number): void {
     const dmg = Math.max(1, Math.round(amount));
     this.hp = Math.max(0, this.hp - dmg);
     this.hurtTimer = 0.25;
@@ -161,7 +161,6 @@ export class Companion {
     const myCenterX = this.x + this.width / 2;
     const myCenterY = this.y + this.height / 2;
     const playerCenterX = player.x + player.width / 2;
-    const playerCenterY = player.y + player.height / 2;
 
     // 1. Flora Special: Healing Player or Companion
     if (this.type === 'FLORA' && this.healCooldown <= 0) {
@@ -193,7 +192,8 @@ export class Companion {
       const mCenterX = m.x + m.width / 2;
       const mCenterY = m.y + m.height / 2;
       const dist = Math.hypot(myCenterX - mCenterX, myCenterY - mCenterY);
-      if (dist < 135 && dist < closestDist) {
+      const maxDetectRange = this.type === 'RODRIC' ? 145 : 185;
+      if (dist < maxDetectRange && dist < closestDist) {
         closestDist = dist;
         targetMonster = m;
       }
@@ -203,7 +203,8 @@ export class Companion {
     if (targetMonster) {
       const mCenterX = targetMonster.x + targetMonster.width / 2;
       const mCenterY = targetMonster.y + targetMonster.height / 2;
-      const desiredRange = this.type === 'RODRIC' ? 24 : 75;
+      const mRadius = Math.max(targetMonster.width, targetMonster.height) / 2;
+      const desiredRange = this.type === 'RODRIC' ? (mRadius + 16) : 85;
 
       this.direction = (mCenterX < myCenterX) ? 'left' : 'right';
 
@@ -214,7 +215,7 @@ export class Companion {
       }
 
       // Attack Execution
-      if (closestDist <= desiredRange + 16 && this.attackCooldown <= 0) {
+      if (closestDist <= desiredRange + 18 && this.attackCooldown <= 0) {
         this.attackCooldown = this.type === 'RODRIC' ? 1.25 : (this.type === 'LYRA' ? 1.5 : 1.8);
         this.swingTimer = 0.28;
 

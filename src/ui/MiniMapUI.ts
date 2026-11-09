@@ -341,8 +341,8 @@ export class MiniMapUI {
 
         // Tangga ke Lantai 2 jika terbuka
         if (dungeonMap.isFloor2Unlocked) {
-          const s2x = toRadarX(dungeonMap.floor2StairsX / CONSTANTS.TILE_SIZE);
-          const s2y = toRadarY(dungeonMap.floor2StairsY / CONSTANTS.TILE_SIZE);
+          const s2x = toRadarX(dungeonMap.floor2LadderX / CONSTANTS.TILE_SIZE);
+          const s2y = toRadarY(dungeonMap.floor2LadderY / CONSTANTS.TILE_SIZE);
           ctx.fillStyle = '#60a5fa';
           ctx.beginPath();
           ctx.arc(s2x, s2y, 3.5, 0, Math.PI * 2);
@@ -543,8 +543,8 @@ export class MiniMapUI {
         ctx.stroke();
 
         if (dungeonMap.isFloor2Unlocked) {
-          const s2x = toMapX(dungeonMap.floor2StairsX / CONSTANTS.TILE_SIZE);
-          const s2y = toMapY(dungeonMap.floor2StairsY / CONSTANTS.TILE_SIZE);
+          const s2x = toMapX(dungeonMap.floor2LadderX / CONSTANTS.TILE_SIZE);
+          const s2y = toMapY(dungeonMap.floor2LadderY / CONSTANTS.TILE_SIZE);
           ctx.fillStyle = '#60a5fa';
           ctx.beginPath();
           ctx.arc(s2x, s2y, 5, 0, Math.PI * 2);

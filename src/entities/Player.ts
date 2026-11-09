@@ -2,6 +2,8 @@ import { CONSTANTS } from '../core/Constants.ts';
 import { InputState } from '../core/Input.ts';
 import { TileMap } from '../world/TileMap.ts';
 import { DungeonMap } from '../world/DungeonMap.ts';
+import { DungeonFloor2 } from '../world/DungeonFloor2.ts';
+import { DungeonFloor3 } from '../world/DungeonFloor3.ts';
 import { Inventory } from '../items/Inventory.ts';
 import { CharacterCostume, RoleType, Skill, MagicianAffinities } from '../types/GameTypes.ts';
 import { CHARACTER_COSTUMES, ROLE_INFO, getMagicianSkills, ELEMENT_INFO } from '../data/RolesData.ts';
@@ -101,14 +103,14 @@ export class Player {
   public inventory: Inventory = new Inventory(16);
 
   // Adventurer Guild Rank (Anime Style: F to S-Rank)
-  public get adventurerRank(): { rank: string; title: string; color: string; badge: string } {
-    if (this.level >= 22) return { rank: 'S', title: 'Petualang Legendaris', color: '#ec4899', badge: '👑 S-RANK' };
-    if (this.level >= 17) return { rank: 'A', title: 'Petualang Platina', color: '#38bdf8', badge: '💎 A-RANK' };
-    if (this.level >= 12) return { rank: 'B', title: 'Petualang Emas', color: '#eab308', badge: '🏆 B-RANK' };
-    if (this.level >= 8)  return { rank: 'C', title: 'Petualang Perak', color: '#e2e8f0', badge: '🥈 C-RANK' };
-    if (this.level >= 5)  return { rank: 'D', title: 'Petualang Perunggu', color: '#f59e0b', badge: '🥉 D-RANK' };
-    if (this.level >= 3)  return { rank: 'E', title: 'Petualang Besi', color: '#94a3b8', badge: '⚔️ E-RANK' };
-    return { rank: 'F', title: 'Petualang Pemula', color: '#64748b', badge: '🔰 F-RANK' };
+  public get adventurerRank(): { rank: string; title: string; color: string; badge: string; bg: string; border: string; name: string } {
+    if (this.level >= 22) return { rank: 'S', title: 'Petualang Legendaris', name: 'Petualang Legendaris', color: '#ec4899', bg: 'rgba(236,72,153,0.15)', border: '#ec4899', badge: '👑 S-RANK' };
+    if (this.level >= 17) return { rank: 'A', title: 'Petualang Platina', name: 'Petualang Platina', color: '#38bdf8', bg: 'rgba(56,189,248,0.15)', border: '#38bdf8', badge: '💎 A-RANK' };
+    if (this.level >= 12) return { rank: 'B', title: 'Petualang Emas', name: 'Petualang Emas', color: '#eab308', bg: 'rgba(234,179,8,0.15)', border: '#eab308', badge: '🏆 B-RANK' };
+    if (this.level >= 8)  return { rank: 'C', title: 'Petualang Perak', name: 'Petualang Perak', color: '#e2e8f0', bg: 'rgba(226,232,240,0.15)', border: '#e2e8f0', badge: '🥈 C-RANK' };
+    if (this.level >= 5)  return { rank: 'D', title: 'Petualang Perunggu', name: 'Petualang Perunggu', color: '#f59e0b', bg: 'rgba(245,158,11,0.15)', border: '#f59e0b', badge: '🥉 D-RANK' };
+    if (this.level >= 3)  return { rank: 'E', title: 'Petualang Besi', name: 'Petualang Besi', color: '#94a3b8', bg: 'rgba(148,163,184,0.15)', border: '#94a3b8', badge: '⚔️ E-RANK' };
+    return { rank: 'F', title: 'Petualang Pemula', name: 'Petualang Pemula', color: '#64748b', bg: 'rgba(100,116,139,0.15)', border: '#64748b', badge: '🔰 F-RANK' };
   }
 
   // Collision box relative to player (feet area)
@@ -421,7 +423,7 @@ export class Player {
     };
   }
 
-  public update(deltaTime: number, input: InputState, tileMap: TileMap | DungeonMap, obstacleChecker?: (box: { x: number; y: number; width: number; height: number }) => boolean): void {
+  public update(deltaTime: number, input: InputState, tileMap: TileMap | DungeonMap | DungeonFloor2 | DungeonFloor3, obstacleChecker?: (box: { x: number; y: number; width: number; height: number }) => boolean): void {
     const { axisX, axisY, isSprint, isAction } = input;
 
     this.breathTimer += deltaTime * 3;

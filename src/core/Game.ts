@@ -32,9 +32,9 @@ import { AtmosphereEngine } from '../world/AtmosphereEngine.ts';
 import { TimeWeatherEngine } from '../world/TimeWeatherEngine.ts';
 import { DungeonFloor2 } from '../world/DungeonFloor2.ts';
 import { DungeonFloor3 } from '../world/DungeonFloor3.ts';
-import { Companion, CompanionType, COMPANIONS_DATA } from '../entities/Companion.ts';
+import { Companion, CompanionType } from '../entities/Companion.ts';
 import { CookingSystem } from '../systems/CookingSystem.ts';
-import { Pet, PetType, PET_DATA } from '../systems/TamingSystem.ts';
+import { Pet } from '../systems/TamingSystem.ts';
 import { TitleSystem } from '../systems/TitleSystem.ts';
 import { LeaderboardUI } from '../ui/LeaderboardUI.ts';
 
@@ -209,6 +209,14 @@ export class Game {
     this.spawnInitialDungeonObjects();
     this.initFloor2Monsters();
     this.initFloor3Monsters();
+
+    // Pulihkan status akses tangga/portal lantai jika pemain sudah memiliki gelar bos
+    if (this.titleSystem.unlockedTitles.has('CRYPT_CONQUEROR')) {
+      this.dungeonMap.isFloor2Unlocked = true;
+    }
+    if (this.titleSystem.unlockedTitles.has('TITAN_BREAKER')) {
+      this.dungeonFloor2.isFloor3Unlocked = true;
+    }
 
     this.cookingSystem.onCookSuccess = () => {
       this.titleSystem.unlockTitle('GOURMET_CHEF', this.player, this.floatingText);
@@ -461,6 +469,11 @@ export class Game {
       if (chest.isOpen) openedDungeonChestsIndices.push(idx);
     });
 
+    const openedFloor3ChestsIndices: number[] = [];
+    this.floor3Chests.forEach((chest, idx) => {
+      if (chest.isOpen) openedFloor3ChestsIndices.push(idx);
+    });
+
     const snapshot = {
       username: this.player.username,
       costumeId: this.player.costume.id,
@@ -480,6 +493,11 @@ export class Game {
       inventory: this.player.inventory.slots,
       openedChests: openedChestsIndices,
       openedDungeonChests: openedDungeonChestsIndices,
+      openedFloor3Chests: openedFloor3ChestsIndices,
+      isFloor2Unlocked: this.dungeonMap.isFloor2Unlocked || this.titleSystem.unlockedTitles.has('CRYPT_CONQUEROR'),
+      isFloor3Unlocked: this.dungeonFloor2.isFloor3Unlocked || this.titleSystem.unlockedTitles.has('TITAN_BREAKER'),
+      companionType: this.companion ? this.companion.type : null,
+      petType: this.pet ? this.pet.type : null,
       isGuest: this.authUI.isGuest,
       equippedWeaponId: this.player.equippedWeaponId,
       unlockedWeaponIds: this.player.unlockedWeaponIds,
@@ -579,6 +597,31 @@ export class Game {
             this.dungeonChests[idx].isOpen = true;
           }
         }
+      }
+
+      // Pulihkan peti yang sudah terbuka di Lantai 3
+      if (Array.isArray(data.openedFloor3Chests)) {
+        for (const idx of data.openedFloor3Chests) {
+          if (this.floor3Chests[idx]) {
+            this.floor3Chests[idx].isOpen = true;
+          }
+        }
+      }
+
+      // Pulihkan status tangga & portal antar lantai
+      if (data.isFloor2Unlocked || this.titleSystem.unlockedTitles.has('CRYPT_CONQUEROR')) {
+        this.dungeonMap.isFloor2Unlocked = true;
+      }
+      if (data.isFloor3Unlocked || this.titleSystem.unlockedTitles.has('TITAN_BREAKER')) {
+        this.dungeonFloor2.isFloor3Unlocked = true;
+      }
+
+      // Pulihkan Rekan Party Companion & Pet Auto-Loot
+      if (data.companionType && !this.companion) {
+        this.companion = new Companion(data.companionType, this.player.x - 24, this.player.y);
+      }
+      if (data.petType && !this.pet) {
+        this.pet = new Pet(data.petType, this.player.x + 20, this.player.y);
       }
 
       // Pulihkan lokasi map (Overworld, Dungeon Lt.1, Lt.2, atau Lt.3)
@@ -854,9 +897,23 @@ export class Game {
 
     // Peti Harta Karun Lantai 3 (Ruang Rahasia Barat & Timur & Tahta Naga)
     this.floor3Chests = [
-      new Chest('f3_chest_1', 5 * ts, 16 * ts, 'GOLD'),
-      new Chest('f3_chest_2', 34 * ts, 16 * ts, 'GOLD'),
-      new Chest('f3_chest_3', 20 * ts, 3 * ts, 'GOLD')
+      new Chest(5 * ts + 5, 16 * ts + 6, [
+        { itemId: 'GOLD_COIN', count: 400 },
+        { itemId: 'DARK_IRON_ORE', count: 12 },
+        { itemId: 'HEALTH_POTION', count: 4 }
+      ]),
+      new Chest(34 * ts + 5, 16 * ts + 6, [
+        { itemId: 'GOLD_COIN', count: 500 },
+        { itemId: 'DUNGEON_GEM', count: 6 },
+        { itemId: 'MANA_POTION', count: 5 }
+      ]),
+      new Chest(20 * ts + 5, 3 * ts + 6, [
+        { itemId: 'GOLD_COIN', count: 1200 },
+        { itemId: 'DUNGEON_GEM', count: 10 },
+        { itemId: 'DARK_IRON_ORE', count: 20 },
+        { itemId: 'HEALTH_POTION', count: 6 },
+        { itemId: 'MANA_POTION', count: 6 }
+      ])
     ];
   }
 
@@ -1005,6 +1062,7 @@ export class Game {
         cancelText: 'Tetap Bersama',
         onConfirm: () => {
           this.companion = null;
+          this.saveSessionSnapshot();
           this.floatingText.spawn(this.player.x + 12, this.player.y - 16, 'Rekan party telah dilepas!', '#94a3b8');
         }
       });
@@ -1070,8 +1128,9 @@ export class Game {
         this.floatingText.spawn(this.player.x + 12, this.player.y - 16, `Koin Emas tidak cukup (butuh ${cost})!`, '#ef4444');
         return;
       }
-      this.player.inventory.removeItem('GOLD_COIN', cost);
+      this.player.inventory.removeItemsById('GOLD_COIN', cost);
       this.companion = new Companion(type, this.player.x - 24, this.player.y);
+      this.saveSessionSnapshot();
       AudioEngine.playLevelUp();
       this.floatingText.spawn(this.player.x + 12, this.player.y - 20, `🤝 ${name} bergabung ke Party!`, color, 2.5);
       modal.remove();
@@ -1094,6 +1153,7 @@ export class Game {
         cancelText: 'Tetap Rawat',
         onConfirm: () => {
           this.pet = null;
+          this.saveSessionSnapshot();
           this.floatingText.spawn(this.player.x + 12, this.player.y - 16, 'Hewan peliharaan dilepas ke alam!', '#94a3b8');
         }
       });
@@ -1152,8 +1212,9 @@ export class Game {
           this.floatingText.spawn(this.player.x + 12, this.player.y - 16, 'Butuh 2 Jeli Slime!', '#ef4444');
           return;
         }
-        this.player.inventory.removeItem('SLIME_JELLY', 2);
+        this.player.inventory.removeItemsById('SLIME_JELLY', 2);
         this.pet = new Pet('SLIME_PET', this.player.x + 20, this.player.y);
+        this.saveSessionSnapshot();
         this.titleSystem.unlockTitle('BEAST_TAMER', this.player, this.floatingText);
         AudioEngine.playLevelUp();
         this.floatingText.spawn(this.player.x + 12, this.player.y - 20, '🐾 Puni diadopsi & siap auto-loot!', '#38bdf8', 2.5);
@@ -1169,8 +1230,9 @@ export class Game {
           this.floatingText.spawn(this.player.x + 12, this.player.y - 16, 'Butuh 2 Bunga Mistis!', '#ef4444');
           return;
         }
-        this.player.inventory.removeItem('MAGIC_FLOWER', 2);
+        this.player.inventory.removeItemsById('MAGIC_FLOWER', 2);
         this.pet = new Pet('WOLF_PET', this.player.x + 20, this.player.y);
+        this.saveSessionSnapshot();
         this.titleSystem.unlockTitle('BEAST_TAMER', this.player, this.floatingText);
         AudioEngine.playLevelUp();
         this.floatingText.spawn(this.player.x + 12, this.player.y - 20, '🐾 Lobo diadopsi & siap auto-loot!', '#facc15', 2.5);
@@ -3039,7 +3101,7 @@ export class Game {
     ctx.restore();
   }
 
-  private renderAnimeLocationTitleCard(ctx: CanvasRenderingContext2D, screenWidth: number, screenHeight: number): void {
+  private renderAnimeLocationTitleCard(ctx: CanvasRenderingContext2D, screenWidth: number, _screenHeight: number): void {
     if (this.mapTransitionTimer <= 0) return;
 
     ctx.save();
@@ -3165,7 +3227,8 @@ export class Game {
         const angle = Math.atan2(mCenterY - minion.y, mCenterX - minion.x);
 
         minion.direction = mCenterX < minion.x ? 'left' : 'right';
-        const reach = minion.type === 'bear' ? 28 : (minion.type === 'shadow' ? 24 : 22);
+        const mRadius = Math.max(targetMonster.width, targetMonster.height) / 2;
+        const reach = mRadius + (minion.type === 'bear' ? 24 : (minion.type === 'shadow' ? 20 : 18));
 
         if (closestDist > reach) {
           // Rush to monster
@@ -3220,7 +3283,7 @@ export class Game {
     }
   }
 
-  private handleMonsterAttackMinion(monster: Monster, minion: any, atk: number): void {
+  private handleMonsterAttackMinion(_monster: Monster, minion: any, atk: number): void {
     if (minion.hp <= 0) return;
     minion.hp = Math.max(0, minion.hp - atk);
     this.floatingText.spawn(minion.x + 6, minion.y - 10, `-${atk}`, '#f87171');

@@ -5,6 +5,9 @@ export class WorldItem {
   public y: number;
   public itemId: string;
   public count: number;
+  public width: number = 14;
+  public height: number = 14;
+  public isCollected: boolean = false;
   private animTimer: number;
 
   constructor(x: number, y: number, itemId: string, count: number = 1) {

@@ -185,6 +185,22 @@ export class DungeonFloor3 {
     return t === Floor3TileType.WALL || t === Floor3TileType.PILLAR || t === Floor3TileType.LAVA;
   }
 
+  public checkCollision(rect: { x: number; y: number; width: number; height: number }): boolean {
+    const leftTile = Math.floor(rect.x / this.tileSize);
+    const rightTile = Math.floor((rect.x + rect.width - 0.01) / this.tileSize);
+    const topTile = Math.floor(rect.y / this.tileSize);
+    const bottomTile = Math.floor((rect.y + rect.height - 0.01) / this.tileSize);
+
+    for (let ty = topTile; ty <= bottomTile; ty++) {
+      for (let tx = leftTile; tx <= rightTile; tx++) {
+        if (this.isTileSolid(tx, ty)) {
+          return true;
+        }
+      }
+    }
+    return false;
+  }
+
   public render(ctx: CanvasRenderingContext2D, camera: Camera): void {
     const ts = this.tileSize;
     const startCol = Math.max(0, Math.floor(camera.x / ts));

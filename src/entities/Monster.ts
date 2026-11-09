@@ -282,7 +282,6 @@ export class Monster {
 
     // Knockback away from hit source
     const angle = Math.atan2((this.y + this.height / 2) - fromY, (this.x + this.width / 2) - fromX);
-    const isBigBoss = this.type === 'BOSS_SLIME' || this.type === 'BOSS_TITAN_GOLEM' || this.type === 'BOSS_INFERNAL_DRAGON';
     const knockForce = this.type === 'BOSS_INFERNAL_DRAGON' ? 15 : (this.type === 'BOSS_TITAN_GOLEM' ? 25 : (this.type === 'BOSS_SLIME' ? 60 : 140));
     this.knockbackX = Math.cos(angle) * knockForce;
     this.knockbackY = Math.sin(angle) * knockForce;
@@ -400,7 +399,6 @@ export class Monster {
           distToCompanion = Math.hypot(myCenterX - companionCenterX, myCenterY - companionCenterY);
         }
 
-        const isBoss = this.type === 'BOSS_SLIME' || this.type === 'BOSS_TITAN_GOLEM' || this.type === 'BOSS_INFERNAL_DRAGON';
         const attackReach = this.type === 'BOSS_INFERNAL_DRAGON' ? 44 : (this.type === 'BOSS_TITAN_GOLEM' ? 36 : (this.type === 'BOSS_SLIME' ? 32 : 22));
 
         // PRIORITAS 1: Serang Minion/Pet

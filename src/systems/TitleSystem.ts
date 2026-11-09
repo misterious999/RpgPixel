@@ -84,6 +84,35 @@ export class TitleSystem {
 
   constructor() {
     this.createUI();
+    this.loadFromStorage();
+  }
+
+  private loadFromStorage(): void {
+    try {
+      const saved = localStorage.getItem('rpg2d_titles');
+      if (saved) {
+        const data = JSON.parse(saved);
+        if (Array.isArray(data.unlocked)) {
+          data.unlocked.forEach((t: string) => this.unlockedTitles.add(t));
+        }
+        if (data.equipped && this.unlockedTitles.has(data.equipped)) {
+          this.equippedTitleId = data.equipped;
+        }
+      }
+    } catch (e) {
+      console.warn('Could not load titles from storage:', e);
+    }
+  }
+
+  private saveToStorage(): void {
+    try {
+      localStorage.setItem('rpg2d_titles', JSON.stringify({
+        unlocked: Array.from(this.unlockedTitles),
+        equipped: this.equippedTitleId
+      }));
+    } catch (e) {
+      console.warn('Could not save titles to storage:', e);
+    }
   }
 
   private createUI(): void {
@@ -113,6 +142,7 @@ export class TitleSystem {
     if (!def) return false;
 
     this.unlockedTitles.add(titleId);
+    this.saveToStorage();
     AudioEngine.playLevelUp();
     floatingText.spawn(player.x + 12, player.y - 20, `🏆 Gelar Terbuka: ${def.name}!`, def.color, 3.0);
     return true;
@@ -121,6 +151,7 @@ export class TitleSystem {
   public equipTitle(titleId: string): void {
     if (this.unlockedTitles.has(titleId)) {
       this.equippedTitleId = titleId;
+      this.saveToStorage();
     }
   }
 

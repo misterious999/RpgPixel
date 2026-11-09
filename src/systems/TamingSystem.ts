@@ -1,5 +1,5 @@
 import { Player } from '../entities/Player.ts';
-import { WorldItem } from '../items/WorldItem.ts';
+import { WorldItem } from '../world/WorldItem.ts';
 import { FloatingTextManager } from '../ui/FloatingText.ts';
 import { AudioEngine } from '../audio/AudioEngine.ts';
 import { ITEM_DEFINITIONS } from '../items/ItemTypes.ts';
@@ -97,18 +97,21 @@ export class Pet {
       this.direction = itemCenterX < myCenterX ? 'left' : 'right';
 
       // Pick up item when reached
-      if (nearestDist < 12) {
-        nearestItem.isCollected = true;
-        const itemDef = ITEM_DEFINITIONS[nearestItem.itemId];
+      if (nearestDist < 16) {
         const added = player.inventory.addItem(nearestItem.itemId, nearestItem.count);
 
-        if (added) {
+        if (added > 0) {
+          nearestItem.count -= added;
+          if (nearestItem.count <= 0) {
+            nearestItem.isCollected = true;
+          }
           this.heartTimer = 1.4;
-          AudioEngine.playCoinPickup();
+          AudioEngine.playItemPickup(nearestItem.itemId === 'GOLD_COIN');
+          const itemDef = ITEM_DEFINITIONS[nearestItem.itemId];
           floatingText.spawn(
             myCenterX,
             myCenterY - 12,
-            `🐾 ${this.name}: +${nearestItem.count} ${itemDef ? itemDef.name : nearestItem.itemId}!`,
+            `🐾 ${this.name}: +${added} ${itemDef ? itemDef.name : nearestItem.itemId}!`,
             '#facc15',
             1.8
           );

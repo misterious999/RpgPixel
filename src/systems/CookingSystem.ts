@@ -94,8 +94,6 @@ export class CookingSystem {
     let recipesHtml = '';
 
     for (const recipe of COOKING_RECIPES) {
-      const def = ITEM_DEFINITIONS[recipe.resultItemId];
-
       // Check ingredient counts
       let canCraft = true;
       let ingHtml = '';
@@ -194,12 +192,12 @@ export class CookingSystem {
 
     // Deduct ingredients
     for (const ing of recipe.ingredients) {
-      player.inventory.removeItem(ing.itemId, ing.count);
+      player.inventory.removeItemsById(ing.itemId, ing.count);
     }
 
     // Add cooked meal
     player.inventory.addItem(recipe.resultItemId, 1);
-    AudioEngine.playPotionUse();
+    AudioEngine.playPotionDrink();
     floatingText.spawn(player.x + 12, player.y - 14, `🍳 +1 ${recipe.name}!`, '#fb923c', 2.2);
 
     if (this.onCookSuccess) {
