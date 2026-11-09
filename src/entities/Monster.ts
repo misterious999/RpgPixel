@@ -1,7 +1,17 @@
 import { CONSTANTS } from '../core/Constants.ts';
 import type { Minion } from './Player.ts';
 
-export type MonsterType = 'SLIME' | 'BAT' | 'SKELETON' | 'BOSS_SLIME' | 'FOREST_SLIME' | 'WILD_WOLF' | 'GOBLIN';
+export type MonsterType =
+  | 'SLIME'
+  | 'BAT'
+  | 'SKELETON'
+  | 'BOSS_SLIME'
+  | 'FOREST_SLIME'
+  | 'WILD_WOLF'
+  | 'GOBLIN'
+  | 'STONE_GOLEM'
+  | 'CRYPT_SHADOW'
+  | 'BOSS_TITAN_GOLEM';
 export type MonsterTier = 'LOW' | 'MID' | 'HIGH' | 'BOSS';
 
 export interface MonsterDrop {
@@ -36,6 +46,7 @@ export class Monster {
   public respawnTimer: number = 0;
   public hurtTimer: number = 0;
   public attackCooldown: number = 0;
+  public telegraphCooldown: number = 0;
 
   public vx: number = 0;
   public vy: number = 0;
@@ -155,6 +166,48 @@ export class Monster {
         this.tier = 'MID';
         this.tierLabel = 'Tingkat Menengah';
         break;
+      case 'STONE_GOLEM':
+        this.name = 'Golem Batu Kuno';
+        this.width = 28;
+        this.height = 28;
+        this.maxHp = 160;
+        this.level = 6;
+        this.attackPower = 20;
+        this.expReward = 85;
+        this.goldReward = 55;
+        this.speed = 28;
+        this.aggroRange = 105;
+        this.tier = 'HIGH';
+        this.tierLabel = 'Makam Kuno';
+        break;
+      case 'CRYPT_SHADOW':
+        this.name = 'Bayangan Makam Purba';
+        this.width = 22;
+        this.height = 24;
+        this.maxHp = 120;
+        this.level = 7;
+        this.attackPower = 25;
+        this.expReward = 95;
+        this.goldReward = 60;
+        this.speed = 52;
+        this.aggroRange = 130;
+        this.tier = 'HIGH';
+        this.tierLabel = 'Makam Kuno';
+        break;
+      case 'BOSS_TITAN_GOLEM':
+        this.name = 'Titan Abisal Kolosal';
+        this.width = 46;
+        this.height = 46;
+        this.maxHp = 650;
+        this.level = 12;
+        this.attackPower = 36;
+        this.expReward = 550;
+        this.goldReward = 380;
+        this.speed = 26;
+        this.aggroRange = 160;
+        this.tier = 'BOSS';
+        this.tierLabel = 'Penguasa Makam Kuno';
+        break;
     }
 
     this.hp = this.maxHp;
@@ -169,13 +222,14 @@ export class Monster {
 
     // Knockback away from hit source
     const angle = Math.atan2((this.y + this.height / 2) - fromY, (this.x + this.width / 2) - fromX);
-    const knockForce = this.type === 'BOSS_SLIME' ? 60 : 140;
+    const isBigBoss = this.type === 'BOSS_SLIME' || this.type === 'BOSS_TITAN_GOLEM';
+    const knockForce = this.type === 'BOSS_TITAN_GOLEM' ? 25 : (this.type === 'BOSS_SLIME' ? 60 : 140);
     this.knockbackX = Math.cos(angle) * knockForce;
     this.knockbackY = Math.sin(angle) * knockForce;
 
     if (this.hp <= 0) {
       this.isDead = true;
-      this.respawnTimer = this.type === 'BOSS_SLIME' ? 45 : 22;
+      this.respawnTimer = isBigBoss ? (this.type === 'BOSS_TITAN_GOLEM' ? 60 : 45) : 22;
       return { isDead: true, damage };
     }
 
@@ -189,7 +243,9 @@ export class Monster {
     isTileSolid: (tileX: number, tileY: number) => boolean,
     onAttackPlayer: (atk: number) => void,
     minions?: Minion[],
-    onAttackMinion?: (minion: Minion, atk: number) => void
+    onAttackMinion?: (minion: Minion, atk: number) => void,
+    companion?: { x: number; y: number; hp: number; takeDamage: (dmg: number, fromX: number, fromY: number) => void } | null,
+    onSpawnTelegraph?: (x: number, y: number, radius: number, duration: number, damage: number) => void
   ): void {
     if (this.isDead) {
       this.respawnTimer -= deltaTime;
@@ -207,11 +263,23 @@ export class Monster {
     this.animTimer += deltaTime;
     if (this.hurtTimer > 0) this.hurtTimer -= deltaTime;
     if (this.attackCooldown > 0) this.attackCooldown -= deltaTime;
+    if (this.telegraphCooldown > 0) this.telegraphCooldown -= deltaTime;
 
     const myCenterX = this.x + this.width / 2;
     const myCenterY = this.y + this.height / 2;
     const distToPlayer = Math.hypot(myCenterX - playerCenterX, myCenterY - playerCenterY);
-    this.isPlayerNearby = distToPlayer < 75;
+    this.isPlayerNearby = distToPlayer < 85;
+
+    // Boss Titan Golem: Telegraph AOE Ground Attack
+    if (this.type === 'BOSS_TITAN_GOLEM' && onSpawnTelegraph && !this.isDead) {
+      if (distToPlayer <= 180 && this.telegraphCooldown <= 0) {
+        this.telegraphCooldown = 4.2;
+        // Carpet red telegraph zone under player
+        onSpawnTelegraph(playerCenterX, playerCenterY, 48, 1.7, 36);
+        // Seismic tremor telegraph near boss
+        onSpawnTelegraph(myCenterX, myCenterY, 60, 2.2, 42);
+      }
+    }
 
     // 1. Knockback Decay
     let moveX = 0;
@@ -233,7 +301,7 @@ export class Monster {
         moveY = Math.sin(backAngle) * this.speed * deltaTime * 0.85;
         this.direction = (this.spawnX < this.x) ? 'left' : 'right';
       } else {
-        // Cek apakah ada pet/minion aktif di sekitar monster
+        // Cek target pet/minion atau companion
         let targetMinion: Minion | null = null;
         let closestMinionDist = Infinity;
 
@@ -243,7 +311,6 @@ export class Monster {
             const mCenterX = m.x + 8;
             const mCenterY = m.y + 12;
             const dist = Math.hypot(myCenterX - mCenterX, myCenterY - mCenterY);
-            // Deteksi pet dalam jangkauan aggro monster atau radius engagement (140px)
             if (dist <= Math.max(this.aggroRange, 140) && dist < closestMinionDist) {
               closestMinionDist = dist;
               targetMinion = m;
@@ -251,9 +318,20 @@ export class Monster {
           }
         }
 
-        const attackReach = this.type === 'BOSS_SLIME' ? 32 : 22;
+        // Cek Companion target
+        let distToCompanion = Infinity;
+        let companionCenterX = 0;
+        let companionCenterY = 0;
+        if (companion && companion.hp > 0) {
+          companionCenterX = companion.x + 12;
+          companionCenterY = companion.y + 16;
+          distToCompanion = Math.hypot(myCenterX - companionCenterX, myCenterY - companionCenterY);
+        }
 
-        // PRIORITAS UTAMA: Menyerang pet/summon terlebih dahulu jika ada di dekatnya!
+        const isBoss = this.type === 'BOSS_SLIME' || this.type === 'BOSS_TITAN_GOLEM';
+        const attackReach = this.type === 'BOSS_TITAN_GOLEM' ? 36 : (this.type === 'BOSS_SLIME' ? 32 : 22);
+
+        // PRIORITAS 1: Serang Minion/Pet
         if (targetMinion) {
           const mCenterX = targetMinion.x + 8;
           const mCenterY = targetMinion.y + 12;
@@ -262,21 +340,32 @@ export class Monster {
           moveY = Math.sin(angle) * this.speed * deltaTime;
           this.direction = (mCenterX < myCenterX) ? 'left' : 'right';
 
-          // Serang Pet / Minion saat berada dalam jangkauan
           if (closestMinionDist <= attackReach && this.attackCooldown <= 0) {
             this.attackCooldown = 1.35;
             if (onAttackMinion) {
               onAttackMinion(targetMinion, this.attackPower);
             }
           }
-        } else if (distToPlayer <= this.aggroRange) {
-          // PRIORITAS KEDUA: Menyerang player jika tidak ada pet/summon di sekitarnya
+        }
+        // PRIORITAS 2: Serang Rekan Party / Companion jika ada di dekatnya
+        else if (companion && companion.hp > 0 && distToCompanion <= Math.max(this.aggroRange, 130)) {
+          const angle = Math.atan2(companionCenterY - myCenterY, companionCenterX - myCenterX);
+          moveX = Math.cos(angle) * this.speed * deltaTime;
+          moveY = Math.sin(angle) * this.speed * deltaTime;
+          this.direction = (companionCenterX < myCenterX) ? 'left' : 'right';
+
+          if (distToCompanion <= attackReach && this.attackCooldown <= 0) {
+            this.attackCooldown = 1.35;
+            companion.takeDamage(this.attackPower, myCenterX, myCenterY);
+          }
+        }
+        // PRIORITAS 3: Serang Player jika tidak ada sekutu terdekat
+        else if (distToPlayer <= this.aggroRange) {
           const angle = Math.atan2(playerCenterY - myCenterY, playerCenterX - myCenterX);
           moveX = Math.cos(angle) * this.speed * deltaTime;
           moveY = Math.sin(angle) * this.speed * deltaTime;
           this.direction = (playerCenterX < myCenterX) ? 'left' : 'right';
 
-          // Attack Player if within reach
           if (distToPlayer <= attackReach && this.attackCooldown <= 0) {
             this.attackCooldown = 1.35;
             onAttackPlayer(this.attackPower);
@@ -400,6 +489,15 @@ export class Monster {
         break;
       case 'GOBLIN':
         this.renderGoblin(ctx, x, y, isFlashing);
+        break;
+      case 'STONE_GOLEM':
+        this.renderStoneGolem(ctx, x, y, isFlashing);
+        break;
+      case 'CRYPT_SHADOW':
+        this.renderCryptShadow(ctx, x, y, isFlashing);
+        break;
+      case 'BOSS_TITAN_GOLEM':
+        this.renderBossTitanGolem(ctx, x, y, isFlashing);
         break;
     }
 
@@ -674,9 +772,161 @@ export class Monster {
     }
   }
 
+  private renderStoneGolem(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const bob = Math.sin(this.animTimer * 2.5) * 1.5;
+    const isLeft = this.direction === 'left';
+
+    // Stone Torso
+    ctx.fillStyle = flash ? '#ffffff' : '#475569';
+    ctx.fillRect(x + 4, y + 8 + bob, 20, 14);
+
+    // Stone Armor Plates
+    if (!flash) {
+      ctx.fillStyle = '#64748b';
+      ctx.fillRect(x + 6, y + 10 + bob, 7, 5);
+      ctx.fillRect(x + 15, y + 10 + bob, 7, 5);
+
+      // Cyan Glowing Rune Cracks
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(x + 13, y + 9 + bob, 2, 10);
+      ctx.fillRect(x + 8, y + 14 + bob, 12, 2);
+
+      // Stone Head
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(x + 7, y + 2 + bob, 14, 7);
+
+      // Cyan Eye Slits
+      ctx.fillStyle = '#06b6d4';
+      if (isLeft) {
+        ctx.fillRect(x + 8, y + 4 + bob, 3, 2);
+        ctx.fillRect(x + 13, y + 4 + bob, 3, 2);
+      } else {
+        ctx.fillRect(x + 12, y + 4 + bob, 3, 2);
+        ctx.fillRect(x + 17, y + 4 + bob, 3, 2);
+      }
+
+      // Stone Arms / Boulder Fists
+      ctx.fillStyle = '#475569';
+      ctx.fillRect(x + 1, y + 10 + bob, 4, 10);
+      ctx.fillRect(x + 23, y + 10 + bob, 4, 10);
+
+      // Stone Legs
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(x + 6, y + 22 + bob, 6, 6);
+      ctx.fillRect(x + 16, y + 22 + bob, 6, 6);
+    }
+  }
+
+  private renderCryptShadow(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const floatY = Math.sin(this.animTimer * 4) * 3;
+    const isLeft = this.direction === 'left';
+
+    // Shadow Mist Aura
+    ctx.fillStyle = flash ? '#ffffff' : 'rgba(88, 28, 135, 0.45)';
+    ctx.beginPath();
+    ctx.arc(x + 11, y + 12 + floatY, 13, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Dark Hooded Robe
+    ctx.fillStyle = flash ? '#ffffff' : '#1e1b4b';
+    ctx.beginPath();
+    ctx.moveTo(x + 11, y + 2 + floatY);
+    ctx.lineTo(x + 21, y + 22 + floatY);
+    ctx.lineTo(x + 1, y + 22 + floatY);
+    ctx.closePath();
+    ctx.fill();
+
+    if (!flash) {
+      // Dark Inner Cowl
+      ctx.fillStyle = '#09090b';
+      ctx.beginPath();
+      ctx.ellipse(x + 11, y + 8 + floatY, 5, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Piercing Crimson Eyes
+      ctx.fillStyle = '#ef4444';
+      if (isLeft) {
+        ctx.fillRect(x + 8, y + 7 + floatY, 2, 2);
+        ctx.fillRect(x + 12, y + 7 + floatY, 2, 2);
+      } else {
+        ctx.fillRect(x + 10, y + 7 + floatY, 2, 2);
+        ctx.fillRect(x + 14, y + 7 + floatY, 2, 2);
+      }
+
+      // Trailing Shadow Tendrils
+      ctx.fillStyle = '#581c87';
+      const tendrilSway = Math.sin(this.animTimer * 6) * 2;
+      ctx.fillRect(x + 4, y + 20 + floatY, 3, 5 + tendrilSway);
+      ctx.fillRect(x + 10, y + 21 + floatY, 3, 6 - tendrilSway);
+      ctx.fillRect(x + 16, y + 20 + floatY, 3, 5 + tendrilSway);
+    }
+  }
+
+  private renderBossTitanGolem(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const stomp = Math.sin(this.animTimer * 2.2) * 2;
+    const isLeft = this.direction === 'left';
+
+    // Ancient Granite Torso
+    ctx.fillStyle = flash ? '#ffffff' : '#1e293b';
+    ctx.fillRect(x + 8, y + 14 + stomp, 30, 22);
+
+    if (!flash) {
+      // Obsidian Armor Plating
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(x + 10, y + 16 + stomp, 12, 10);
+      ctx.fillRect(x + 24, y + 16 + stomp, 12, 10);
+
+      // Glowing Magma Runic Veins across chest
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(x + 22, y + 15 + stomp, 2, 18);
+      ctx.fillRect(x + 12, y + 24 + stomp, 22, 2);
+      ctx.fillStyle = '#fde047';
+      ctx.fillRect(x + 21, y + 23 + stomp, 4, 4); // Core spark
+
+      // Massive Horned Granite Head
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(x + 14, y + 3 + stomp, 18, 12);
+
+      // Horn Crests
+      ctx.fillStyle = '#475569';
+      ctx.beginPath();
+      ctx.moveTo(x + 12, y + 6 + stomp);
+      ctx.lineTo(x + 8, y - 2 + stomp);
+      ctx.lineTo(x + 15, y + 3 + stomp);
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(x + 34, y + 6 + stomp);
+      ctx.lineTo(x + 38, y - 2 + stomp);
+      ctx.lineTo(x + 31, y + 3 + stomp);
+      ctx.fill();
+
+      // Glowing Abyssal Eye Monolith
+      ctx.fillStyle = '#ef4444';
+      const eyeX = isLeft ? x + 18 : x + 24;
+      ctx.fillRect(eyeX, y + 7 + stomp, 5, 4);
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(eyeX + 1, y + 8 + stomp, 3, 2);
+
+      // Colossal Granite Shoulders & Fists
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(x + 1, y + 14 + stomp, 8, 18);
+      ctx.fillRect(x + 37, y + 14 + stomp, 8, 18);
+
+      // Glowing Fist Runes
+      ctx.fillStyle = '#ea580c';
+      ctx.fillRect(x + 3, y + 26 + stomp, 4, 3);
+      ctx.fillRect(x + 39, y + 26 + stomp, 4, 3);
+
+      // Heavy Stone Stilt Legs
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(x + 11, y + 36 + stomp, 9, 10);
+      ctx.fillRect(x + 26, y + 36 + stomp, 9, 10);
+    }
+  }
+
   private renderHealthBar(ctx: CanvasRenderingContext2D, x: number, y: number): void {
-    const isBoss = this.type === 'BOSS_SLIME';
-    const barW = isBoss ? 44 : 24;
+    const isBoss = this.type === 'BOSS_SLIME' || this.type === 'BOSS_TITAN_GOLEM';
+    const barW = this.type === 'BOSS_TITAN_GOLEM' ? 56 : (this.type === 'BOSS_SLIME' ? 44 : 24);
     const barH = isBoss ? 5 : 3;
     const barX = x + (this.width - barW) / 2;
     const barY = isBoss ? y - 16 : y - 8;
@@ -689,7 +939,8 @@ export class Monster {
 
       // Warna bar berdasarkan tingkatan monster
       let barFillColor = '#22c55e'; // Hijau untuk tingkat bawah
-      if (isBoss) barFillColor = '#ec4899';
+      if (this.type === 'BOSS_TITAN_GOLEM') barFillColor = '#ef4444';
+      else if (this.type === 'BOSS_SLIME') barFillColor = '#ec4899';
       else if (this.tier === 'MID') barFillColor = '#f59e0b'; // Oranye/Amber untuk tingkat menengah
       else if (this.tier === 'HIGH') barFillColor = '#a855f7'; // Ungu untuk elit
 

@@ -281,5 +281,112 @@ export const ITEM_DEFINITIONS: Record<string, ItemDefinition> = {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(x + size * 0.48, y + size * 0.42, 2, 2);
     }
+  },
+  WOLF_MEAT: {
+    id: 'WOLF_MEAT',
+    name: 'Daging Serigala',
+    description: 'Daging segar berotot dari serigala rimba. Bahan dasar masakan bernutrisi tinggi.',
+    category: 'material',
+    maxStack: 30,
+    color: '#f87171',
+    renderIcon: (ctx, x, y, size) => {
+      ctx.fillStyle = '#ef4444';
+      ctx.beginPath();
+      ctx.roundRect(x + size * 0.2, y + size * 0.3, size * 0.6, size * 0.4, 4);
+      ctx.fill();
+      ctx.fillStyle = '#fca5a5';
+      ctx.fillRect(x + size * 0.35, y + size * 0.4, size * 0.3, size * 0.08);
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.22, y + size * 0.5, size * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  },
+  WOLF_STEAK: {
+    id: 'WOLF_STEAK',
+    name: 'Steak Serigala Rimba',
+    description: 'Steak lezat gurih beraroma harum. Memulihkan 60 HP dan memberi buff +20% Serangan Fisik selama 3 menit.',
+    category: 'consumable',
+    maxStack: 10,
+    effectValue: 60,
+    color: '#fb923c',
+    renderIcon: (ctx, x, y, size) => {
+      // Plate
+      ctx.fillStyle = '#cbd5e1';
+      ctx.beginPath();
+      ctx.ellipse(x + size * 0.5, y + size * 0.65, size * 0.4, size * 0.2, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Grilled meat
+      ctx.fillStyle = '#92400e';
+      ctx.beginPath();
+      ctx.roundRect(x + size * 0.25, y + size * 0.42, size * 0.5, size * 0.28, 4);
+      ctx.fill();
+      // Grill marks
+      ctx.strokeStyle = '#451a03';
+      ctx.lineWidth = 1.5;
+      for (let i = -1; i <= 1; i++) {
+        ctx.beginPath();
+        ctx.moveTo(x + size * (0.4 + i * 0.12), y + size * 0.44);
+        ctx.lineTo(x + size * (0.48 + i * 0.12), y + size * 0.68);
+        ctx.stroke();
+      }
+    }
+  },
+  SLIME_PUDDING: {
+    id: 'SLIME_PUDDING',
+    name: 'Puding Kristal Slime',
+    description: 'Puding manis kenyal berkilau. Memulihkan 50 MP dan memberi buff regenerasi Mana pesat selama 3 menit.',
+    category: 'consumable',
+    maxStack: 10,
+    effectValue: 50,
+    color: '#38bdf8',
+    renderIcon: (ctx, x, y, size) => {
+      // Dish
+      ctx.fillStyle = '#e2e8f0';
+      ctx.beginPath();
+      ctx.ellipse(x + size * 0.5, y + size * 0.72, size * 0.38, size * 0.16, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Jelly Dome
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.85)';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.5, y + size * 0.5, size * 0.26, Math.PI, 0, false);
+      ctx.lineTo(x + size * 0.76, y + size * 0.68);
+      ctx.lineTo(x + size * 0.24, y + size * 0.68);
+      ctx.closePath();
+      ctx.fill();
+      // Glossy highlight
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x + size * 0.4, y + size * 0.38, size * 0.1, size * 0.08);
+    }
+  },
+  MYSTIC_SOUP: {
+    id: 'MYSTIC_SOUP',
+    name: 'Sup Bunga Mistis',
+    description: 'Sup herbal ajaib mengepulkan uap wangi. Memberi buff +25% Kecepatan Gerak dan +25% Bonus EXP selama 3 menit.',
+    category: 'consumable',
+    maxStack: 10,
+    effectValue: 40,
+    color: '#4ade80',
+    renderIcon: (ctx, x, y, size) => {
+      // Wooden bowl
+      ctx.fillStyle = '#78350f';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.5, y + size * 0.58, size * 0.35, 0, Math.PI, false);
+      ctx.fill();
+      // Green herbal broth
+      ctx.fillStyle = '#4ade80';
+      ctx.beginPath();
+      ctx.ellipse(x + size * 0.5, y + size * 0.58, size * 0.32, size * 0.12, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Steam
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.6)';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.moveTo(x + size * 0.4, y + size * 0.45);
+      ctx.quadraticCurveTo(x + size * 0.35, y + size * 0.3, x + size * 0.42, y + size * 0.2);
+      ctx.moveTo(x + size * 0.6, y + size * 0.45);
+      ctx.quadraticCurveTo(x + size * 0.65, y + size * 0.3, x + size * 0.58, y + size * 0.2);
+      ctx.stroke();
+    }
   }
 };

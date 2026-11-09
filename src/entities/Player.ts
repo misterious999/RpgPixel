@@ -85,6 +85,15 @@ export class Player {
   public miracleRebirthReady: boolean = false;
   public predatorBuffTimer: number = 0;
 
+  // Active Food Buffs (Dungeon Meshi Cooking System)
+  public foodBuffAtkTimer: number = 0;       // Wolf Steak (+20% ATK)
+  public foodBuffMpTimer: number = 0;        // Slime Pudding (Rapid MP Regen)
+  public foodBuffExpSpeedTimer: number = 0;  // Mystic Soup (+25% Speed & +25% EXP)
+
+  // Equipped Anime Title & Cosmetics
+  public equippedTitle: string = '« Petualang Pemula »';
+  public equippedTitleColor: string = '#94a3b8';
+
   // Minions
   public minions: Minion[] = [];
 
@@ -194,7 +203,8 @@ export class Player {
   }
 
   public addExp(amount: number): boolean {
-    this.exp += amount;
+    const finalAmount = this.foodBuffExpSpeedTimer > 0 ? Math.round(amount * 1.25) : amount;
+    this.exp += finalAmount;
     if (this.exp >= this.maxExp) {
       this.levelUp();
       return true;
@@ -322,6 +332,10 @@ export class Player {
       baseDmg *= 1.35;
     }
 
+    if (this.foodBuffAtkTimer > 0) {
+      baseDmg *= 1.20; // +20% Serangan Fisik dari Steak Serigala Rimba
+    }
+
     const isCrit = weaponCrit > 0 && Math.random() < weaponCrit;
     const variance = (Math.random() * 0.3) - 0.15;
     const finalDmg = Math.max(1, Math.round(baseDmg * (1 + variance) * (isCrit ? 1.8 : 1)));
@@ -414,7 +428,8 @@ export class Player {
 
     // Passive Mana Regeneration: akumulasi sebelum menambah 1 MP integer murni (100% bebas desimal)
     if (this.mp < this.maxMp) {
-      const regenRate = (this.role === 'HEALER' || this.role === 'MAGICIAN') ? 4.5 : 2.5;
+      let regenRate = (this.role === 'HEALER' || this.role === 'MAGICIAN') ? 4.5 : 2.5;
+      if (this.foodBuffMpTimer > 0) regenRate *= 3.0; // Puding Kristal Slime: Regenerasi Mana Pesat
       this.mpRegenAccumulator += regenRate * deltaTime;
       if (this.mpRegenAccumulator >= 1.0) {
         const add = Math.floor(this.mpRegenAccumulator);
@@ -516,6 +531,9 @@ export class Player {
     if (this.predatorBuffTimer > 0) {
       this.predatorBuffTimer -= deltaTime;
     }
+    if (this.foodBuffAtkTimer > 0) this.foodBuffAtkTimer -= deltaTime;
+    if (this.foodBuffMpTimer > 0) this.foodBuffMpTimer -= deltaTime;
+    if (this.foodBuffExpSpeedTimer > 0) this.foodBuffExpSpeedTimer -= deltaTime;
 
     this.isMoving = Math.abs(axisX) > 0.05 || Math.abs(axisY) > 0.05;
 
@@ -533,6 +551,7 @@ export class Player {
       if (this.isStealthed) speed *= 1.4;
       if (this.isBerserk) speed *= 1.6;
       if (this.godspeedTimer > 0) speed *= 1.8;
+      if (this.foodBuffExpSpeedTimer > 0) speed *= 1.25; // Sup Bunga Mistis +25% Speed
 
       const moveX = axisX * speed * deltaTime;
       const moveY = axisY * speed * deltaTime;
@@ -1110,8 +1129,18 @@ export class Player {
       }
     }
 
-    // 15. Floating Header (Role Badge & Username)
+    // 15. Floating Header (Role Badge, Title & Username)
     ctx.globalAlpha = 1.0;
+
+    if (this.equippedTitle) {
+      ctx.font = 'bold 7.5px sans-serif';
+      ctx.fillStyle = this.equippedTitleColor || '#facc15';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2.0;
+      ctx.strokeText(this.equippedTitle, px + 12, renderY - 24);
+      ctx.fillText(this.equippedTitle, px + 12, renderY - 24);
+    }
+
     ctx.font = 'bold 8.5px sans-serif';
     ctx.textAlign = 'center';
 

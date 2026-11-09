@@ -29,6 +29,13 @@ import { MiniMapUI } from '../ui/MiniMapUI.ts';
 import { QuickPotionUI } from '../ui/QuickPotionUI.ts';
 import { VillageManager } from '../world/VillageManager.ts';
 import { AtmosphereEngine } from '../world/AtmosphereEngine.ts';
+import { TimeWeatherEngine } from '../world/TimeWeatherEngine.ts';
+import { DungeonFloor2 } from '../world/DungeonFloor2.ts';
+import { Companion, CompanionType, COMPANIONS_DATA } from '../entities/Companion.ts';
+import { CookingSystem } from '../systems/CookingSystem.ts';
+import { Pet, PetType, PET_DATA } from '../systems/TamingSystem.ts';
+import { TitleSystem } from '../systems/TitleSystem.ts';
+import { LeaderboardUI } from '../ui/LeaderboardUI.ts';
 
 export class Game {
   private canvas: HTMLCanvasElement;
@@ -56,12 +63,33 @@ export class Game {
   private activeSkillBanner: { name: string; color: string; role: string; timer: number; maxTimer: number } | null = null;
 
   // Map & Dungeon state
-  public currentMap: 'OVERWORLD' | 'DUNGEON' = 'OVERWORLD';
+  public currentMap: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' = 'OVERWORLD';
   private caveEntrance: CaveEntrance;
   private dungeonMap: DungeonMap;
   private dungeonMonsters: Monster[] = [];
   private dungeonChests: Chest[] = [];
   private dungeonWorldItems: WorldItem[] = [];
+
+  // Dungeon Floor 2 (Ancient Crypt Ruins)
+  private dungeonFloor2: DungeonFloor2 = new DungeonFloor2();
+  private floor2Monsters: Monster[] = [];
+  private floor2WorldItems: WorldItem[] = [];
+
+  // Day/Night & Weather Engine
+  public timeWeatherEngine: TimeWeatherEngine = new TimeWeatherEngine();
+
+  // Adventurer Party Companion & Auto-Loot Pet
+  public companion: Companion | null = null;
+  public pet: Pet | null = null;
+
+  // Cooking, Titles & Leaderboard Systems
+  private cookingSystem: CookingSystem = new CookingSystem();
+  private titleSystem: TitleSystem = new TitleSystem();
+  private leaderboardUI: LeaderboardUI = new LeaderboardUI();
+
+  // Achievement kill tracking
+  private slimeKillCount: number = 0;
+  private forestMonsterKillCount: number = 0;
   private mapTransitionTimer: number = 0;
   private mapTransitionTitle: string = '';
   private mapTransitionSubtitle: string = '';
@@ -172,6 +200,11 @@ export class Game {
     // Inisialisasi Dungeon Bawah Tanah, Monster & Peti Rahasia
     this.dungeonMap = new DungeonMap();
     this.spawnInitialDungeonObjects();
+    this.initFloor2Monsters();
+
+    this.cookingSystem.onCookSuccess = () => {
+      this.titleSystem.unlockTitle('GOURMET_CHEF', this.player, this.floatingText);
+    };
 
     this.spawnInitialWorldObjects();
 
@@ -235,6 +268,18 @@ export class Game {
 
       // 0.2 Quick Potion Buttons (HP & MP)
       if (this.quickPotionUI.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight)) {
+        return true;
+      }
+
+      // Gelar & Achievement Button (👑)
+      const titleBtn = { x: this.screenWidth - 180, y: 10, size: 34 };
+      if (
+        touchX >= titleBtn.x &&
+        touchX <= titleBtn.x + titleBtn.size &&
+        touchY >= titleBtn.y &&
+        touchY <= titleBtn.y + titleBtn.size
+      ) {
+        this.titleSystem.open(this.player);
         return true;
       }
 
@@ -735,64 +780,376 @@ export class Game {
     this.saveSessionSnapshot();
   }
 
+  private initFloor2Monsters(): void {
+    const ts = CONSTANTS.TILE_SIZE;
+    this.floor2Monsters = [
+      // Central Ancient Hall (Lantai 2)
+      new Monster('f2_golem_1', 'STONE_GOLEM', 17 * ts + 4, 22 * ts + 4),
+      new Monster('f2_golem_2', 'STONE_GOLEM', 23 * ts + 4, 25 * ts + 4),
+      // West Crypt Room (Ruang Makam Purba)
+      new Monster('f2_shadow_1', 'CRYPT_SHADOW', 7 * ts + 4, 20 * ts + 4),
+      new Monster('f2_shadow_2', 'CRYPT_SHADOW', 9 * ts + 4, 23 * ts + 4),
+      new Monster('f2_golem_3', 'STONE_GOLEM', 6 * ts + 4, 18 * ts + 4),
+      // East Crystal Grotto (Gua Batu Kristal Abisal)
+      new Monster('f2_shadow_3', 'CRYPT_SHADOW', 31 * ts + 4, 19 * ts + 4),
+      new Monster('f2_shadow_4', 'CRYPT_SHADOW', 33 * ts + 4, 22 * ts + 4),
+      new Monster('f2_golem_4', 'STONE_GOLEM', 30 * ts + 4, 24 * ts + 4),
+      // Boss Arena: Altar Golem Titan (Utara)
+      new Monster('f2_boss_titan', 'BOSS_TITAN_GOLEM', 20 * ts, 8 * ts)
+    ];
+  }
+
+  public enterFloor2(): void {
+    if (this.transitionCooldown > 0) return;
+    this.transitionCooldown = 1.0;
+    this.input.consumeAction();
+
+    this.currentMap = 'DUNGEON_FLOOR_2';
+    this.player.x = this.dungeonFloor2.entranceSpawnX;
+    this.player.y = this.dungeonFloor2.entranceSpawnY;
+    this.player.direction = 'up';
+
+    if (this.companion) {
+      this.companion.x = this.player.x - 20;
+      this.companion.y = this.player.y + 10;
+    }
+    if (this.pet) {
+      this.pet.x = this.player.x + 20;
+      this.pet.y = this.player.y + 10;
+    }
+    for (const minion of this.player.minions) {
+      minion.x = this.player.x - 16;
+      minion.y = this.player.y;
+    }
+
+    AudioEngine.playMapTransition(true);
+    AudioEngine.playBgm('DUNGEON');
+
+    this.camera.setWorldBounds(this.dungeonFloor2.width * CONSTANTS.TILE_SIZE, this.dungeonFloor2.height * CONSTANTS.TILE_SIZE);
+    this.camera.update(this.player.x, this.player.y);
+
+    this.triggerMapTransition('「 MAKAM KUNO RUINAS ABISAL · LANTAI 2 」', '~ Sarang Titan Kolosal & Bayangan Abisal ~');
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '⚡ Memasuki Lantai 2!', '#ef4444', 3.0);
+    this.saveSessionSnapshot();
+  }
+
+  public exitFloor2(): void {
+    if (this.transitionCooldown > 0) return;
+    this.transitionCooldown = 1.0;
+    this.input.consumeAction();
+
+    this.currentMap = 'DUNGEON';
+    this.player.x = this.dungeonMap.floor2LadderX;
+    this.player.y = this.dungeonMap.floor2LadderY + 36;
+    this.player.direction = 'down';
+
+    if (this.companion) {
+      this.companion.x = this.player.x - 20;
+      this.companion.y = this.player.y;
+    }
+    if (this.pet) {
+      this.pet.x = this.player.x + 20;
+      this.pet.y = this.player.y;
+    }
+    for (const minion of this.player.minions) {
+      minion.x = this.player.x - 16;
+      minion.y = this.player.y;
+    }
+
+    AudioEngine.playMapTransition(false);
+    AudioEngine.playBgm('DUNGEON');
+
+    this.camera.setWorldBounds(this.dungeonMap.width * CONSTANTS.TILE_SIZE, this.dungeonMap.height * CONSTANTS.TILE_SIZE);
+    this.camera.update(this.player.x, this.player.y);
+
+    this.triggerMapTransition('「 GOA PURBA ABISAL · TINGKAT 1 」', '~ Kembali ke Ruang Altar Bos ~');
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '▲ Naik ke Lantai 1', '#c084fc', 3.0);
+    this.saveSessionSnapshot();
+  }
+
+  public openCompanionHireModal(): void {
+    if (this.companion) {
+      NotificationModal.confirm({
+        title: `Berpisah dengan ${this.companion.name}?`,
+        message: `${this.companion.name} saat ini menemani petualanganmu. Apakah kamu ingin melepasnya dari party?`,
+        confirmText: 'Lepas Party',
+        cancelText: 'Tetap Bersama',
+        onConfirm: () => {
+          this.companion = null;
+          this.floatingText.spawn(this.player.x + 12, this.player.y - 16, 'Rekan party telah dilepas!', '#94a3b8');
+        }
+      });
+      return;
+    }
+
+    // Modal interaktif HTML untuk perekrutan rekan party anime
+    let existing = document.getElementById('companion-hire-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'companion-hire-modal';
+    modal.style.cssText = `
+      position: fixed; inset: 0; background: rgba(3, 7, 18, 0.82); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center; z-index: 1000; font-family: system-ui, sans-serif;
+    `;
+
+    modal.innerHTML = `
+      <div style="background: linear-gradient(180deg, #0f172a, #1e293b); border: 2px solid #38bdf8; border-radius: 12px; width: 92%; max-width: 440px; padding: 16px; color: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(56, 189, 248, 0.4); padding-bottom: 8px; margin-bottom: 12px;">
+          <div>
+            <div style="font-size: 16px; font-weight: 900; color: #38bdf8;">🤝 REKRUT REKAN PARTY GUILD</div>
+            <div style="font-size: 11px; color: #94a3b8;">Rekan petualang akan mengikuti dan membantumu bertarung!</div>
+          </div>
+          <button id="close-companion-btn" style="background: none; border: none; font-size: 20px; color: #94a3b8; cursor: pointer;">✕</button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="background: rgba(30, 41, 59, 0.85); border: 1px solid #38bdf8; border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: bold; font-size: 13px; color: #38bdf8;">🛡️ Rodric (Ksatria Baja) [50 Gold]</div>
+              <div style="font-size: 11px; color: #cbd5e1;">Tanker tangguh berzirah baja tebal yang menarik perhatian monster.</div>
+            </div>
+            <button id="hire-rodric-btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">Rekrut</button>
+          </div>
+
+          <div style="background: rgba(30, 41, 59, 0.85); border: 1px solid #c084fc; border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: bold; font-size: 13px; color: #c084fc;">🔮 Lyra (Penyihir Bintang Peri) [65 Gold]</div>
+              <div style="font-size: 11px; color: #cbd5e1;">Penyihir elf anggun dengan tembakan sihir bintang jarak jauh.</div>
+            </div>
+            <button id="hire-lyra-btn" style="background: linear-gradient(135deg, #9333ea, #7e22ce); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">Rekrut</button>
+          </div>
+
+          <div style="background: rgba(30, 41, 59, 0.85); border: 1px solid #4ade80; border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: bold; font-size: 13px; color: #4ade80;">🌿 Flora (Pendeta Suci) [50 Gold]</div>
+              <div style="font-size: 11px; color: #cbd5e1;">Pendeta berhati mulia yang otomatis menyembuhkan HP saat sekarat.</div>
+            </div>
+            <button id="hire-flora-btn" style="background: linear-gradient(135deg, #16a34a, #15803d); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">Rekrut</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const closeBtn = document.getElementById('close-companion-btn');
+    if (closeBtn) closeBtn.onclick = () => modal.remove();
+
+    const hireHelper = (type: CompanionType, cost: number, name: string, color: string) => {
+      const gold = this.player.inventory.getItemCount('GOLD_COIN');
+      if (gold < cost) {
+        this.floatingText.spawn(this.player.x + 12, this.player.y - 16, `Koin Emas tidak cukup (butuh ${cost})!`, '#ef4444');
+        return;
+      }
+      this.player.inventory.removeItem('GOLD_COIN', cost);
+      this.companion = new Companion(type, this.player.x - 24, this.player.y);
+      AudioEngine.playLevelUp();
+      this.floatingText.spawn(this.player.x + 12, this.player.y - 20, `🤝 ${name} bergabung ke Party!`, color, 2.5);
+      modal.remove();
+    };
+
+    const rBtn = document.getElementById('hire-rodric-btn');
+    if (rBtn) rBtn.onclick = () => hireHelper('RODRIC', 50, 'Rodric', '#38bdf8');
+    const lBtn = document.getElementById('hire-lyra-btn');
+    if (lBtn) lBtn.onclick = () => hireHelper('LYRA', 65, 'Lyra', '#c084fc');
+    const fBtn = document.getElementById('hire-flora-btn');
+    if (fBtn) fBtn.onclick = () => hireHelper('FLORA', 50, 'Flora', '#4ade80');
+  }
+
+  public openPetAdoptionDialog(): void {
+    if (this.pet) {
+      NotificationModal.confirm({
+        title: `Lepas ${this.pet.name}?`,
+        message: `${this.pet.name} saat ini aktif mengumpulkan koin & item secara otomatis. Apakah kamu ingin melepasnya?`,
+        confirmText: 'Lepas Pet',
+        cancelText: 'Tetap Rawat',
+        onConfirm: () => {
+          this.pet = null;
+          this.floatingText.spawn(this.player.x + 12, this.player.y - 16, 'Hewan peliharaan dilepas ke alam!', '#94a3b8');
+        }
+      });
+      return;
+    }
+
+    let existing = document.getElementById('pet-adoption-modal');
+    if (existing) existing.remove();
+
+    const modal = document.createElement('div');
+    modal.id = 'pet-adoption-modal';
+    modal.style.cssText = `
+      position: fixed; inset: 0; background: rgba(3, 7, 18, 0.82); backdrop-filter: blur(4px);
+      display: flex; align-items: center; justify-content: center; z-index: 1000; font-family: system-ui, sans-serif;
+    `;
+
+    modal.innerHTML = `
+      <div style="background: linear-gradient(180deg, #0f172a, #1e293b); border: 2px solid #facc15; border-radius: 12px; width: 92%; max-width: 440px; padding: 16px; color: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
+        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(250, 204, 21, 0.4); padding-bottom: 8px; margin-bottom: 12px;">
+          <div>
+            <div style="font-size: 16px; font-weight: 900; color: #facc15;">🐾 SUAKA HEWAN DESA (PET AUTO-LOOT)</div>
+            <div style="font-size: 11px; color: #94a3b8;">Pet pendamping akan berlari memungut koin & drop item otomatis!</div>
+          </div>
+          <button id="close-pet-btn" style="background: none; border: none; font-size: 20px; color: #94a3b8; cursor: pointer;">✕</button>
+        </div>
+
+        <div style="display: flex; flex-direction: column; gap: 8px;">
+          <div style="background: rgba(30, 41, 59, 0.85); border: 1px solid #38bdf8; border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: bold; font-size: 13px; color: #38bdf8;">🟢 Puni (Slime Kristal Mungil)</div>
+              <div style="font-size: 11px; color: #cbd5e1;">Slime mini yang lincah menyerap item drop. [Butuh: 2 Jeli Slime]</div>
+            </div>
+            <button id="adopt-slime-btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">Adopsi</button>
+          </div>
+
+          <div style="background: rgba(30, 41, 59, 0.85); border: 1px solid #f59e0b; border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
+            <div>
+              <div style="font-weight: bold; font-size: 13px; color: #f59e0b;">🐺 Lobo (Anak Serigala Rimba)</div>
+              <div style="font-size: 11px; color: #cbd5e1;">Anak serigala berbulu lebat pengendus harta. [Butuh: 2 Bunga Mistis]</div>
+            </div>
+            <button id="adopt-wolf-btn" style="background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">Adopsi</button>
+          </div>
+        </div>
+      </div>
+    `;
+    document.body.appendChild(modal);
+
+    const closeBtn = document.getElementById('close-pet-btn');
+    if (closeBtn) closeBtn.onclick = () => modal.remove();
+
+    const sBtn = document.getElementById('adopt-slime-btn');
+    if (sBtn) {
+      sBtn.onclick = () => {
+        const count = this.player.inventory.getItemCount('SLIME_JELLY');
+        if (count < 2) {
+          this.floatingText.spawn(this.player.x + 12, this.player.y - 16, 'Butuh 2 Jeli Slime!', '#ef4444');
+          return;
+        }
+        this.player.inventory.removeItem('SLIME_JELLY', 2);
+        this.pet = new Pet('SLIME_PET', this.player.x + 20, this.player.y);
+        this.titleSystem.unlockTitle('BEAST_TAMER', this.player, this.floatingText);
+        AudioEngine.playLevelUp();
+        this.floatingText.spawn(this.player.x + 12, this.player.y - 20, '🐾 Puni diadopsi & siap auto-loot!', '#38bdf8', 2.5);
+        modal.remove();
+      };
+    }
+
+    const wBtn = document.getElementById('adopt-wolf-btn');
+    if (wBtn) {
+      wBtn.onclick = () => {
+        const count = this.player.inventory.getItemCount('MAGIC_FLOWER');
+        if (count < 2) {
+          this.floatingText.spawn(this.player.x + 12, this.player.y - 16, 'Butuh 2 Bunga Mistis!', '#ef4444');
+          return;
+        }
+        this.player.inventory.removeItem('MAGIC_FLOWER', 2);
+        this.pet = new Pet('WOLF_PET', this.player.x + 20, this.player.y);
+        this.titleSystem.unlockTitle('BEAST_TAMER', this.player, this.floatingText);
+        AudioEngine.playLevelUp();
+        this.floatingText.spawn(this.player.x + 12, this.player.y - 20, '🐾 Lobo diadopsi & siap auto-loot!', '#facc15', 2.5);
+        modal.remove();
+      };
+    }
+  }
+
   private handleMonsterDefeated(monster: Monster): void {
-    const leveledUp = this.player.addExp(monster.expReward);
-    this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 20, `+${monster.expReward} EXP!`, '#facc15', 2.0);
+    const isNight = this.timeWeatherEngine.isNight();
+    const expReward = isNight ? Math.round(monster.expReward * 1.25) : monster.expReward;
+    const goldReward = isNight ? Math.round(monster.goldReward * 1.25) : monster.goldReward;
+
+    const leveledUp = this.player.addExp(expReward);
+    this.floatingText.spawn(
+      monster.x + monster.width / 2,
+      monster.y - 20,
+      isNight ? `+${expReward} EXP (🌙 Malam +25%)!` : `+${expReward} EXP!`,
+      '#facc15',
+      2.0
+    );
 
     // Audio Monster Defeated
-    AudioEngine.playMonsterDefeated(monster.type === 'BOSS_SLIME');
+    AudioEngine.playMonsterDefeated(monster.type === 'BOSS_SLIME' || monster.type === 'BOSS_TITAN_GOLEM');
 
     // Update Progres Misi Petualang (Quest Manager)
     this.questManager.onMonsterDefeated(monster.type, this.floatingText, this.player.x, this.player.y);
 
-    const targetItems = this.currentMap === 'OVERWORLD' ? this.worldItems : this.dungeonWorldItems;
+    const targetItems =
+      this.currentMap === 'OVERWORLD'
+        ? this.worldItems
+        : this.currentMap === 'DUNGEON'
+        ? this.dungeonWorldItems
+        : this.floor2WorldItems;
 
     // Drop Koin Emas
-    targetItems.push(new WorldItem(monster.x + 4, monster.y + 4, 'GOLD_COIN', monster.goldReward));
+    targetItems.push(new WorldItem(monster.x + 4, monster.y + 4, 'GOLD_COIN', goldReward));
 
     // --- OVERWORLD MONSTER DROPS ---
     if (monster.type === 'FOREST_SLIME') {
       if (Math.random() < 0.65) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'SLIME_JELLY', 1));
       if (Math.random() < 0.40) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'MAGIC_FLOWER', 1));
     } else if (monster.type === 'WILD_WOLF') {
+      if (Math.random() < 0.75) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'WOLF_MEAT', 1));
       if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'HEALTH_POTION', 1));
       if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'MANA_POTION', 1));
     } else if (monster.type === 'GOBLIN') {
       if (Math.random() < 0.60) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'WOOD_LOG', 2));
       if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 1));
     }
-    // --- DUNGEON MONSTER DROPS ---
+    // --- DUNGEON FLOOR 1 MONSTER DROPS ---
     else if (monster.type === 'SLIME') {
-      if (Math.random() < 0.65) {
-        targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'SLIME_JELLY', 1));
-      }
-      if (Math.random() < 0.45) {
-        targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 1));
-      }
+      if (Math.random() < 0.65) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'SLIME_JELLY', 1));
+      if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 1));
     } else if (monster.type === 'BAT') {
-      if (Math.random() < 0.5) {
-        targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 2));
-      }
-      if (Math.random() < 0.45) {
-        targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 1));
-      }
+      if (Math.random() < 0.5) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 2));
+      if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 1));
     } else if (monster.type === 'SKELETON') {
-      if (Math.random() < 0.75) {
-        targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'ANCIENT_BONE', 1));
-      }
-      if (Math.random() < 0.65) {
-        targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 2));
-      }
-      if (Math.random() < 0.35) {
-        targetItems.push(new WorldItem(monster.x + 6, monster.y + 12, 'MANA_POTION', 1));
-      }
+      if (Math.random() < 0.75) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'ANCIENT_BONE', 1));
+      if (Math.random() < 0.65) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 2));
+      if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 6, monster.y + 12, 'MANA_POTION', 1));
     } else if (monster.type === 'BOSS_SLIME') {
       targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 3));
       targetItems.push(new WorldItem(monster.x + 24, monster.y + 12, 'DARK_IRON_ORE', 6));
       targetItems.push(new WorldItem(monster.x + 12, monster.y + 16, 'SLIME_JELLY', 4));
       targetItems.push(new WorldItem(monster.x + 28, monster.y + 14, 'HEALTH_POTION', 3));
       targetItems.push(new WorldItem(monster.x + 6, monster.y + 14, 'MANA_POTION', 3));
+
+      // Buka akses tangga menuju Lantai 2
+      this.dungeonMap.isFloor2Unlocked = true;
+      this.titleSystem.unlockTitle('CRYPT_CONQUEROR', this.player, this.floatingText);
       this.floatingText.spawn(monster.x + 16, monster.y - 32, '🏆 RAJA SLIME DIKALAHKAN!!', '#facc15', 3.5);
+      this.floatingText.spawn(monster.x + 16, monster.y - 48, '🚪 TANGGA KE LANTAI 2 TERBUKA!', '#c084fc', 4.0);
+    }
+    // --- DUNGEON FLOOR 2 MONSTER DROPS ---
+    else if (monster.type === 'STONE_GOLEM') {
+      targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DARK_IRON_ORE', 2));
+      if (Math.random() < 0.5) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'ANCIENT_BONE', 1));
+    } else if (monster.type === 'CRYPT_SHADOW') {
+      targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 2));
+      if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'MANA_POTION', 1));
+      if (Math.random() < 0.4) targetItems.push(new WorldItem(monster.x + 6, monster.y + 14, 'ANCIENT_BONE', 1));
+    } else if (monster.type === 'BOSS_TITAN_GOLEM') {
+      targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 5));
+      targetItems.push(new WorldItem(monster.x + 24, monster.y + 12, 'DARK_IRON_ORE', 8));
+      targetItems.push(new WorldItem(monster.x + 10, monster.y + 16, 'HEALTH_POTION', 4));
+      targetItems.push(new WorldItem(monster.x + 28, monster.y + 16, 'MANA_POTION', 4));
+      targetItems.push(new WorldItem(monster.x + 18, monster.y + 20, 'GOLD_COIN', 300));
+
+      this.titleSystem.unlockTitle('TITAN_BREAKER', this.player, this.floatingText);
+      this.floatingText.spawn(monster.x + 16, monster.y - 32, '⚡ TITAN ABISAL DITUMBANGKAN!!', '#ef4444', 4.0);
+    }
+
+    // Title Progress Tracking
+    if (monster.type === 'SLIME' || monster.type === 'FOREST_SLIME') {
+      this.slimeKillCount++;
+      if (this.slimeKillCount >= 5) {
+        this.titleSystem.unlockTitle('SLIME_SLAYER', this.player, this.floatingText);
+      }
+    } else if (monster.type === 'WILD_WOLF' || monster.type === 'GOBLIN') {
+      this.forestMonsterKillCount++;
+      if (this.forestMonsterKillCount >= 3) {
+        this.titleSystem.unlockTitle('FOREST_HUNTER', this.player, this.floatingText);
+      }
+    }
+
+    if (this.player.level >= 22) {
+      this.titleSystem.unlockTitle('GUILD_LEGEND', this.player, this.floatingText);
     }
 
     if (leveledUp) {
@@ -969,18 +1326,99 @@ export class Game {
     };
 
     // Freeze player if inventory, village dialog, guild dialog, blacksmith workshop, control settings, or notification modal is open
-    const activeInput = (this.inventoryUI.isOpen || this.villageManager.isDialogOpen || this.guildNPC.isAppraisalOpen || this.blacksmithNPC.isWorkshopOpen || this.controlSettingsModal.isOpen || NotificationModal.isOpen)
+    const activeInput = (this.inventoryUI.isOpen || this.villageManager.isDialogOpen || this.guildNPC.isAppraisalOpen || this.blacksmithNPC.isWorkshopOpen || this.controlSettingsModal.isOpen || NotificationModal.isOpen || this.cookingSystem.isOpen || this.titleSystem.isOpen || this.leaderboardUI.isOpen)
       ? { axisX: 0, axisY: 0, isAction: false, isSprint: false }
       : this.input.state;
 
-    const activeMap = this.currentMap === 'OVERWORLD' ? this.tileMap : this.dungeonMap;
+    const activeMap = this.currentMap === 'OVERWORLD' ? this.tileMap : (this.currentMap === 'DUNGEON' ? this.dungeonMap : this.dungeonFloor2);
     this.player.update(deltaTime, activeInput, activeMap, obstacleChecker);
+
+    // Update Day/Night & Weather Engine
+    this.timeWeatherEngine.update(
+      deltaTime,
+      this.camera.x,
+      this.camera.y,
+      this.camera.viewportWidth,
+      this.camera.viewportHeight,
+      this.currentMap !== 'OVERWORLD'
+    );
+
+    // Sync Active Title
+    const activeTitle = this.titleSystem.getEquippedTitle();
+    this.player.equippedTitle = activeTitle.name;
+    this.player.equippedTitleColor = activeTitle.color;
+
+    // Update Active Party Companion (Rodric, Lyra, Flora)
+    if (this.companion) {
+      const activeMonsters =
+        this.currentMap === 'OVERWORLD'
+          ? this.overworldMonsters
+          : this.currentMap === 'DUNGEON'
+          ? this.dungeonMonsters
+          : this.floor2Monsters;
+
+      this.companion.update(deltaTime, this.player, activeMonsters, this.floatingText, (targetM) => {
+        if (targetM.isDead) this.handleMonsterDefeated(targetM);
+      });
+    }
+
+    // Update Active Pet Auto-Loot Magnet (Puni, Lobo)
+    if (this.pet) {
+      const activeItems =
+        this.currentMap === 'OVERWORLD'
+          ? this.worldItems
+          : this.currentMap === 'DUNGEON'
+          ? this.dungeonWorldItems
+          : this.floor2WorldItems;
+
+      this.pet.update(deltaTime, this.player, activeItems, this.floatingText);
+    }
 
     // Update Blacksmith animations
     this.blacksmithNPC.update(deltaTime);
 
     // --- OVERWORLD SPECIFIC UPDATES ---
     if (this.currentMap === 'OVERWORLD') {
+      // Dapur Petualang (Cooking Pot) Interaction at (48, 48)
+      const cookPotX = 48 * CONSTANTS.TILE_SIZE + 16;
+      const cookPotY = 48 * CONSTANTS.TILE_SIZE + 16;
+      if (Math.hypot(cookPotX - playerCenterX, cookPotY - playerCenterY) < 38) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.input.consumeAction();
+          this.cookingSystem.open(this.player, this.floatingText);
+        }
+      }
+
+      // Papan Kehormatan Guild (Leaderboard Notice Board) at (53, 48)
+      const boardX = 53 * CONSTANTS.TILE_SIZE + 16;
+      const boardY = 48 * CONSTANTS.TILE_SIZE + 16;
+      if (Math.hypot(boardX - playerCenterX, boardY - playerCenterY) < 38) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.input.consumeAction();
+          this.leaderboardUI.open(this.player);
+        }
+      }
+
+      // Suaka Hewan Desa (Pet Sanctuary) at (54, 52)
+      const petPenX = 54 * CONSTANTS.TILE_SIZE + 16;
+      const petPenY = 52 * CONSTANTS.TILE_SIZE + 16;
+      if (Math.hypot(petPenX - playerCenterX, petPenY - playerCenterY) < 38) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.input.consumeAction();
+          this.openPetAdoptionDialog();
+        }
+      }
+
+      // Rekrut Rekan Party Guild Receptionist Side Door at (51, 48)
+      const compHireX = 51 * CONSTANTS.TILE_SIZE + 24;
+      const compHireY = 48 * CONSTANTS.TILE_SIZE + 8;
+      if (Math.hypot(compHireX - playerCenterX, compHireY - playerCenterY) < 34 && !this.guildNPC.isAppraisalOpen) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.input.consumeAction();
+          this.openCompanionHireModal();
+        }
+      }
+
       // Village NPC Interaction (Quest & Ambient)
       if (!this.villageManager.isDialogOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen) {
         const nearNPC = this.villageManager.isNearAnyNPC(playerCenterX, playerCenterY);
@@ -1139,12 +1577,20 @@ export class Game {
 
       // 10.5 Minion AI Combat & Escort Update (Prajurit Kerangka, Roh Beruang, Klon Bayangan)
       this.updateMinions(deltaTime, this.overworldMonsters);
-    } else {
-      // --- DUNGEON SPECIFIC UPDATES ---
+    } else if (this.currentMap === 'DUNGEON') {
+      // --- DUNGEON FLOOR 1 SPECIFIC UPDATES ---
       // 4. Exit Ladder to Surface
       if (this.dungeonMap.isNearLadder(playerCenterX, playerCenterY)) {
         if (this.input.isActionJustPressed || this.input.state.isAction) {
           this.exitDungeon(false);
+          return;
+        }
+      }
+
+      // 4.5 Descent Ladder to Floor 2 in Boss Room
+      if (this.dungeonMap.isNearFloor2Ladder(playerCenterX, playerCenterY)) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.enterFloor2();
           return;
         }
       }
@@ -1210,7 +1656,8 @@ export class Game {
           this.player.minions,
           (minion, atk) => {
             this.handleMonsterAttackMinion(monster, minion, atk);
-          }
+          },
+          this.companion
         );
       }
 
@@ -1272,8 +1719,142 @@ export class Game {
         }
       }
 
-      // 9.5 Minion AI Combat & Escort Update (Prajurit Kerangka, Roh Beruang, Klon Bayangan)
+      // 9.5 Minion AI Combat & Escort Update
       this.updateMinions(deltaTime, this.dungeonMonsters);
+    } else {
+      // --- DUNGEON FLOOR 2 SPECIFIC UPDATES (Ancient Crypt Ruins) ---
+      // Ladder up to Floor 1
+      if (this.dungeonFloor2.isNearLadderUp(playerCenterX, playerCenterY)) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.exitFloor2();
+          return;
+        }
+      }
+
+      // Update Floor 2 Engine & Boss Telegraphs
+      this.dungeonFloor2.update(deltaTime);
+
+      // Check Boss AOE Telegraph Ground Damage (Red Carpet Danger Zones)
+      for (const tel of this.dungeonFloor2.telegraphs) {
+        if (tel.timer <= deltaTime * 1.5) {
+          const dist = Math.hypot(playerCenterX - tel.x, playerCenterY - tel.y);
+          if (dist < tel.radius) {
+            const died = this.player.takeDamage(tel.damage);
+            this.camera.shake(5.5, 0.22);
+            AudioEngine.playHit(true);
+            this.floatingText.spawn(this.player.x + 12, this.player.y - 14, `💥 GEMPA BUMI -${tel.damage}!`, '#ef4444', 2.2);
+            if (died) {
+              AudioEngine.playPlayerDeath();
+              this.exitDungeon(true);
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur di Lantai 2 dan dipulangkan ke Kota!', '#ef4444', 3.5);
+              return;
+            }
+          }
+        }
+      }
+
+      // Floor 2 World Items
+      for (let i = this.floor2WorldItems.length - 1; i >= 0; i--) {
+        const item = this.floor2WorldItems[i];
+        const pickedUp = item.update(deltaTime, playerCenterX, playerCenterY);
+        if (pickedUp) {
+          const added = this.player.inventory.addItem(item.itemId, item.count);
+          if (added > 0) {
+            AudioEngine.playItemPickup(item.itemId === 'GOLD_COIN');
+            const def = ITEM_DEFINITIONS[item.itemId];
+            const name = def ? def.name : item.itemId;
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `+${added} ${name}`, '#38bdf8');
+            this.floor2WorldItems.splice(i, 1);
+          }
+        }
+      }
+
+      // Floor 2 Monsters AI & Boss Telegraph Hook
+      for (const monster of this.floor2Monsters) {
+        monster.update(
+          deltaTime,
+          playerCenterX,
+          playerCenterY,
+          (tx, ty) => this.dungeonFloor2.isTileSolid(tx, ty),
+          (atk) => {
+            const died = this.player.takeDamage(atk);
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `-${atk} HP`, '#ef4444');
+            AudioEngine.playPlayerHurt();
+            this.camera.shake(4.2, 0.18);
+            if (died) {
+              AudioEngine.playPlayerDeath();
+              this.exitDungeon(true);
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur di Lantai 2 dan dipulangkan ke Kota!', '#ef4444', 3.5);
+            }
+          },
+          this.player.minions,
+          (minion, atk) => {
+            this.handleMonsterAttackMinion(monster, minion, atk);
+          },
+          this.companion,
+          (tx, ty, r, dur, dmg) => {
+            this.dungeonFloor2.spawnTelegraph(tx, ty, r, dur, dmg);
+          }
+        );
+      }
+
+      // Player Melee Attack vs Floor 2 Monsters
+      const attackHitbox = this.player.getAttackHitbox();
+      if (attackHitbox) {
+        for (const monster of this.floor2Monsters) {
+          if (monster.isDead) continue;
+          if (this.hitMonstersInSwing.has(monster.id)) continue;
+          if (
+            attackHitbox.x < monster.x + monster.width &&
+            attackHitbox.x + attackHitbox.width > monster.x &&
+            attackHitbox.y < monster.y + monster.height &&
+            attackHitbox.y + attackHitbox.height > monster.y
+          ) {
+            this.hitMonstersInSwing.add(monster.id);
+            const { damage, isCrit } = this.player.getAttackDamage();
+            const res = monster.takeDamage(damage, playerCenterX, playerCenterY);
+            AudioEngine.playHit(isCrit);
+            this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, isCrit);
+            this.camera.shake(isCrit ? 4.8 : 2.6, isCrit ? 0.16 : 0.10);
+            const hitText = isCrit ? `💥 CRIT -${res.damage}!` : `-${res.damage}`;
+            this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 10, hitText, isCrit ? '#facc15' : '#ffffff');
+            if (res.isDead) {
+              this.handleMonsterDefeated(monster);
+            }
+          }
+        }
+      }
+
+      // Skills vs Floor 2 Monsters
+      for (const effect of this.skillBarUI.visualEffects) {
+        if (['slash', 'fire', 'ice', 'lightning', 'wind', 'earth', 'abnormal', 'shockwave', 'grasp', 'devour'].includes(effect.type)) {
+          for (const monster of this.floor2Monsters) {
+            if (monster.isDead) continue;
+            const dist = Math.hypot(effect.x - (monster.x + monster.width / 2), effect.y - (monster.y + monster.height / 2));
+            if (dist < effect.radius + monster.width / 2) {
+              if (monster.hurtTimer <= 0) {
+                let spellDmg = 28 + this.player.level * 3.5;
+                if (effect.type === 'abnormal' || effect.type === 'devour') {
+                  spellDmg = 72 + this.player.level * 6.5;
+                } else if (effect.type === 'grasp' || effect.type === 'shockwave') {
+                  spellDmg = 34 + this.player.level * 4.0;
+                }
+                const res = monster.takeDamage(spellDmg, effect.x, effect.y);
+                AudioEngine.playHit(false);
+                this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, true);
+                this.camera.shake(3.2, 0.12);
+                this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 8, `✨ -${res.damage}`, effect.color);
+                if (res.isDead) {
+                  this.handleMonsterDefeated(monster);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Minions vs Floor 2 Monsters
+      this.updateMinions(deltaTime, this.floor2Monsters);
     }
 
     // 10. Update Floating Text Notifications
@@ -1363,6 +1944,11 @@ export class Game {
       // Render Desa Khusus Oakhaven (Bangunan, Balai Serikat, Air Mancur, Lampu & NPC)
       this.villageManager.renderEnvironment(ctx, playerCenterX, playerCenterY);
 
+      // Render Interactive Cauldron, Notice Board, Pet Pen
+      this.renderCookingCauldron(ctx, 48 * CONSTANTS.TILE_SIZE, 48 * CONSTANTS.TILE_SIZE, playerCenterX, playerCenterY);
+      this.renderNoticeBoard(ctx, 53 * CONSTANTS.TILE_SIZE, 48 * CONSTANTS.TILE_SIZE, playerCenterX, playerCenterY);
+      this.renderPetPen(ctx, 54 * CONSTANTS.TILE_SIZE, 52 * CONSTANTS.TILE_SIZE, playerCenterX, playerCenterY);
+
       // 2. Render Cave / Dungeon Entrance
       this.caveEntrance.render(ctx, this.caveEntrance.isNearPlayer(playerCenterX, playerCenterY));
 
@@ -1387,6 +1973,16 @@ export class Game {
         monster.render(ctx);
       }
 
+      // Render Companion if active
+      if (this.companion) {
+        this.companion.render(ctx);
+      }
+
+      // Render Pet if active
+      if (this.pet) {
+        this.pet.render(ctx);
+      }
+
       // 6. Render Player
       this.player.render(ctx);
 
@@ -1399,10 +1995,13 @@ export class Game {
       // 7.6 Render Combat Hit Sparks
       this.renderHitSparks(ctx);
 
+      // 7.7 Day/Night Cycle & Weather Ambient Lighting Wash
+      this.timeWeatherEngine.renderWorldLighting(ctx, this.camera.x, this.camera.y, this.camera.viewportWidth, this.camera.viewportHeight, false);
+
       // 8. Render Floating Texts
       this.floatingText.render(ctx);
-    } else {
-      // --- DUNGEON WORLD RENDERING ---
+    } else if (this.currentMap === 'DUNGEON') {
+      // --- DUNGEON FLOOR 1 WORLD RENDERING ---
       // 1. Render Dungeon Map Tiles
       this.dungeonMap.render(ctx, this.camera);
 
@@ -1421,6 +2020,16 @@ export class Game {
         monster.render(ctx);
       }
 
+      // Render Companion if active
+      if (this.companion) {
+        this.companion.render(ctx);
+      }
+
+      // Render Pet if active
+      if (this.pet) {
+        this.pet.render(ctx);
+      }
+
       // 5. Render Player
       this.player.render(ctx);
 
@@ -1437,6 +2046,48 @@ export class Game {
       this.renderHitSparks(ctx);
 
       // 8. Render Floating Texts (Crisp & Readable above darkness)
+      this.floatingText.render(ctx);
+    } else {
+      // --- DUNGEON FLOOR 2 WORLD RENDERING (Ancient Crypt Ruins) ---
+      // 1. Render Floor 2 Map Tiles & Boss Telegraph Red Warning Zones
+      this.dungeonFloor2.render(ctx, this.camera);
+
+      // 2. Render Floor 2 Items
+      for (const item of this.floor2WorldItems) {
+        item.render(ctx);
+      }
+
+      // 3. Render Floor 2 Monsters (Stone Golems, Crypt Shadows, Abyssal Titan)
+      for (const monster of this.floor2Monsters) {
+        monster.render(ctx);
+      }
+
+      // Render Companion if active
+      if (this.companion) {
+        this.companion.render(ctx);
+      }
+
+      // Render Pet if active
+      if (this.pet) {
+        this.pet.render(ctx);
+      }
+
+      // 4. Render Player
+      this.player.render(ctx);
+
+      // 5. Render Spell Effects
+      this.skillBarUI.renderWorldEffects(ctx);
+
+      // 6. Render Floor 2 Atmospheric Darkness & Purple Torch Light
+      this.dungeonFloor2.renderAtmosphericLighting(ctx, this.camera, playerCenterX, playerCenterY);
+
+      // 7. Render Abyssal Mana Motes
+      this.atmosphereEngine.render(ctx);
+
+      // 8. Render Combat Hit Sparks
+      this.renderHitSparks(ctx);
+
+      // 9. Render Floating Texts
       this.floatingText.render(ctx);
     }
 
@@ -1497,6 +2148,67 @@ export class Game {
 
       // 12.2 Render Active Quest HUD Tracker (Top-Left)
       this.renderQuestTrackerHUD(ctx);
+
+      // Top Center: Day/Night Cycle & Weather Banner
+      ctx.save();
+      const timeStr = this.timeWeatherEngine.getFormattedTime();
+      ctx.font = 'bold 9.5px sans-serif';
+      const timeWidth = ctx.measureText(timeStr).width + 16;
+      const timeX = (screenWidth - timeWidth) / 2;
+      const timeY = 10;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.fillRect(timeX, timeY, timeWidth, 22);
+      ctx.strokeStyle = this.timeWeatherEngine.isNight() ? '#a855f7' : '#38bdf8';
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(timeX, timeY, timeWidth, 22);
+      ctx.fillStyle = '#f8fafc';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(timeStr, timeX + timeWidth / 2, timeY + 11);
+      ctx.restore();
+
+      // Top-Left: Active Food Buffs HUD Badges
+      let buffX = 10;
+      const buffY = 72;
+      if (this.player.foodBuffAtkTimer > 0) {
+        const m = Math.floor(this.player.foodBuffAtkTimer / 60);
+        const s = Math.floor(this.player.foodBuffAtkTimer % 60);
+        this.renderBuffBadge(ctx, buffX, buffY, '🥩 +20% ATK', `${m}:${s.toString().padStart(2, '0')}`, '#fb923c');
+        buffX += 88;
+      }
+      if (this.player.foodBuffMpTimer > 0) {
+        const m = Math.floor(this.player.foodBuffMpTimer / 60);
+        const s = Math.floor(this.player.foodBuffMpTimer % 60);
+        this.renderBuffBadge(ctx, buffX, buffY, '🍮 Regen MP', `${m}:${s.toString().padStart(2, '0')}`, '#38bdf8');
+        buffX += 88;
+      }
+      if (this.player.foodBuffExpSpeedTimer > 0) {
+        const m = Math.floor(this.player.foodBuffExpSpeedTimer / 60);
+        const s = Math.floor(this.player.foodBuffExpSpeedTimer % 60);
+        this.renderBuffBadge(ctx, buffX, buffY, '🍲 +Speed/EXP', `${m}:${s.toString().padStart(2, '0')}`, '#4ade80');
+        buffX += 88;
+      }
+
+      // Top HUD: Gelar & Title Button (👑)
+      const titleBtnX = screenWidth - 180;
+      const titleBtnY = 10;
+      const titleBtnSize = 34;
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.beginPath();
+      ctx.arc(titleBtnX + titleBtnSize / 2, titleBtnY + titleBtnSize / 2, titleBtnSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('👑', titleBtnX + titleBtnSize / 2, titleBtnY + titleBtnSize / 2);
+      ctx.restore();
 
       // 13. Top HUD: Fullscreen Icon (⛶)
       const fsX = screenWidth - 138;
@@ -1580,6 +2292,42 @@ export class Game {
         ctx.restore();
       }
 
+      if (this.currentMap === 'DUNGEON' && this.dungeonMap.isNearFloor2Ladder(playerCenterX, playerCenterY)) {
+        ctx.save();
+        const pW = 230;
+        const pH = 26;
+        const pX = (screenWidth - pW) / 2;
+        const pY = screenHeight - 90;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillRect(pX, pY, pW, pH);
+        ctx.strokeStyle = '#c084fc';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(pX, pY, pW, pH);
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#e879f9';
+        ctx.fillText('Tekan [A] Masuk Makam Kuno Lantai 2 ▼', pX + pW / 2, pY + 17);
+        ctx.restore();
+      }
+
+      if (this.currentMap === 'DUNGEON_FLOOR_2' && this.dungeonFloor2.isNearLadderUp(playerCenterX, playerCenterY)) {
+        ctx.save();
+        const pW = 210;
+        const pH = 26;
+        const pX = (screenWidth - pW) / 2;
+        const pY = screenHeight - 90;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillRect(pX, pY, pW, pH);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(pX, pY, pW, pH);
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#93c5fd';
+        ctx.fillText('Tekan [A] Naik Tangga (Lantai 1) ▲', pX + pW / 2, pY + 17);
+        ctx.restore();
+      }
+
       // 16. Anime Location Title Card
       this.renderAnimeLocationTitleCard(ctx, screenWidth, screenHeight);
 
@@ -1588,6 +2336,134 @@ export class Game {
 
       // 17. Topmost Modal: Premium In-Game Notification / Confirm Dialog
       NotificationModal.render(ctx, screenWidth, screenHeight);
+    }
+  }
+
+  private renderBuffBadge(ctx: CanvasRenderingContext2D, x: number, y: number, label: string, timerText: string, color: string): void {
+    ctx.save();
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+    ctx.fillRect(x, y, 84, 20);
+    ctx.strokeStyle = color;
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(x, y, 84, 20);
+
+    ctx.fillStyle = color;
+    ctx.font = 'bold 8px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.fillText(label, x + 4, y + 9);
+
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 8px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(timerText, x + 80, y + 16);
+    ctx.restore();
+  }
+
+  private renderCookingCauldron(ctx: CanvasRenderingContext2D, px: number, py: number, pcx: number, pcy: number): void {
+    const isNear = Math.hypot(px + 16 - pcx, py + 16 - pcy) < 38;
+    // Campfire base stones & logs
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(px + 6, py + 22, 20, 4);
+    // Flickering fire
+    const fireFlicker = Math.sin(Date.now() * 0.01) * 2;
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(px + 10 + fireFlicker * 0.5, py + 18, 12, 6);
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(px + 12, py + 16, 8, 5);
+
+    // Black Iron Cauldron Pot
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.ellipse(px + 16, py + 14, 11, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#475569';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Boiling broth inside
+    ctx.fillStyle = '#ea580c';
+    ctx.beginPath();
+    ctx.ellipse(px + 16, py + 12, 8, 4, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Rising steam
+    const steamY = (Date.now() * 0.02) % 18;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+    ctx.beginPath();
+    ctx.arc(px + 14, py + 8 - steamY, 3, 0, Math.PI * 2);
+    ctx.arc(px + 18, py + 6 - ((steamY + 6) % 18), 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Prompt if near
+    if (isNear) {
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#fdba74';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      ctx.strokeText('[A] Dapur Petualang', px + 16, py - 4);
+      ctx.fillText('[A] Dapur Petualang', px + 16, py - 4);
+    }
+  }
+
+  private renderNoticeBoard(ctx: CanvasRenderingContext2D, bx: number, by: number, pcx: number, pcy: number): void {
+    const isNear = Math.hypot(bx + 16 - pcx, by + 16 - pcy) < 38;
+    // Wooden posts
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(bx + 4, by + 8, 4, 24);
+    ctx.fillRect(bx + 24, by + 8, 4, 24);
+    // Board panel
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(bx + 2, by + 2, 28, 16);
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(bx + 2, by + 2, 28, 16);
+    // Parchment notice
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(bx + 5, by + 5, 22, 10);
+    // Gold star emblem
+    ctx.fillStyle = '#ca8a04';
+    ctx.fillRect(bx + 14, by + 4, 4, 3);
+
+    if (isNear) {
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#fde047';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      ctx.strokeText('[A] Papan Kehormatan (Top 10)', bx + 16, by - 4);
+      ctx.fillText('[A] Papan Kehormatan (Top 10)', bx + 16, by - 4);
+    }
+  }
+
+  private renderPetPen(ctx: CanvasRenderingContext2D, px: number, py: number, pcx: number, pcy: number): void {
+    const isNear = Math.hypot(px + 16 - pcx, py + 16 - pcy) < 38;
+    // Wooden fence enclosure
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(px, py + 4, 32, 3);
+    ctx.fillRect(px, py + 22, 32, 3);
+    ctx.fillRect(px, py + 4, 3, 20);
+    ctx.fillRect(px + 29, py + 4, 3, 20);
+
+    // Baby creatures inside pen
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.arc(px + 10, py + 14, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.beginPath();
+    ctx.arc(px + 20, py + 14, 5.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (isNear) {
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#bae6fd';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      ctx.strokeText('[A] Adopsi Pet Auto-Loot', px + 16, py - 3);
+      ctx.fillText('[A] Adopsi Pet Auto-Loot', px + 16, py - 3);
     }
   }
 

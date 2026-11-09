@@ -29,6 +29,11 @@ export class DungeonMap {
   public ladderX: number = 20 * CONSTANTS.TILE_SIZE;
   public ladderY: number = 36 * CONSTANTS.TILE_SIZE;
 
+  // Floor 2 Descent Staircase (Unlocked after defeating Floor 1 Boss)
+  public floor2LadderX: number = 20 * CONSTANTS.TILE_SIZE;
+  public floor2LadderY: number = 3 * CONSTANTS.TILE_SIZE;
+  public isFloor2Unlocked: boolean = false;
+
   constructor() {
     this.generateDungeon();
   }
@@ -150,6 +155,13 @@ export class DungeonMap {
     return Math.hypot(lx - playerCenterX, ly - playerCenterY) < 32;
   }
 
+  public isNearFloor2Ladder(playerCenterX: number, playerCenterY: number): boolean {
+    if (!this.isFloor2Unlocked) return false;
+    const lx = this.floor2LadderX + 16;
+    const ly = this.floor2LadderY + 16;
+    return Math.hypot(lx - playerCenterX, ly - playerCenterY) < 36;
+  }
+
   public update(deltaTime: number): void {
     this.animTimer += deltaTime * 4;
   }
@@ -179,6 +191,28 @@ export class DungeonMap {
           ty >= camera.y - ts && ty <= camera.y + camera.viewportHeight + ts) {
         this.drawWallTorch(ctx, tx + 12, ty + 10);
       }
+    }
+
+    // Render Staircase Down to Floor 2 if unlocked
+    if (this.isFloor2Unlocked) {
+      const sx = this.floor2LadderX;
+      const sy = this.floor2LadderY;
+      ctx.fillStyle = '#020617';
+      ctx.fillRect(sx, sy, ts, ts);
+
+      ctx.fillStyle = '#475569';
+      for (let s = 0; s < 4; s++) {
+        ctx.fillRect(sx + 4 + s * 2, sy + 6 + s * 5, ts - 8 - s * 4, 3.5);
+      }
+
+      ctx.strokeStyle = '#c084fc';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(sx + 2, sy + 2, ts - 4, ts - 4);
+
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#e879f9';
+      ctx.fillText('▼ Ke Lantai 2', sx + 16, sy - 4);
     }
   }
 
