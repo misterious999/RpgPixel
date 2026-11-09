@@ -24,6 +24,9 @@ export interface GameSaveData {
   world_y: number;
   inventory: any[];
   opened_chests: number[];
+  equipped_weapon_id?: string;
+  unlocked_weapons?: string[];
+  quests?: any[];
 }
 
 export class SupabaseService {

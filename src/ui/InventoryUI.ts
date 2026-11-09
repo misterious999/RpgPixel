@@ -4,6 +4,7 @@ import { Player } from '../entities/Player.ts';
 import { FloatingTextManager } from './FloatingText.ts';
 import { CanvasText } from '../utils/CanvasText.ts';
 import { ROLE_INFO } from '../data/RolesData.ts';
+import { AudioEngine } from '../audio/AudioEngine.ts';
 
 export class InventoryUI {
   public isOpen: boolean = false;
@@ -24,6 +25,7 @@ export class InventoryUI {
 
   public toggle(): void {
     this.isOpen = !this.isOpen;
+    AudioEngine.playButtonClick();
     if (this.isOpen) {
       // Auto-select first non-empty slot if available
       for (let i = 0; i < this.inventory.capacity; i++) {
@@ -168,6 +170,7 @@ export class InventoryUI {
       }
       const healed = this.player.heal(def.effectValue || 35);
       this.inventory.removeItem(this.selectedSlotIndex, 1);
+      AudioEngine.playPotionDrink();
       this.floatingText.spawn(this.player.x + 10, this.player.y - 10, `+${healed} HP Pulih!`, '#4ade80');
 
       if (!this.inventory.getSlot(this.selectedSlotIndex)) {
@@ -180,6 +183,7 @@ export class InventoryUI {
       }
       const restored = this.player.restoreMp(def.effectValue || 25);
       this.inventory.removeItem(this.selectedSlotIndex, 1);
+      AudioEngine.playPotionDrink();
       this.floatingText.spawn(this.player.x + 10, this.player.y - 10, `+${restored} MP Pulih!`, '#38bdf8');
 
       if (!this.inventory.getSlot(this.selectedSlotIndex)) {

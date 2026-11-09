@@ -69,4 +69,41 @@ export class Inventory {
     if (slotIndex < 0 || slotIndex >= this.capacity) return null;
     return this.slots[slotIndex];
   }
+
+  /**
+   * Menghitung total jumlah suatu item di seluruh slot tas
+   */
+  public getItemCount(itemId: string): number {
+    let total = 0;
+    for (let i = 0; i < this.capacity; i++) {
+      const slot = this.slots[i];
+      if (slot && slot.itemId === itemId) {
+        total += slot.count;
+      }
+    }
+    return total;
+  }
+
+  /**
+   * Mengurangi sejumlah item berdasarkan ID item di seluruh slot
+   */
+  public removeItemsById(itemId: string, count: number): boolean {
+    if (this.getItemCount(itemId) < count) return false;
+    let needed = count;
+    for (let i = 0; i < this.capacity; i++) {
+      const slot = this.slots[i];
+      if (slot && slot.itemId === itemId) {
+        if (slot.count > needed) {
+          slot.count -= needed;
+          needed = 0;
+          break;
+        } else {
+          needed -= slot.count;
+          this.slots[i] = null;
+          if (needed <= 0) break;
+        }
+      }
+    }
+    return true;
+  }
 }

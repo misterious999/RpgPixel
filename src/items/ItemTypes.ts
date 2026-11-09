@@ -248,5 +248,38 @@ export const ITEM_DEFINITIONS: Record<string, ItemDefinition> = {
       ctx.fillStyle = '#ffffff';
       ctx.fillRect(x + size * 0.45, y + size * 0.35, size * 0.1, size * 0.1);
     }
+  },
+  DARK_IRON_ORE: {
+    id: 'DARK_IRON_ORE',
+    name: 'Bijih Besi Gelap',
+    description: 'Bijih logam hitam pekat dari goa terdalam. Bahan utama menempa persenjataan khusus.',
+    category: 'material',
+    maxStack: 50,
+    color: '#64748b',
+    renderIcon: (ctx, x, y, size) => {
+      // Dark rock cluster
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.moveTo(x + size * 0.2, y + size * 0.7);
+      ctx.lineTo(x + size * 0.38, y + size * 0.25);
+      ctx.lineTo(x + size * 0.75, y + size * 0.32);
+      ctx.lineTo(x + size * 0.85, y + size * 0.75);
+      ctx.lineTo(x + size * 0.5, y + size * 0.85);
+      ctx.closePath();
+      ctx.fill();
+      // Metallic mineral facets
+      ctx.fillStyle = '#475569';
+      ctx.beginPath();
+      ctx.moveTo(x + size * 0.35, y + size * 0.35);
+      ctx.lineTo(x + size * 0.65, y + size * 0.3);
+      ctx.lineTo(x + size * 0.55, y + size * 0.68);
+      ctx.closePath();
+      ctx.fill();
+      // Shiny iron vein gleam
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(x + size * 0.45, y + size * 0.4, size * 0.12, size * 0.08);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x + size * 0.48, y + size * 0.42, 2, 2);
+    }
   }
 };

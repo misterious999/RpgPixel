@@ -3,6 +3,8 @@ import { ROLE_INFO, ELEMENT_INFO } from '../data/RolesData.ts';
 import { Player } from '../entities/Player.ts';
 import { FloatingTextManager } from '../ui/FloatingText.ts';
 import { CanvasText } from '../utils/CanvasText.ts';
+import { QuestManager } from './QuestManager.ts';
+import { AudioEngine } from '../audio/AudioEngine.ts';
 
 export class GuildNPC {
   public x: number;
@@ -13,6 +15,8 @@ export class GuildNPC {
 
   public isAppraisalOpen: boolean = false;
   private openTime: number = 0;
+  public questManager: QuestManager | null = null;
+  public activeTab: 'QUESTS' | 'CARD' = 'QUESTS';
 
   // Ceremony State for Novices (Random Awakening by System)
   public ceremonyState: 'READY' | 'SPINNING' | 'AWAKENED' = 'READY';
@@ -103,8 +107,59 @@ export class GuildNPC {
       return true;
     }
 
-    // --- CASE A: PLAYER ALREADY HAS A LOCKED ROLE (OFFICIAL CERTIFICATE VIEW) ---
+    // --- CASE A: PLAYER ALREADY HAS A LOCKED ROLE (OFFICIAL CERTIFICATE & QUEST BOARD) ---
     if (player.hasLockedRole || player.role !== 'NOVICE') {
+      // 1. Tab Selector Navigation (Misi Guild vs Kartu Petualang)
+      const tabY = modalY + 36;
+      const tabH = 26;
+      const tabW = (modalWidth - 28) / 2;
+
+      if (touchY >= tabY && touchY <= tabY + tabH) {
+        if (touchX >= modalX + 14 && touchX < modalX + 14 + tabW) {
+          this.activeTab = 'QUESTS';
+          AudioEngine.playButtonClick();
+          return true;
+        } else if (touchX >= modalX + 14 + tabW && touchX <= modalX + 14 + tabW * 2) {
+          this.activeTab = 'CARD';
+          AudioEngine.playButtonClick();
+          return true;
+        }
+      }
+
+      // 2. Interaksi di Tab MISI GUILD
+      if (this.activeTab === 'QUESTS' && this.questManager) {
+        const colW = (modalWidth - 36) / 2;
+        const cardH = (modalHeight - 74) / 2;
+        const startY = modalY + 66;
+
+        const quests = this.questManager.quests;
+        for (let i = 0; i < quests.length; i++) {
+          const col = i % 2;
+          const row = Math.floor(i / 2);
+          const cx = col === 0 ? modalX + 14 : modalX + 22 + colW;
+          const cy = startY + row * (cardH + 6);
+
+          // Area Tombol Aksi di Bawah Kartu Misi
+          const btnX = cx + 8;
+          const btnY = cy + cardH - 24;
+          const btnW = colW - 18;
+          const btnH = 20;
+
+          if (touchX >= btnX && touchX <= btnX + btnW && touchY >= btnY && touchY <= btnY + btnH) {
+            const q = quests[i];
+            if (q.status === 'AVAILABLE') {
+              this.questManager.acceptQuest(q.id);
+              floatingText.spawn(player.x + 10, player.y - 18, `📜 Misi Diterima: ${q.title}!`, '#4ade80', 2.5);
+              return true;
+            } else if (q.status === 'COMPLETED') {
+              this.questManager.turnInQuest(q.id, player, floatingText);
+              return true;
+            }
+          }
+        }
+        return true;
+      }
+
       // Bottom Close Button: "TUTUP (KEMBALI BERPETUALANG)"
       const btnW = 200;
       const btnH = 34;
@@ -255,7 +310,7 @@ export class GuildNPC {
 
     const isLocked = player.hasLockedRole || player.role !== 'NOVICE';
     const headerTitle = isLocked
-      ? '🪪 KARTU IDENTITAS RESMI GUILD ELAINE'
+      ? '🏛️ SERIKAT PETUALANG ELAINE'
       : '🔮 UPACARA KEBANGKITAN TAKDIR JIWA (ACAK)';
 
     ctx.fillStyle = '#facc15';
@@ -272,12 +327,132 @@ export class GuildNPC {
 
     // ROUTING:
     if (isLocked) {
-      this.renderCertificateModal(ctx, modalX, modalY, modalWidth, modalHeight, player);
+      // Tab Bar (Misi vs Kartu)
+      const tabY = modalY + 36;
+      const tabH = 26;
+      const tabW = (modalWidth - 28) / 2;
+
+      // Tab 1: Misi
+      ctx.fillStyle = this.activeTab === 'QUESTS' ? '#eab308' : '#1e293b';
+      ctx.fillRect(modalX + 14, tabY, tabW, tabH);
+      ctx.fillStyle = this.activeTab === 'QUESTS' ? '#0f172a' : '#94a3b8';
+      ctx.font = 'bold 11px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('📜 PAPAN MISI GUILD', modalX + 14 + tabW / 2, tabY + 13);
+
+      // Tab 2: Kartu Petualang
+      ctx.fillStyle = this.activeTab === 'CARD' ? '#38bdf8' : '#1e293b';
+      ctx.fillRect(modalX + 14 + tabW, tabY, tabW, tabH);
+      ctx.fillStyle = this.activeTab === 'CARD' ? '#0f172a' : '#94a3b8';
+      ctx.fillText('🪪 KARTU IDENTITAS RESMI', modalX + 14 + tabW + tabW / 2, tabY + 13);
+
+      if (this.activeTab === 'QUESTS') {
+        this.renderQuestsModal(ctx, modalX, modalY, modalWidth, modalHeight, player);
+      } else {
+        this.renderCertificateModal(ctx, modalX, modalY, modalWidth, modalHeight, player);
+      }
     } else {
       this.renderAwakeningModal(ctx, modalX, modalY, modalWidth, modalHeight, player);
     }
 
     ctx.restore();
+  }
+
+  private renderQuestsModal(
+    ctx: CanvasRenderingContext2D,
+    modalX: number,
+    modalY: number,
+    modalWidth: number,
+    modalHeight: number,
+    _player: Player
+  ): void {
+    if (!this.questManager) return;
+    const quests = this.questManager.quests;
+
+    const colW = (modalWidth - 36) / 2;
+    const cardH = (modalHeight - 82) / 2;
+    const startY = modalY + 68;
+
+    for (let i = 0; i < quests.length; i++) {
+      const q = quests[i];
+      const col = i % 2;
+      const row = Math.floor(i / 2);
+      const cx = col === 0 ? modalX + 14 : modalX + 22 + colW;
+      const cy = startY + row * (cardH + 6);
+
+      // Card Background
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(cx, cy, colW, cardH);
+      ctx.strokeStyle = q.themeColor;
+      ctx.lineWidth = q.status === 'COMPLETED' ? 2 : 1;
+      ctx.strokeRect(cx, cy, colW, cardH);
+
+      // Quest Badge & Title
+      ctx.fillStyle = q.themeColor;
+      ctx.font = 'bold 9.5px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`[${q.badge}] ${q.title}`, cx + 8, cy + 6);
+
+      // Target Objective & Count
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '9px sans-serif';
+      ctx.fillText(`Target: ${q.targetName} (${q.currentCount}/${q.requiredCount})`, cx + 8, cy + 20);
+
+      // Progress Bar
+      const pBarW = colW - 16;
+      const pBarH = 4;
+      const pct = Math.min(1, q.currentCount / q.requiredCount);
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(cx + 8, cy + 34, pBarW, pBarH);
+      ctx.fillStyle = q.themeColor;
+      ctx.fillRect(cx + 8, cy + 34, Math.round(pBarW * pct), pBarH);
+
+      // Rewards line
+      ctx.fillStyle = '#eab308';
+      ctx.font = '8.5px sans-serif';
+      ctx.fillText(`Hadiah: +${q.rewardGold} Emas · +${q.rewardExp} EXP`, cx + 8, cy + 42);
+
+      // Button at bottom
+      const btnX = cx + 8;
+      const btnY = cy + cardH - 22;
+      const btnW = colW - 16;
+      const btnH = 18;
+
+      if (q.status === 'AVAILABLE') {
+        ctx.fillStyle = '#16a34a';
+        ctx.fillRect(btnX, btnY, btnW, btnH);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('➕ TERIMA MISI', btnX + btnW / 2, btnY + btnH / 2);
+      } else if (q.status === 'ACTIVE') {
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(btnX, btnY, btnW, btnH);
+        ctx.fillStyle = '#94a3b8';
+        ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(`⏳ BERJALAN (${q.currentCount}/${q.requiredCount})`, btnX + btnW / 2, btnY + btnH / 2);
+      } else if (q.status === 'COMPLETED') {
+        ctx.fillStyle = '#eab308';
+        ctx.fillRect(btnX, btnY, btnW, btnH);
+        ctx.fillStyle = '#0f172a';
+        ctx.font = 'bold 9.5px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🎁 KLAIM HADIAH!', btnX + btnW / 2, btnY + btnH / 2);
+      } else {
+        ctx.fillStyle = '#064e3b';
+        ctx.fillRect(btnX, btnY, btnW, btnH);
+        ctx.fillStyle = '#6ee7b7';
+        ctx.font = 'bold 9px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('✓ MISI TUNTAS', btnX + btnW / 2, btnY + btnH / 2);
+      }
+    }
   }
 
   /**
@@ -295,8 +470,8 @@ export class GuildNPC {
     const colW = (modalWidth - 36) / 2;
     const col1X = modalX + 14;
     const col2X = modalX + 22 + colW;
-    const contentY = modalY + 44;
-    const contentH = modalHeight - 56;
+    const contentY = modalY + 66;
+    const contentH = modalHeight - 76;
 
     const curRole = ROLE_INFO[player.role] || ROLE_INFO.NOVICE;
 

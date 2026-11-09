@@ -15,6 +15,8 @@ export class AuthUI {
 
   public isGuest: boolean = false;
   public getCurrentMap?: () => string;
+  public getQuestSaveData?: () => any[];
+  public onQuestDataLoaded?: (data: any[]) => void;
   private avatarImg: HTMLImageElement | null = null;
   private isSaving: boolean = false;
   private autoSaveTimer: number = 0;
@@ -90,6 +92,19 @@ export class AuthUI {
       }
     }
 
+    // Restore Weapons
+    if (save.equipped_weapon_id) {
+      this.player.equippedWeaponId = save.equipped_weapon_id;
+    }
+    if (Array.isArray(save.unlocked_weapons)) {
+      this.player.unlockedWeaponIds = save.unlocked_weapons;
+    }
+
+    // Restore Quests
+    if (Array.isArray(save.quests) && this.onQuestDataLoaded) {
+      this.onQuestDataLoaded(save.quests);
+    }
+
     return true;
   }
 
@@ -126,7 +141,10 @@ export class AuthUI {
       world_x: spawnX,
       world_y: spawnY,
       inventory: this.player.inventory.slots,
-      opened_chests: openedChestsIndices
+      opened_chests: openedChestsIndices,
+      equipped_weapon_id: this.player.equippedWeaponId || undefined,
+      unlocked_weapons: this.player.unlockedWeaponIds,
+      quests: this.getQuestSaveData ? this.getQuestSaveData() : undefined
     };
 
     const success = await SupabaseService.saveGame(user.id, saveData);

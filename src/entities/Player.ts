@@ -5,6 +5,8 @@ import { DungeonMap } from '../world/DungeonMap.ts';
 import { Inventory } from '../items/Inventory.ts';
 import { CharacterCostume, RoleType, Skill, MagicianAffinities } from '../types/GameTypes.ts';
 import { CHARACTER_COSTUMES, ROLE_INFO, getMagicianSkills, ELEMENT_INFO } from '../data/RolesData.ts';
+import { WeaponData, WEAPONS_DATA } from '../data/WeaponsData.ts';
+import { AudioEngine } from '../audio/AudioEngine.ts';
 
 export type Direction = 'down' | 'up' | 'left' | 'right';
 
@@ -38,6 +40,22 @@ export class Player {
   public role: RoleType = 'NOVICE';
   public hasLockedRole: boolean = false;
   public skills: Skill[] = [];
+
+  // Persenjataan Peran (Equipped & Unlocked Weapons)
+  public equippedWeaponId: string | null = null;
+  public unlockedWeaponIds: string[] = [];
+
+  public get equippedWeapon(): WeaponData | null {
+    if (!this.equippedWeaponId) return null;
+    return WEAPONS_DATA[this.equippedWeaponId] || null;
+  }
+
+  public equipWeapon(weaponId: string | null): void {
+    if (weaponId && !this.unlockedWeaponIds.includes(weaponId)) {
+      this.unlockedWeaponIds.push(weaponId);
+    }
+    this.equippedWeaponId = weaponId;
+  }
 
   // Special Magician Elemental Affinities
   public magicianAffinities: MagicianAffinities = {
@@ -237,22 +255,38 @@ export class Player {
 
   public getAttackDamage(): { damage: number; isCrit: boolean } {
     let baseDmg = 12 + this.level * 2;
+    let weaponAtk = 0;
+    let weaponCrit = 0;
+
+    const weapon = this.equippedWeapon;
+    if (weapon) {
+      weaponAtk = weapon.atkBonus || 0;
+      weaponCrit = weapon.critBonus || 0;
+    }
+
     if (this.role === 'KNIGHT') {
-      baseDmg = 24 + this.level * 4;
+      baseDmg = 24 + this.level * 4 + weaponAtk;
       if (this.isBerserk) baseDmg *= 1.5;
     } else if (this.role === 'ASSASSIN') {
-      baseDmg = 20 + this.level * 3.5;
-      const isCrit = Math.random() < 0.35;
+      baseDmg = 20 + this.level * 3.5 + weaponAtk;
+      const totalCritChance = 0.35 + weaponCrit;
+      const isCrit = Math.random() < totalCritChance;
       if (isCrit) return { damage: Math.round(baseDmg * 2.2), isCrit: true };
     } else if (this.role === 'MAGICIAN') {
-      baseDmg = 16 + this.level * 3;
+      baseDmg = 16 + this.level * 3 + weaponAtk;
     } else if (this.role === 'HEALER') {
-      baseDmg = 14 + this.level * 2.5;
+      baseDmg = 14 + this.level * 2.5 + weaponAtk;
     } else if (this.role === 'NECROMANCER') {
-      baseDmg = 18 + this.level * 3;
+      baseDmg = 18 + this.level * 3 + weaponAtk;
+    } else {
+      // NOVICE
+      baseDmg = 12 + this.level * 2 + weaponAtk;
     }
+
+    const isCrit = weaponCrit > 0 && Math.random() < weaponCrit;
     const variance = (Math.random() * 0.3) - 0.15;
-    return { damage: Math.max(1, Math.round(baseDmg * (1 + variance))), isCrit: false };
+    const finalDmg = Math.max(1, Math.round(baseDmg * (1 + variance) * (isCrit ? 1.8 : 1)));
+    return { damage: finalDmg, isCrit };
   }
 
   public playSkillCastAnimation(skill: Skill): void {
@@ -373,6 +407,7 @@ export class Player {
 
     if (isAction && this.attackTimer <= 0) {
       this.attackTimer = 0.25;
+      AudioEngine.playAttackSwing(this.role);
       if (this.role === 'NOVICE') {
         this.punchHand = this.punchHand === 'right' ? 'left' : 'right';
       }
@@ -1251,22 +1286,64 @@ export class Player {
       return;
     }
 
+    const eqId = this.equippedWeaponId;
+
     if (this.role === 'KNIGHT') {
-      // Silver Steel Broadsword
-      ctx.fillStyle = '#64748b'; // Pommel
-      ctx.fillRect(wx - 1, wy + 4, 3, 2);
-      ctx.fillStyle = '#facc15'; // Gold guard
-      ctx.fillRect(wx - 2, wy + 2, 5, 2);
-      ctx.fillStyle = '#e2e8f0'; // Blade
-      ctx.fillRect(wx - 1, wy - 8, 3, 10);
-      ctx.fillStyle = '#ffffff'; // Blade edge shine
-      ctx.fillRect(wx, wy - 8, 1, 10);
+      if (eqId === 'KNIGHT_CUSTOM') {
+        // --- PEDANG MAGMA ABYSS (EPIK DUNGEON) ---
+        // Obsidian hilt & molten horned guard
+        ctx.fillStyle = '#1c1917';
+        ctx.fillRect(wx - 1, wy + 4, 3, 3);
+        ctx.fillStyle = '#b91c1c';
+        ctx.fillRect(wx - 3, wy + 2, 7, 2);
+
+        // Obsidian blade with molten core
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(wx - 2, wy - 11, 5, 13);
+        ctx.fillStyle = '#ea580c';
+        ctx.fillRect(wx - 1, wy - 9, 3, 10);
+        ctx.fillStyle = '#fde047';
+        ctx.fillRect(wx, wy - 7, 1, 7);
+
+        // Blazing magma aura & flame particles
+        const flamePulse = Math.sin(this.animTimer * 5) * 1.5;
+        ctx.fillStyle = 'rgba(239, 68, 68, 0.45)';
+        ctx.fillRect(wx - 3, wy - 12 - flamePulse, 7, 4);
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(wx - 1 + flamePulse, wy - 14, 2, 2);
+      } else if (eqId === 'KNIGHT_RARE') {
+        // --- PEDANG KSATRIA KERAJAAN (RARE GOLD) ---
+        ctx.fillStyle = '#ca8a04'; // Gold Pommel
+        ctx.fillRect(wx - 1, wy + 4, 3, 3);
+        // Winged gold guard with blue gem
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(wx - 3, wy + 2, 7, 2);
+        ctx.fillStyle = '#0284c7';
+        ctx.fillRect(wx, wy + 2, 1, 2);
+        // Royal blue-silver blade
+        ctx.fillStyle = '#e0f2fe';
+        ctx.fillRect(wx - 1, wy - 9, 3, 11);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(wx, wy - 7, 1, 8);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(wx - 1, wy - 9, 1, 10);
+      } else {
+        // --- PEDANG BAJA STANDAR ---
+        ctx.fillStyle = '#64748b'; // Pommel
+        ctx.fillRect(wx - 1, wy + 4, 3, 2);
+        ctx.fillStyle = '#facc15'; // Gold guard
+        ctx.fillRect(wx - 2, wy + 2, 5, 2);
+        ctx.fillStyle = '#e2e8f0'; // Blade
+        ctx.fillRect(wx - 1, wy - 8, 3, 10);
+        ctx.fillStyle = '#ffffff'; // Blade edge shine
+        ctx.fillRect(wx, wy - 8, 1, 10);
+      }
 
       // Blazing golden weapon aura & slash trail when casting Knight skill
       if (isCasting && activeRole === 'KNIGHT') {
         const isRage = this.castingSkill?.id === 'berserk_overdrive';
         ctx.fillStyle = isRage ? 'rgba(239, 68, 68, 0.55)' : 'rgba(250, 204, 21, 0.55)';
-        ctx.fillRect(wx - 3, wy - 11, 7, 14);
+        ctx.fillRect(wx - 3, wy - 12, 7, 15);
         ctx.strokeStyle = isRage ? '#dc2626' : '#facc15';
         ctx.lineWidth = 2.5;
         ctx.beginPath();
@@ -1274,14 +1351,66 @@ export class Player {
         ctx.stroke();
       }
     } else if (this.role === 'MAGICIAN') {
-      // Wizard Staff with glowing Elemental Orb!
       const pInfo = ELEMENT_INFO[this.magicianAffinities.primary];
       const elemColor = (this.castingSkill && this.castingSkill.color) ? this.castingSkill.color : pInfo.color;
-      ctx.fillStyle = '#78350f'; // Wood staff pole
-      ctx.fillRect(wx, wy - 6, 2, 14);
-      // Staff Top Ring
-      ctx.fillStyle = '#facc15';
-      ctx.fillRect(wx - 2, wy - 9, 6, 3);
+
+      if (eqId === 'MAGICIAN_CUSTOM') {
+        // --- TONGKAT KOSMIK ABYSS (EPIK DUNGEON) ---
+        // Cosmic black rod
+        ctx.fillStyle = '#1e1b4b';
+        ctx.fillRect(wx, wy - 7, 2, 15);
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(wx - 2, wy - 9, 6, 2);
+
+        // Swirling galaxy void orb
+        ctx.fillStyle = '#581c87';
+        ctx.beginPath();
+        ctx.arc(wx + 1, wy - 12, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#c084fc';
+        ctx.beginPath();
+        ctx.arc(wx + 1, wy - 12, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(wx, wy - 13, 2, 2);
+
+        // Orbiting cosmic dust
+        const orbitAngle = this.animTimer * 4;
+        const ox = wx + 1 + Math.cos(orbitAngle) * 7;
+        const oy = wy - 12 + Math.sin(orbitAngle) * 5;
+        ctx.fillStyle = '#f0abfc';
+        ctx.fillRect(ox - 1, oy - 1, 2, 2);
+      } else if (eqId === 'MAGICIAN_RARE') {
+        // --- TONGKAT SAFIR BINTANG (RARE GOLD) ---
+        ctx.fillStyle = '#94a3b8'; // Silver Staff Pole
+        ctx.fillRect(wx, wy - 6, 2, 14);
+        ctx.fillStyle = '#e0f2fe';
+        ctx.fillRect(wx - 2, wy - 9, 6, 3);
+
+        // Star Sapphire Orb
+        ctx.fillStyle = '#0284c7';
+        ctx.beginPath();
+        ctx.arc(wx + 1, wy - 11, 4.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(wx + 1, wy - 11, 2.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(wx, wy - 12, 2, 2);
+      } else {
+        // --- TONGKAT KAYU STANDAR ---
+        ctx.fillStyle = '#78350f'; // Wood staff pole
+        ctx.fillRect(wx, wy - 6, 2, 14);
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(wx - 2, wy - 9, 6, 3);
+        ctx.fillStyle = elemColor;
+        ctx.beginPath();
+        ctx.arc(wx + 1, wy - 11, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(wx, wy - 12, 2, 2);
+      }
 
       if (isCasting && activeRole === 'MAGICIAN') {
         // Supercharged Elemental Orb Flare
@@ -1291,45 +1420,57 @@ export class Player {
         ctx.arc(wx + 1, wy - 11, pulse, 0, Math.PI * 2);
         ctx.fill();
 
-        // White core sparkle
         ctx.fillStyle = '#ffffff';
         ctx.beginPath();
         ctx.arc(wx + 1, wy - 11, 2.5, 0, Math.PI * 2);
         ctx.fill();
 
-        // Radiant beams of magical energy
         ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
         ctx.lineWidth = 1.2;
         ctx.beginPath();
         ctx.moveTo(wx + 1 - 7, wy - 11); ctx.lineTo(wx + 1 + 7, wy - 11);
         ctx.moveTo(wx + 1, wy - 11 - 7); ctx.lineTo(wx + 1, wy - 11 + 7);
         ctx.stroke();
-      } else {
-        // Normal floating glowing elemental crystal
-        ctx.fillStyle = pInfo.color;
-        ctx.beginPath();
-        ctx.arc(wx + 1, wy - 11, 4, 0, Math.PI * 2);
-        ctx.fill();
-        // Orb core sparkle
-        ctx.fillStyle = '#ffffff';
-        ctx.fillRect(wx, wy - 12, 2, 2);
       }
     } else if (this.role === 'ASSASSIN') {
-      // Twin Toxic Shadow Daggers
-      ctx.fillStyle = '#22c55e'; // Poison edge
-      ctx.fillRect(wx, wy - 4, 2, 7);
-      ctx.fillStyle = '#0f172a'; // Dark hilt
-      ctx.fillRect(wx - 1, wy + 3, 4, 2);
+      if (eqId === 'ASSASSIN_CUSTOM') {
+        // --- CAKAR IBLIS GUA (EPIK DUNGEON) ---
+        ctx.fillStyle = '#450a0a';
+        ctx.fillRect(wx, wy + 3, 4, 2);
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(wx - 1, wy - 5, 4, 8);
+        ctx.fillStyle = '#fca5a5';
+        ctx.fillRect(wx - 2, wy - 3, 2, 2);
+        ctx.fillRect(wx + 2, wy - 1, 2, 2);
+
+        // Shadow smoke wisp
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.55)';
+        ctx.fillRect(wx - 2, wy - 7, 5, 3);
+      } else if (eqId === 'ASSASSIN_RARE') {
+        // --- BELATI BAYANGAN KELELAWAR (RARE GOLD) ---
+        ctx.fillStyle = '#090d16'; // Jet black hilt
+        ctx.fillRect(wx - 1, wy + 3, 4, 2);
+        ctx.fillStyle = '#06b6d4'; // Cyan razor blade
+        ctx.fillRect(wx, wy - 5, 2, 8);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(wx, wy - 4, 1, 7);
+      } else {
+        // --- BELATI KEMBAR STANDAR ---
+        ctx.fillStyle = '#22c55e'; // Poison edge
+        ctx.fillRect(wx, wy - 4, 2, 7);
+        ctx.fillStyle = '#0f172a'; // Dark hilt
+        ctx.fillRect(wx - 1, wy + 3, 4, 2);
+      }
 
       if (isCasting && activeRole === 'ASSASSIN') {
         // Dual Wield: Left Hand Dagger
-        ctx.fillStyle = '#22c55e';
+        ctx.fillStyle = eqId === 'ASSASSIN_CUSTOM' ? '#dc2626' : (eqId === 'ASSASSIN_RARE' ? '#06b6d4' : '#22c55e');
         ctx.fillRect(px + 2, wy - 4, 2, 7);
         ctx.fillStyle = '#0f172a';
         ctx.fillRect(px + 1, wy + 3, 4, 2);
 
         // Crossed dual scissor slash trails
-        ctx.strokeStyle = '#06b6d4';
+        ctx.strokeStyle = eqId === 'ASSASSIN_CUSTOM' ? '#ef4444' : '#06b6d4';
         ctx.lineWidth = 2;
         ctx.beginPath();
         ctx.moveTo(px - 1, wy + 6);
@@ -1339,32 +1480,87 @@ export class Player {
         ctx.stroke();
       }
     } else if (this.role === 'HEALER') {
-      // Holy Cross Scepter
-      ctx.fillStyle = '#fde047'; // Golden scepter
-      ctx.fillRect(wx, wy - 8, 2, 16);
-      ctx.fillRect(wx - 3, wy - 6, 8, 2);
-      // Holy jewel
-      ctx.fillStyle = '#38bdf8';
-      ctx.fillRect(wx, wy - 10, 2, 2);
+      if (eqId === 'HEALER_CUSTOM') {
+        // --- RELIK SERAPHIM KUNO (EPIK DUNGEON) ---
+        ctx.fillStyle = '#ca8a04'; // Gold scepter
+        ctx.fillRect(wx, wy - 8, 2, 16);
+        // Seraphim Angelic Wings
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(wx - 4, wy - 7, 3, 4);
+        ctx.fillRect(wx + 3, wy - 7, 3, 4);
+        // Holy pulsating halo
+        const haloPulse = Math.sin(this.animTimer * 4) * 1;
+        ctx.strokeStyle = '#facc15';
+        ctx.lineWidth = 1.5;
+        ctx.beginPath();
+        ctx.arc(wx + 1, wy - 11, 4.5 + haloPulse, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(wx, wy - 12, 2, 2);
+      } else if (eqId === 'HEALER_RARE') {
+        // --- TONGKAT CAHAYA FAJAR (RARE GOLD) ---
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(wx, wy - 8, 2, 16);
+        ctx.fillRect(wx - 3, wy - 6, 8, 2);
+        // Sun Jewel
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(wx + 1, wy - 10, 3, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(wx, wy - 11, 2, 2);
+      } else {
+        // --- TONGKAT SALIB STANDAR ---
+        ctx.fillStyle = '#fde047'; // Golden scepter
+        ctx.fillRect(wx, wy - 8, 2, 16);
+        ctx.fillRect(wx - 3, wy - 6, 8, 2);
+        ctx.fillStyle = '#38bdf8';
+        ctx.fillRect(wx, wy - 10, 2, 2);
+      }
 
       if (isCasting && activeRole === 'HEALER') {
-        // Radiant Holy Light Beaming Skyward
         ctx.fillStyle = 'rgba(254, 240, 138, 0.4)';
         ctx.fillRect(wx - 3, wy - 28, 8, 20);
         ctx.fillStyle = '#ffffff';
         ctx.fillRect(wx - 1, wy - 20, 4, 10);
       }
     } else if (this.role === 'NECROMANCER') {
-      // Dark Bone Scythe / Wand
-      ctx.fillStyle = '#334155';
-      ctx.fillRect(wx, wy - 8, 2, 15);
-      ctx.fillStyle = '#a855f7'; // Purple Soul Gem
-      ctx.fillRect(wx - 1, wy - 10, 4, 3);
-      ctx.fillStyle = '#e2e8f0'; // Bone curve
-      ctx.fillRect(wx - 4, wy - 10, 3, 2);
+      if (eqId === 'NECROMANCER_CUSTOM') {
+        // --- SABIT JIWA KEGELAPAN ABADI (EPIK DUNGEON) ---
+        // Dragon bone curved shaft
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(wx, wy - 9, 2, 16);
+        // Giant obsidian dragon scythe blade
+        ctx.fillStyle = '#0f172a';
+        ctx.fillRect(wx - 5, wy - 11, 6, 3);
+        ctx.fillRect(wx - 6, wy - 8, 3, 5);
+        // Violet Void Flame aura along blade
+        ctx.fillStyle = '#a855f7';
+        ctx.fillRect(wx - 4, wy - 12, 5, 2);
+        ctx.fillRect(wx - 7, wy - 9, 2, 5);
+        // Soul eye
+        ctx.fillStyle = '#f3e8ff';
+        ctx.fillRect(wx - 1, wy - 10, 2, 2);
+      } else if (eqId === 'NECROMANCER_RARE') {
+        // --- SABIT ROH PENJARAH (RARE GOLD) ---
+        ctx.fillStyle = '#1e1b4b';
+        ctx.fillRect(wx, wy - 8, 2, 15);
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillRect(wx - 4, wy - 10, 5, 3);
+        ctx.fillRect(wx - 5, wy - 7, 2, 4);
+        ctx.fillStyle = '#ef4444'; // Red Soul Eye
+        ctx.fillRect(wx - 1, wy - 10, 3, 3);
+      } else {
+        // --- SABIT TULANG STANDAR ---
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(wx, wy - 8, 2, 15);
+        ctx.fillStyle = '#a855f7'; // Purple Soul Gem
+        ctx.fillRect(wx - 1, wy - 10, 4, 3);
+        ctx.fillStyle = '#e2e8f0'; // Bone curve
+        ctx.fillRect(wx - 4, wy - 10, 3, 2);
+      }
 
       if (isCasting && activeRole === 'NECROMANCER') {
-        // Swirling dark soul miasma
         ctx.fillStyle = 'rgba(168, 85, 247, 0.5)';
         ctx.beginPath();
         ctx.arc(wx - 2, wy - 9, 6.5, 0, Math.PI * 2);

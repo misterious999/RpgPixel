@@ -4,6 +4,9 @@ export interface ControlConfig {
   buttonScale: number;  // 0.85, 1.0, 1.2
   opacity: number;      // 0.4 to 1.0
   cameraZoom: number;   // 1.0 (Luas/Jauh), 1.25 (Sedang), 1.5 (Dekat)
+  soundEnabled: boolean; // Efek Suara (SFX)
+  musicEnabled: boolean; // Musik Latar (BGM)
+  soundVolume: number;   // 0.0 - 1.0
 }
 
 const STORAGE_KEY = 'rpg_control_config_landscape_v3';
@@ -13,7 +16,10 @@ export const DEFAULT_CONTROL_CONFIG: ControlConfig = {
   sideMargin: 58,     // Perfect thumb reach from bezel
   buttonScale: 1.0,
   opacity: 0.85,
-  cameraZoom: 1.0     // 1.0x Luas & Lapang (Jarak kamera retro RPG nyaman!)
+  cameraZoom: 1.0,    // 1.0x Luas & Lapang (Jarak kamera retro RPG nyaman!)
+  soundEnabled: true,
+  musicEnabled: true,
+  soundVolume: 0.8
 };
 
 export class ControlSettingsManager {

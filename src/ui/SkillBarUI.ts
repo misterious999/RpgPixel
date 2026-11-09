@@ -1,6 +1,7 @@
 import { Player } from '../entities/Player.ts';
 import { FloatingTextManager } from './FloatingText.ts';
 import { ControlSettingsManager, ControlConfig } from '../core/ControlSettings.ts';
+import { AudioEngine } from '../audio/AudioEngine.ts';
 
 export interface VisualEffect {
   x: number;
@@ -98,6 +99,16 @@ export class SkillBarUI {
 
     // Animasi karakter mengeluarkan skill dinamis untuk setiap role
     this.player.playSkillCastAnimation(skill);
+
+    // Audio SFX Synthesizer
+    if (skill.id.includes('fire')) AudioEngine.playSpell('fire');
+    else if (skill.id.includes('ice')) AudioEngine.playSpell('ice');
+    else if (skill.id.includes('lightning') || skill.id.includes('thunder')) AudioEngine.playSpell('lightning');
+    else if (skill.id.includes('wind')) AudioEngine.playSpell('wind');
+    else if (skill.id.includes('earth')) AudioEngine.playSpell('earth');
+    else if (skill.id.includes('heal') || skill.id.includes('bless') || skill.id.includes('holy')) AudioEngine.playSpell('heal');
+    else if (skill.id.includes('shield') || skill.id.includes('barrier')) AudioEngine.playSpell('barrier');
+    else AudioEngine.playSpell('slash');
 
     // 1. Magician Elemental Skills
     if (skill.role === 'MAGICIAN') {

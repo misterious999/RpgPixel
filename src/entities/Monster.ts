@@ -1,6 +1,6 @@
 import { CONSTANTS } from '../core/Constants.ts';
 
-export type MonsterType = 'SLIME' | 'BAT' | 'SKELETON' | 'BOSS_SLIME';
+export type MonsterType = 'SLIME' | 'BAT' | 'SKELETON' | 'BOSS_SLIME' | 'FOREST_SLIME' | 'WILD_WOLF' | 'GOBLIN';
 
 export interface MonsterDrop {
   itemId: string;
@@ -99,6 +99,42 @@ export class Monster {
         this.goldReward = 180;
         this.speed = 32;
         this.aggroRange = 140;
+        break;
+      case 'FOREST_SLIME':
+        this.name = 'Slime Hutan';
+        this.width = 20;
+        this.height = 18;
+        this.maxHp = 35;
+        this.level = 1;
+        this.attackPower = 5;
+        this.expReward = 20;
+        this.goldReward = 12;
+        this.speed = 32;
+        this.aggroRange = 90;
+        break;
+      case 'WILD_WOLF':
+        this.name = 'Serigala Liar';
+        this.width = 24;
+        this.height = 20;
+        this.maxHp = 60;
+        this.level = 3;
+        this.attackPower = 11;
+        this.expReward = 38;
+        this.goldReward = 22;
+        this.speed = 52;
+        this.aggroRange = 125;
+        break;
+      case 'GOBLIN':
+        this.name = 'Pengintai Goblin';
+        this.width = 20;
+        this.height = 24;
+        this.maxHp = 75;
+        this.level = 4;
+        this.attackPower = 13;
+        this.expReward = 48;
+        this.goldReward = 30;
+        this.speed = 40;
+        this.aggroRange = 110;
         break;
     }
 
@@ -269,6 +305,15 @@ export class Monster {
       case 'BOSS_SLIME':
         this.renderBossSlime(ctx, x, y, isFlashing);
         break;
+      case 'FOREST_SLIME':
+        this.renderForestSlime(ctx, x, y, isFlashing);
+        break;
+      case 'WILD_WOLF':
+        this.renderWildWolf(ctx, x, y, isFlashing);
+        break;
+      case 'GOBLIN':
+        this.renderGoblin(ctx, x, y, isFlashing);
+        break;
     }
 
     // Health Bar & Name Tag
@@ -412,6 +457,133 @@ export class Monster {
       // Red Ruby
       ctx.fillStyle = '#ef4444';
       ctx.fillRect(crownX + 7, crownY + 4, 2, 2);
+    }
+  }
+
+  private renderForestSlime(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const squish = Math.sin(this.animTimer * 6) * 2;
+    const bodyW = this.width + squish;
+    const bodyH = this.height - squish;
+    const bx = x - squish / 2;
+    const by = y + squish;
+
+    // Forest Slime: Bright lime green body
+    ctx.fillStyle = flash ? '#ffffff' : '#16a34a';
+    ctx.beginPath();
+    ctx.ellipse(bx + bodyW / 2, by + bodyH / 2, bodyW / 2, bodyH / 2, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (!flash) {
+      // Inner lighter jelly core
+      ctx.fillStyle = '#4ade80';
+      ctx.beginPath();
+      ctx.ellipse(bx + bodyW / 2, by + bodyH / 2 - 1, (bodyW / 2) * 0.7, (bodyH / 2) * 0.7, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Slime Eyes
+      const eyeDir = this.direction === 'left' ? -2 : 2;
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(bx + bodyW / 2 - 4 + eyeDir, by + 4, 3, 4);
+      ctx.fillRect(bx + bodyW / 2 + 2 + eyeDir, by + 4, 3, 4);
+      ctx.fillStyle = '#15803d';
+      ctx.fillRect(bx + bodyW / 2 - 3 + eyeDir, by + 5, 2, 2);
+      ctx.fillRect(bx + bodyW / 2 + 3 + eyeDir, by + 5, 2, 2);
+
+      // Cute Little Yellow Flower Sprout on Head
+      ctx.fillStyle = '#15803d';
+      ctx.fillRect(bx + bodyW / 2 - 1, by - 3, 2, 4);
+      ctx.fillStyle = '#facc15';
+      ctx.beginPath();
+      ctx.arc(bx + bodyW / 2, by - 4, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+
+  private renderWildWolf(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const runOffset = Math.sin(this.animTimer * 10) * 1.5;
+    const isLeft = this.direction === 'left';
+
+    // Body
+    ctx.fillStyle = flash ? '#ffffff' : '#64748b';
+    ctx.beginPath();
+    ctx.roundRect(x + 2, y + 6 + runOffset, 20, 10, 4);
+    ctx.fill();
+
+    if (!flash) {
+      // Underbelly
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(x + 6, y + 11 + runOffset, 12, 4);
+
+      // Head
+      const hx = isLeft ? x : x + 14;
+      ctx.fillStyle = '#475569';
+      ctx.beginPath();
+      ctx.roundRect(hx, y + 3 + runOffset, 10, 8, 3);
+      ctx.fill();
+
+      // Pointy Ears
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(hx + 2, y + 1 + runOffset, 2, 3);
+      ctx.fillRect(hx + 6, y + 1 + runOffset, 2, 3);
+
+      // Fierce Amber Eyes
+      ctx.fillStyle = '#f59e0b';
+      const eyeX = isLeft ? hx + 2 : hx + 6;
+      ctx.fillRect(eyeX, y + 5 + runOffset, 2, 2);
+
+      // Bushy Wagging Tail
+      const tailWag = Math.sin(this.animTimer * 12) * 2;
+      const tx = isLeft ? x + 20 : x;
+      ctx.fillStyle = '#64748b';
+      ctx.fillRect(tx, y + 6 + runOffset + tailWag, 4, 4);
+
+      // Paws
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(x + 4, y + 15, 3, 5);
+      ctx.fillRect(x + 16, y + 15, 3, 5);
+    }
+  }
+
+  private renderGoblin(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const bob = Math.sin(this.animTimer * 8) * 1.5;
+    const isLeft = this.direction === 'left';
+
+    // Body (Brown ragged vest)
+    ctx.fillStyle = flash ? '#ffffff' : '#78350f';
+    ctx.fillRect(x + 5, y + 10 + bob, 10, 8);
+
+    // Green Head
+    ctx.fillStyle = flash ? '#ffffff' : '#15803d';
+    ctx.beginPath();
+    ctx.roundRect(x + 4, y + 3 + bob, 12, 8, 3);
+    ctx.fill();
+
+    if (!flash) {
+      // Pointed Goblin Ears
+      ctx.fillStyle = '#16a34a';
+      ctx.fillRect(x + 1, y + 4 + bob, 3, 2);
+      ctx.fillRect(x + 16, y + 4 + bob, 3, 2);
+
+      // Red Bandana
+      ctx.fillStyle = '#dc2626';
+      ctx.fillRect(x + 4, y + 2 + bob, 12, 2);
+
+      // Yellow Eyes
+      ctx.fillStyle = '#facc15';
+      const ex = isLeft ? x + 6 : x + 10;
+      ctx.fillRect(ex, y + 5 + bob, 2, 2);
+
+      // Wooden Cudgel / Club Weapon
+      const clubX = isLeft ? x - 1 : x + 16;
+      ctx.fillStyle = '#92400e';
+      ctx.fillRect(clubX, y + 6 + bob, 3, 10);
+      ctx.fillStyle = '#b45309';
+      ctx.fillRect(clubX - 1, y + 4 + bob, 5, 4);
+
+      // Legs
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(x + 6, y + 18, 3, 5);
+      ctx.fillRect(x + 11, y + 18, 3, 5);
     }
   }
 

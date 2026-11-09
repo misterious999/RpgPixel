@@ -22,6 +22,11 @@ import { UpdateService } from '../services/UpdateService.ts';
 import { CaveEntrance } from '../world/CaveEntrance.ts';
 import { DungeonMap } from '../world/DungeonMap.ts';
 import { Monster } from '../entities/Monster.ts';
+import { BlacksmithNPC } from '../world/BlacksmithNPC.ts';
+import { AudioEngine } from '../audio/AudioEngine.ts';
+import { QuestManager } from '../world/QuestManager.ts';
+import { MiniMapUI } from '../ui/MiniMapUI.ts';
+import { QuickPotionUI } from '../ui/QuickPotionUI.ts';
 
 export class Game {
   private canvas: HTMLCanvasElement;
@@ -37,6 +42,11 @@ export class Game {
   private onboardingUI: OnboardingUI;
   private controlSettingsModal: ControlSettingsModal;
 
+  // Audio, Quests, Mini-Map & Quick Potion
+  private questManager: QuestManager;
+  private miniMapUI: MiniMapUI;
+  private quickPotionUI: QuickPotionUI;
+
   // Map & Dungeon state
   public currentMap: 'OVERWORLD' | 'DUNGEON' = 'OVERWORLD';
   private caveEntrance: CaveEntrance;
@@ -51,7 +61,9 @@ export class Game {
   // World objects
   private worldItems: WorldItem[] = [];
   private chests: Chest[] = [];
+  private overworldMonsters: Monster[] = [];
   private guildNPC: GuildNPC;
+  private blacksmithNPC: BlacksmithNPC;
 
   private lastTime: number = 0;
   private fps: number = 60;
@@ -103,6 +115,7 @@ export class Game {
         this.onboardingUI.state === 'PLAYING' &&
         !this.inventoryUI.isOpen &&
         !this.guildNPC.isAppraisalOpen &&
+        !this.blacksmithNPC.isWorkshopOpen &&
         !this.controlSettingsModal.isOpen &&
         !NotificationModal.isOpen
       );
@@ -114,10 +127,21 @@ export class Game {
       this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '🚀 Update versi baru terdeteksi!', '#38bdf8', 4.0);
     };
 
+    AudioEngine.init();
+    this.questManager = new QuestManager();
+    this.miniMapUI = new MiniMapUI();
+    this.quickPotionUI = new QuickPotionUI(this.player, this.floatingText);
+
     // Create Guild Receptionist Elaine near spawn
     const guildX = 51 * CONSTANTS.TILE_SIZE;
     const guildY = 48 * CONSTANTS.TILE_SIZE;
     this.guildNPC = new GuildNPC(guildX, guildY);
+    this.guildNPC.questManager = this.questManager;
+
+    // Create Weaponsmith Blacksmith Master Brokk near town plaza (West of spawn)
+    const smithX = 46 * CONSTANTS.TILE_SIZE;
+    const smithY = 49 * CONSTANTS.TILE_SIZE;
+    this.blacksmithNPC = new BlacksmithNPC(smithX, smithY);
 
     // Inisialisasi Pintu Masuk Goa (Dungeon Entrance) di Overworld (Utara Kota)
     this.caveEntrance = new CaveEntrance(49, 32);
@@ -131,12 +155,29 @@ export class Game {
     // Inisialisasi Auth & Onboarding flow
     this.authUI = new AuthUI(this.player, this.chests, this.floatingText);
     this.authUI.getCurrentMap = () => this.currentMap;
+    this.authUI.getQuestSaveData = () => this.questManager.serialize();
+    this.authUI.onQuestDataLoaded = (data) => this.questManager.deserialize(data);
     this.controlSettingsModal.onLogoutRequested = () => {
       this.authUI.performLogout();
     };
     this.onboardingUI = new OnboardingUI();
 
     this.setupOnboardingFlow();
+
+    // Setup Desktop Keyboard Shortcuts (1: HP Potion, 2: MP Potion, M: MiniMap, B: Tas)
+    window.addEventListener('keydown', (e) => {
+      if (this.onboardingUI.state !== 'PLAYING') return;
+      if (e.key === '1') {
+        this.quickPotionUI.useHpPotion();
+      } else if (e.key === '2') {
+        this.quickPotionUI.useMpPotion();
+      } else if (e.key === 'm' || e.key === 'M') {
+        this.miniMapUI.mode = this.miniMapUI.mode === 'NORMAL' ? 'EXPANDED' : (this.miniMapUI.mode === 'EXPANDED' ? 'MINIMIZED' : 'NORMAL');
+        AudioEngine.playButtonClick();
+      } else if (e.key === 'b' || e.key === 'B' || e.key === 'i' || e.key === 'I') {
+        this.inventoryUI.toggle();
+      }
+    });
 
     // Connect touch interceptor for all UI layers
     this.input.setTouchInterceptor((touchX, touchY) => {
@@ -161,6 +202,16 @@ export class Game {
 
       // 0. Control Settings Modal
       if (this.controlSettingsModal.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight)) {
+        return true;
+      }
+
+      // 0.1 Mini-Map Touch
+      if (this.miniMapUI.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight)) {
+        return true;
+      }
+
+      // 0.2 Quick Potion Buttons (HP & MP)
+      if (this.quickPotionUI.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight)) {
         return true;
       }
 
@@ -192,6 +243,10 @@ export class Game {
 
       // 1. Guild Appraisal Modal
       if (this.guildNPC.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight, this.player, this.floatingText)) {
+        return true;
+      }
+      // 2. Blacksmith Weaponsmith Workshop Modal
+      if (this.blacksmithNPC.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight, this.player, this.floatingText)) {
         return true;
       }
       // 2. Auth Profile / Logout buttons
@@ -308,6 +363,9 @@ export class Game {
       openedChests: openedChestsIndices,
       openedDungeonChests: openedDungeonChestsIndices,
       isGuest: this.authUI.isGuest,
+      equippedWeaponId: this.player.equippedWeaponId,
+      unlockedWeaponIds: this.player.unlockedWeaponIds,
+      quests: this.questManager.serialize(),
       timestamp: Date.now()
     };
 
@@ -374,6 +432,17 @@ export class Game {
         if (!hasCard) {
           this.player.inventory.addItem('ADVENTURER_CARD', 1);
         }
+      }
+
+      // Pulihkan Senjata yang Terpasang & Terbuka
+      if (data.equippedWeaponId) {
+        this.player.equippedWeaponId = data.equippedWeaponId;
+      }
+      if (Array.isArray(data.unlockedWeaponIds)) {
+        this.player.unlockedWeaponIds = data.unlockedWeaponIds;
+      }
+      if (Array.isArray(data.quests)) {
+        this.questManager.deserialize(data.quests);
       }
 
       // Pulihkan peti yang sudah terbuka di Overworld
@@ -445,6 +514,28 @@ export class Game {
         new WorldItem(50 * ts + s.dx * ts + 16, 50 * ts + s.dy * ts + 16, s.item, s.count)
       );
     }
+
+    // 3. Overworld Wild Monsters
+    this.overworldMonsters = [
+      // Slime Hutan (Padang Rumput Barat & Utara)
+      new Monster('ow_slime_1', 'FOREST_SLIME', 42 * ts + 6, 42 * ts + 6),
+      new Monster('ow_slime_2', 'FOREST_SLIME', 58 * ts + 6, 44 * ts + 6),
+      new Monster('ow_slime_3', 'FOREST_SLIME', 44 * ts + 6, 60 * ts + 6),
+      new Monster('ow_slime_4', 'FOREST_SLIME', 56 * ts + 6, 58 * ts + 6),
+      new Monster('ow_slime_5', 'FOREST_SLIME', 38 * ts + 6, 52 * ts + 6),
+
+      // Serigala Liar (Hutan Belantara Timur & Selatan)
+      new Monster('ow_wolf_1', 'WILD_WOLF', 66 * ts + 6, 45 * ts + 6),
+      new Monster('ow_wolf_2', 'WILD_WOLF', 68 * ts + 6, 55 * ts + 6),
+      new Monster('ow_wolf_3', 'WILD_WOLF', 34 * ts + 6, 65 * ts + 6),
+      new Monster('ow_wolf_4', 'WILD_WOLF', 52 * ts + 6, 70 * ts + 6),
+
+      // Pengintai Goblin (Lereng Tebing & Danau)
+      new Monster('ow_gob_1', 'GOBLIN', 32 * ts + 6, 36 * ts + 6),
+      new Monster('ow_gob_2', 'GOBLIN', 72 * ts + 6, 38 * ts + 6),
+      new Monster('ow_gob_3', 'GOBLIN', 62 * ts + 6, 68 * ts + 6),
+      new Monster('ow_gob_4', 'GOBLIN', 35 * ts + 6, 45 * ts + 6)
+    ];
   }
 
   private hitMonstersInSwing: Set<string> = new Set();
@@ -458,20 +549,23 @@ export class Game {
       new Chest(6 * ts + 5, 15 * ts + 6, [
         { itemId: 'GOLD_COIN', count: 160 },
         { itemId: 'HEALTH_POTION', count: 2 },
-        { itemId: 'ANCIENT_BONE', count: 3 }
+        { itemId: 'ANCIENT_BONE', count: 3 },
+        { itemId: 'DARK_IRON_ORE', count: 5 }
       ]),
       // Peti 2: Gua Kristal Mineral (East Cavern)
       new Chest(34 * ts + 5, 15 * ts + 6, [
         { itemId: 'GOLD_COIN', count: 180 },
         { itemId: 'MANA_POTION', count: 3 },
-        { itemId: 'DUNGEON_GEM', count: 1 }
+        { itemId: 'DUNGEON_GEM', count: 1 },
+        { itemId: 'DARK_IRON_ORE', count: 6 }
       ]),
       // Peti 3: Harta Karun Legendaris di Belakang Altar Bos (North Chamber)
       new Chest(20 * ts + 5, 3 * ts + 6, [
         { itemId: 'GOLD_COIN', count: 350 },
         { itemId: 'DUNGEON_GEM', count: 3 },
         { itemId: 'HEALTH_POTION', count: 4 },
-        { itemId: 'MANA_POTION', count: 4 }
+        { itemId: 'MANA_POTION', count: 4 },
+        { itemId: 'DARK_IRON_ORE', count: 10 }
       ])
     ];
 
@@ -499,6 +593,9 @@ export class Game {
     this.player.y = this.dungeonMap.entranceSpawnY;
     this.player.direction = 'up';
 
+    AudioEngine.playMapTransition(true);
+    AudioEngine.playBgm('DUNGEON');
+
     // Perbarui batas kamera untuk map Dungeon (40x40 tile)
     this.camera.setWorldBounds(this.dungeonMap.width * CONSTANTS.TILE_SIZE, this.dungeonMap.height * CONSTANTS.TILE_SIZE);
     this.camera.update(this.player.x, this.player.y);
@@ -515,6 +612,9 @@ export class Game {
     this.player.y = 35 * CONSTANTS.TILE_SIZE + 3;
     this.player.direction = 'down';
 
+    AudioEngine.playMapTransition(false);
+    AudioEngine.playBgm('OVERWORLD');
+
     // Perbarui batas kamera untuk Dunia Luar (100x100 tile)
     this.camera.setWorldBounds(CONSTANTS.MAP_WIDTH * CONSTANTS.TILE_SIZE, CONSTANTS.MAP_HEIGHT * CONSTANTS.TILE_SIZE);
     this.camera.update(this.player.x, this.player.y);
@@ -522,6 +622,72 @@ export class Game {
     this.triggerMapTransition('🌤️ LEMBAH SERIKAT', 'Dunia Luar (Overworld)');
     this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🌤️ Kembali ke Permukaan', '#facc15', 3.0);
     this.saveSessionSnapshot();
+  }
+
+  private handleMonsterDefeated(monster: Monster): void {
+    const leveledUp = this.player.addExp(monster.expReward);
+    this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 20, `+${monster.expReward} EXP!`, '#facc15', 2.0);
+
+    // Audio Monster Defeated
+    AudioEngine.playMonsterDefeated(monster.type === 'BOSS_SLIME');
+
+    // Update Progres Misi Petualang (Quest Manager)
+    this.questManager.onMonsterDefeated(monster.type, this.floatingText, this.player.x, this.player.y);
+
+    const targetItems = this.currentMap === 'OVERWORLD' ? this.worldItems : this.dungeonWorldItems;
+
+    // Drop Koin Emas
+    targetItems.push(new WorldItem(monster.x + 4, monster.y + 4, 'GOLD_COIN', monster.goldReward));
+
+    // --- OVERWORLD MONSTER DROPS ---
+    if (monster.type === 'FOREST_SLIME') {
+      if (Math.random() < 0.65) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'SLIME_JELLY', 1));
+      if (Math.random() < 0.40) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'MAGIC_FLOWER', 1));
+    } else if (monster.type === 'WILD_WOLF') {
+      if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'HEALTH_POTION', 1));
+      if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'MANA_POTION', 1));
+    } else if (monster.type === 'GOBLIN') {
+      if (Math.random() < 0.60) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'WOOD_LOG', 2));
+      if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 1));
+    }
+    // --- DUNGEON MONSTER DROPS ---
+    else if (monster.type === 'SLIME') {
+      if (Math.random() < 0.65) {
+        targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'SLIME_JELLY', 1));
+      }
+      if (Math.random() < 0.45) {
+        targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 1));
+      }
+    } else if (monster.type === 'BAT') {
+      if (Math.random() < 0.5) {
+        targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 2));
+      }
+      if (Math.random() < 0.45) {
+        targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 1));
+      }
+    } else if (monster.type === 'SKELETON') {
+      if (Math.random() < 0.75) {
+        targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'ANCIENT_BONE', 1));
+      }
+      if (Math.random() < 0.65) {
+        targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 2));
+      }
+      if (Math.random() < 0.35) {
+        targetItems.push(new WorldItem(monster.x + 6, monster.y + 12, 'MANA_POTION', 1));
+      }
+    } else if (monster.type === 'BOSS_SLIME') {
+      targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 3));
+      targetItems.push(new WorldItem(monster.x + 24, monster.y + 12, 'DARK_IRON_ORE', 6));
+      targetItems.push(new WorldItem(monster.x + 12, monster.y + 16, 'SLIME_JELLY', 4));
+      targetItems.push(new WorldItem(monster.x + 28, monster.y + 14, 'HEALTH_POTION', 3));
+      targetItems.push(new WorldItem(monster.x + 6, monster.y + 14, 'MANA_POTION', 3));
+      this.floatingText.spawn(monster.x + 16, monster.y - 32, '🏆 RAJA SLIME DIKALAHKAN!!', '#facc15', 3.5);
+    }
+
+    if (leveledUp) {
+      AudioEngine.playLevelUp();
+      this.floatingText.spawn(this.player.x + 10, this.player.y - 30, `🎉 LEVEL UP! Sekarang Lv. ${this.player.level}`, '#fde047', 3.0);
+    }
   }
 
   public triggerMapTransition(title: string, subtitle: string): void {
@@ -610,6 +776,7 @@ export class Game {
       this.dungeonMap.update(deltaTime);
     }
     this.skillBarUI.update(deltaTime);
+    this.miniMapUI.update(deltaTime);
 
     // 3. Update Player & Collisions
     const playerCenterX = this.player.x + this.player.width / 2;
@@ -630,6 +797,12 @@ export class Game {
         if (box.x < gx + 40 && box.x + box.width > gx && box.y < gy + 16 && box.y + box.height > gy) {
           return true;
         }
+        // Blacksmith Forge & Anvil
+        const bx = this.blacksmithNPC.x - 18;
+        const by = this.blacksmithNPC.y + 8;
+        if (box.x < bx + 58 && box.x + box.width > bx && box.y < by + 20 && box.y + box.height > by) {
+          return true;
+        }
         // Cave Entrance sides (rock walls)
         const cex = this.caveEntrance.x;
         const cey = this.caveEntrance.y;
@@ -647,13 +820,16 @@ export class Game {
       return false;
     };
 
-    // Freeze player if inventory, guild dialog, control settings, or notification modal is open
-    const activeInput = (this.inventoryUI.isOpen || this.guildNPC.isAppraisalOpen || this.controlSettingsModal.isOpen || NotificationModal.isOpen)
+    // Freeze player if inventory, guild dialog, blacksmith workshop, control settings, or notification modal is open
+    const activeInput = (this.inventoryUI.isOpen || this.guildNPC.isAppraisalOpen || this.blacksmithNPC.isWorkshopOpen || this.controlSettingsModal.isOpen || NotificationModal.isOpen)
       ? { axisX: 0, axisY: 0, isAction: false, isSprint: false }
       : this.input.state;
 
     const activeMap = this.currentMap === 'OVERWORLD' ? this.tileMap : this.dungeonMap;
     this.player.update(deltaTime, activeInput, activeMap, obstacleChecker);
+
+    // Update Blacksmith animations
+    this.blacksmithNPC.update(deltaTime);
 
     // --- OVERWORLD SPECIFIC UPDATES ---
     if (this.currentMap === 'OVERWORLD') {
@@ -661,6 +837,13 @@ export class Game {
       if (!this.guildNPC.isAppraisalOpen && this.guildNPC.isNearPlayer(playerCenterX, playerCenterY)) {
         if (this.input.state.isAction) {
           this.guildNPC.openAppraisal();
+        }
+      }
+
+      // Blacksmith Workshop Interaction
+      if (!this.blacksmithNPC.isWorkshopOpen && this.blacksmithNPC.isNearPlayer(playerCenterX, playerCenterY)) {
+        if (this.input.state.isAction) {
+          this.blacksmithNPC.openWorkshop(this.player.role);
         }
       }
 
@@ -677,6 +860,7 @@ export class Game {
         chest.update(deltaTime);
         if (!chest.isOpen && chest.isNearPlayer(playerCenterX, playerCenterY)) {
           if (this.input.state.isAction) {
+            AudioEngine.playChestOpen();
             const rewards = chest.open();
             for (const reward of rewards) {
               this.player.inventory.addItem(reward.itemId, reward.count);
@@ -686,6 +870,7 @@ export class Game {
             }
             const leveledUp = this.player.addExp(25);
             if (leveledUp) {
+              AudioEngine.playLevelUp();
               this.floatingText.spawn(this.player.x + 10, this.player.y - 30, `🎉 LEVEL UP! Sekarang Lv. ${this.player.level}`, '#fde047', 3.0);
             }
             this.authUI.saveCurrentGame();
@@ -700,10 +885,80 @@ export class Game {
         if (pickedUp) {
           const added = this.player.inventory.addItem(item.itemId, item.count);
           if (added > 0) {
+            AudioEngine.playItemPickup(item.itemId === 'GOLD_COIN');
             const def = ITEM_DEFINITIONS[item.itemId];
             const name = def ? def.name : item.itemId;
             this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `+${added} ${name}`, '#38bdf8');
             this.worldItems.splice(i, 1);
+          }
+        }
+      }
+
+      // 8. Overworld Monsters Update (AI, Movement & Player Attack)
+      for (const monster of this.overworldMonsters) {
+        monster.update(
+          deltaTime,
+          playerCenterX,
+          playerCenterY,
+          (tx, ty) => this.tileMap.isTileSolid(tx, ty),
+          (atk) => {
+            const died = this.player.takeDamage(atk);
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `-${atk} HP`, '#ef4444');
+            AudioEngine.playPlayerHurt();
+            if (died) {
+              AudioEngine.playPlayerDeath();
+              this.player.x = 50 * CONSTANTS.TILE_SIZE + 6;
+              this.player.y = 50 * CONSTANTS.TILE_SIZE + 3;
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur dan sadar kembali di Kota!', '#ef4444', 3.5);
+            }
+          }
+        );
+      }
+
+      // 9. Player Melee Attack vs Overworld Monsters
+      const owAttackHitbox = this.player.getAttackHitbox();
+      if (owAttackHitbox) {
+        for (const monster of this.overworldMonsters) {
+          if (monster.isDead) continue;
+          if (this.hitMonstersInSwing.has(monster.id)) continue;
+
+          if (
+            owAttackHitbox.x < monster.x + monster.width &&
+            owAttackHitbox.x + owAttackHitbox.width > monster.x &&
+            owAttackHitbox.y < monster.y + monster.height &&
+            owAttackHitbox.y + owAttackHitbox.height > monster.y
+          ) {
+            this.hitMonstersInSwing.add(monster.id);
+            const { damage, isCrit } = this.player.getAttackDamage();
+            const res = monster.takeDamage(damage, playerCenterX, playerCenterY);
+            AudioEngine.playHit(isCrit);
+            const hitText = isCrit ? `💥 CRIT -${res.damage}!` : `-${res.damage}`;
+            this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 10, hitText, isCrit ? '#facc15' : '#ffffff');
+
+            if (res.isDead) {
+              this.handleMonsterDefeated(monster);
+            }
+          }
+        }
+      }
+
+      // 10. Player Skill Effects vs Overworld Monsters
+      for (const effect of this.skillBarUI.visualEffects) {
+        if (['slash', 'fire', 'ice', 'lightning', 'wind', 'earth', 'abnormal'].includes(effect.type)) {
+          for (const monster of this.overworldMonsters) {
+            if (monster.isDead) continue;
+            const dist = Math.hypot(effect.x - (monster.x + monster.width / 2), effect.y - (monster.y + monster.height / 2));
+            if (dist < effect.radius + monster.width / 2) {
+              if (monster.hurtTimer <= 0) {
+                const spellDmg = effect.type === 'abnormal' ? 65 + this.player.level * 6 : 28 + this.player.level * 3.5;
+                const res = monster.takeDamage(spellDmg, effect.x, effect.y);
+                AudioEngine.playHit(false);
+                this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 8, `✨ -${res.damage}`, effect.color);
+                if (res.isDead) {
+                  this.handleMonsterDefeated(monster);
+                }
+              }
+            }
           }
         }
       }
@@ -722,6 +977,7 @@ export class Game {
         chest.update(deltaTime);
         if (!chest.isOpen && chest.isNearPlayer(playerCenterX, playerCenterY)) {
           if (this.input.state.isAction) {
+            AudioEngine.playChestOpen();
             const rewards = chest.open();
             for (const reward of rewards) {
               this.player.inventory.addItem(reward.itemId, reward.count);
@@ -731,6 +987,7 @@ export class Game {
             }
             const leveledUp = this.player.addExp(50);
             if (leveledUp) {
+              AudioEngine.playLevelUp();
               this.floatingText.spawn(this.player.x + 10, this.player.y - 30, `🎉 LEVEL UP! Sekarang Lv. ${this.player.level}`, '#fde047', 3.0);
             }
             this.authUI.saveCurrentGame();
@@ -745,6 +1002,7 @@ export class Game {
         if (pickedUp) {
           const added = this.player.inventory.addItem(item.itemId, item.count);
           if (added > 0) {
+            AudioEngine.playItemPickup(item.itemId === 'GOLD_COIN');
             const def = ITEM_DEFINITIONS[item.itemId];
             const name = def ? def.name : item.itemId;
             this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `+${added} ${name}`, '#38bdf8');
@@ -761,10 +1019,13 @@ export class Game {
           playerCenterY,
           (tx, ty) => this.dungeonMap.isTileSolid(tx, ty),
           (atk) => {
-            this.player.takeDamage(atk);
+            const died = this.player.takeDamage(atk);
             this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `-${atk} HP`, '#ef4444');
-            if (this.player.hp <= 0) {
+            AudioEngine.playPlayerHurt();
+            if (died) {
+              AudioEngine.playPlayerDeath();
               this.exitDungeon(); // Safe respawn to town plaza
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur di Dungeon dan dipulangkan ke Kota!', '#ef4444', 3.5);
             }
           }
         );
@@ -787,38 +1048,12 @@ export class Game {
             this.hitMonstersInSwing.add(monster.id);
             const { damage, isCrit } = this.player.getAttackDamage();
             const res = monster.takeDamage(damage, playerCenterX, playerCenterY);
+            AudioEngine.playHit(isCrit);
             const hitText = isCrit ? `💥 CRIT -${res.damage}!` : `-${res.damage}`;
             this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 10, hitText, isCrit ? '#facc15' : '#ffffff');
 
             if (res.isDead) {
-              const leveledUp = this.player.addExp(monster.expReward);
-              this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 20, `+${monster.expReward} EXP!`, '#facc15', 2.0);
-
-              // Gold drop
-              this.dungeonWorldItems.push(new WorldItem(monster.x + 4, monster.y + 4, 'GOLD_COIN', monster.goldReward));
-
-              // Unique Monster Drops
-              if (monster.type === 'SLIME' && Math.random() < 0.65) {
-                this.dungeonWorldItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'SLIME_JELLY', 1));
-              } else if (monster.type === 'BAT' && Math.random() < 0.5) {
-                this.dungeonWorldItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 2));
-              } else if (monster.type === 'SKELETON') {
-                if (Math.random() < 0.7) {
-                  this.dungeonWorldItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'ANCIENT_BONE', 1));
-                }
-                if (Math.random() < 0.35) {
-                  this.dungeonWorldItems.push(new WorldItem(monster.x + 6, monster.y + 12, 'MANA_POTION', 1));
-                }
-              } else if (monster.type === 'BOSS_SLIME') {
-                this.dungeonWorldItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 2));
-                this.dungeonWorldItems.push(new WorldItem(monster.x + 24, monster.y + 14, 'HEALTH_POTION', 3));
-                this.dungeonWorldItems.push(new WorldItem(monster.x + 8, monster.y + 14, 'MANA_POTION', 3));
-                this.floatingText.spawn(monster.x + 16, monster.y - 32, '🏆 RAJA SLIME DIKALAHKAN!!', '#facc15', 3.5);
-              }
-
-              if (leveledUp) {
-                this.floatingText.spawn(this.player.x + 10, this.player.y - 30, `🎉 LEVEL UP! Sekarang Lv. ${this.player.level}`, '#fde047', 3.0);
-              }
+              this.handleMonsterDefeated(monster);
             }
           }
         }
@@ -834,14 +1069,10 @@ export class Game {
               if (monster.hurtTimer <= 0) {
                 const spellDmg = effect.type === 'abnormal' ? 65 + this.player.level * 6 : 28 + this.player.level * 3.5;
                 const res = monster.takeDamage(spellDmg, effect.x, effect.y);
+                AudioEngine.playHit(false);
                 this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 8, `✨ -${res.damage}`, effect.color);
                 if (res.isDead) {
-                  const leveledUp = this.player.addExp(monster.expReward);
-                  this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 18, `+${monster.expReward} EXP!`, '#facc15', 2.0);
-                  this.dungeonWorldItems.push(new WorldItem(monster.x + 4, monster.y + 4, 'GOLD_COIN', monster.goldReward));
-                  if (leveledUp) {
-                    this.floatingText.spawn(this.player.x + 10, this.player.y - 30, `🎉 LEVEL UP! Sekarang Lv. ${this.player.level}`, '#fde047', 3.0);
-                  }
+                  this.handleMonsterDefeated(monster);
                 }
               }
             }
@@ -868,10 +1099,18 @@ export class Game {
         ? '<span style="color: #c084fc; font-weight: 700;">🏰 Goa Bawah Tanah (Dungeon Lt.1)</span>'
         : '<span style="color: #4ade80; font-weight: 700;">🌍 Lembah Serikat (Overworld)</span>';
 
+      const weapon = this.player.equippedWeapon;
+      const weaponHtml = weapon
+        ? `<div style="margin-top: 3px; font-size: 10px; color: ${weapon.themeColor}; font-weight: 700;">⚔️ ${weapon.name} (+${weapon.atkBonus} ATK)</div>`
+        : (this.player.role === 'NOVICE'
+            ? '<div style="margin-top: 3px; font-size: 9.5px; color: #94a3b8;">🥊 Tinju Tangan Kosong</div>'
+            : '<div style="margin-top: 3px; font-size: 9.5px; color: #94a3b8;">⚔️ Senjata Bawaan Dasar</div>');
+
       this.coordsEl.innerHTML = `
         <div style="font-weight: 700; color: ${roleInfo.color}; margin-bottom: 2px;">
           ${this.player.username} · Lv.${this.player.level} [${roleInfo.tag}]
         </div>
+        ${weaponHtml}
         <div>${locText}</div>
         Tile: (${tileX}, ${tileY})<br>
         <!-- HP Bar -->
@@ -928,6 +1167,9 @@ export class Game {
       // 3. Render Guild NPC
       this.guildNPC.render(ctx, this.guildNPC.isNearPlayer(playerCenterX, playerCenterY), this.player);
 
+      // Render Weaponsmith Blacksmith NPC Brokk
+      this.blacksmithNPC.render(ctx, this.blacksmithNPC.isNearPlayer(playerCenterX, playerCenterY), this.player);
+
       // 4. Render Overworld Chests
       for (const chest of this.chests) {
         chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY));
@@ -936,6 +1178,11 @@ export class Game {
       // 5. Render Overworld Items
       for (const item of this.worldItems) {
         item.render(ctx);
+      }
+
+      // 5.5 Render Overworld Monsters
+      for (const monster of this.overworldMonsters) {
+        monster.render(ctx);
       }
 
       // 6. Render Player
@@ -987,10 +1234,12 @@ export class Game {
     // --- SCREEN SPACE 1:1 RENDERING ---
     if (this.onboardingUI.state === 'PLAYING') {
       // 8. Mobile Touch D-Pad & Action Buttons
-      if (!this.inventoryUI.isOpen && !this.guildNPC.isAppraisalOpen && !this.controlSettingsModal.isOpen) {
+      if (!this.inventoryUI.isOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen && !this.controlSettingsModal.isOpen) {
         this.input.renderTouchUI(ctx, screenWidth, screenHeight);
         // Mobile Skill Bar
         this.skillBarUI.renderTouchSkillBar(ctx, screenWidth, screenHeight);
+        // Quick Potion UI (HP & MP)
+        this.quickPotionUI.render(ctx, screenWidth, screenHeight);
       }
 
       // 9. Auth Status Pill / Logout
@@ -1002,8 +1251,35 @@ export class Game {
       // 11. Guild Appraisal Ceremony Modal
       this.guildNPC.renderModal(ctx, screenWidth, screenHeight, this.player);
 
+      // 12. Weaponsmith Workshop Modal
+      this.blacksmithNPC.renderModal(ctx, screenWidth, screenHeight, this.player);
+
       // 12. Control Settings Modal (Gear ⚙️ & customization)
       this.controlSettingsModal.render(ctx, screenWidth, screenHeight);
+
+      // 12.1 Render Mini-Map UI
+      const activeMonsters = this.currentMap === 'OVERWORLD' ? this.overworldMonsters : this.dungeonMonsters;
+      const activeChests = this.currentMap === 'OVERWORLD' ? this.chests : this.dungeonChests;
+      this.miniMapUI.render(
+        ctx,
+        screenWidth,
+        screenHeight,
+        this.currentMap,
+        this.tileMap,
+        this.dungeonMap,
+        this.player,
+        activeMonsters,
+        activeChests,
+        this.caveEntrance.x / CONSTANTS.TILE_SIZE,
+        this.caveEntrance.y / CONSTANTS.TILE_SIZE,
+        this.guildNPC.x,
+        this.guildNPC.y,
+        this.blacksmithNPC.x,
+        this.blacksmithNPC.y
+      );
+
+      // 12.2 Render Active Quest HUD Tracker (Top-Left)
+      this.renderQuestTrackerHUD(ctx);
 
       // 13. Top HUD: Fullscreen Icon (⛶)
       const fsX = screenWidth - 138;
@@ -1116,5 +1392,51 @@ export class Game {
       // 17. Topmost Modal: Premium In-Game Notification / Confirm Dialog
       NotificationModal.render(ctx, screenWidth, screenHeight);
     }
+  }
+
+  private renderQuestTrackerHUD(ctx: CanvasRenderingContext2D): void {
+    const activeQuests = this.questManager.getActiveQuests();
+    if (activeQuests.length === 0) return;
+
+    ctx.save();
+    const startX = 10;
+    const startY = 110; // tepat di bawah koordinat HUD
+    const cardW = 165;
+
+    for (let i = 0; i < Math.min(2, activeQuests.length); i++) {
+      const q = activeQuests[i];
+      const cy = startY + i * 30;
+
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
+      ctx.beginPath();
+      ctx.roundRect(startX, cy, cardW, 26, 5);
+      ctx.fill();
+      ctx.strokeStyle = q.status === 'COMPLETED' ? '#facc15' : q.themeColor;
+      ctx.lineWidth = q.status === 'COMPLETED' ? 1.5 : 1;
+      ctx.stroke();
+
+      ctx.fillStyle = q.themeColor;
+      ctx.font = 'bold 8.5px sans-serif';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'top';
+      ctx.fillText(`📜 ${q.title}`, startX + 6, cy + 3);
+
+      ctx.fillStyle = q.status === 'COMPLETED' ? '#facc15' : '#cbd5e1';
+      ctx.font = 'bold 8px sans-serif';
+      const statusText = q.status === 'COMPLETED' ? '✓ SIAP KLAIM' : `${q.targetName}: ${q.currentCount}/${q.requiredCount}`;
+      ctx.fillText(statusText, startX + 6, cy + 14);
+
+      // Mini progress bar
+      const pbX = startX + cardW - 46;
+      const pbY = cy + 15;
+      const pbW = 40;
+      const pbH = 4;
+      const pct = Math.min(1, q.currentCount / q.requiredCount);
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(pbX, pbY, pbW, pbH);
+      ctx.fillStyle = q.status === 'COMPLETED' ? '#facc15' : q.themeColor;
+      ctx.fillRect(pbX, pbY, Math.round(pbW * pct), pbH);
+    }
+    ctx.restore();
   }
 }

@@ -2,6 +2,7 @@ import { ControlSettingsManager, DEFAULT_CONTROL_CONFIG } from '../core/ControlS
 import { PwaService } from '../services/PwaService.ts';
 import { NotificationModal } from './NotificationModal.ts';
 import { CanvasText } from '../utils/CanvasText.ts';
+import { AudioEngine } from '../audio/AudioEngine.ts';
 
 export class ControlSettingsModal {
   public isOpen: boolean = false;
@@ -126,23 +127,39 @@ export class ControlSettingsModal {
       return true;
     }
 
-    // 6. Pasang Web App / Fullscreen Button Touch
+    // 6. Audio Toggles (SFX & Musik Retro)
     const sec6Y = sec5Y + 54;
-    const pwaBtnW = colW;
-    const pwaBtnH = 32;
-    const pwaBtnX = col2X;
-    const pwaBtnY = sec6Y + 6;
+    const audioBtnW = (colW - 8) / 2;
+    const audioBtnH = 28;
+    const sfxBtnX = col2X;
+    const bgmBtnX = col2X + audioBtnW + 8;
+    const audioBtnY = sec6Y + 15;
+
+    // SFX Toggle Touch
     if (
-      touchX >= pwaBtnX &&
-      touchX <= pwaBtnX + pwaBtnW &&
-      touchY >= pwaBtnY &&
-      touchY <= pwaBtnY + pwaBtnH
+      touchX >= sfxBtnX &&
+      touchX <= sfxBtnX + audioBtnW &&
+      touchY >= audioBtnY &&
+      touchY <= audioBtnY + audioBtnH
     ) {
-      if (PwaService.isInstallable) {
-        PwaService.promptInstall();
-      } else {
-        PwaService.toggleFullscreen();
-      }
+      const newSfx = !AudioEngine.isSoundEnabled;
+      AudioEngine.setSoundEnabled(newSfx);
+      ControlSettingsManager.save({ soundEnabled: newSfx });
+      if (newSfx) AudioEngine.playButtonClick();
+      return true;
+    }
+
+    // BGM Toggle Touch
+    if (
+      touchX >= bgmBtnX &&
+      touchX <= bgmBtnX + audioBtnW &&
+      touchY >= audioBtnY &&
+      touchY <= audioBtnY + audioBtnH
+    ) {
+      const newBgm = !AudioEngine.isMusicEnabled;
+      AudioEngine.setMusicEnabled(newBgm);
+      ControlSettingsManager.save({ musicEnabled: newBgm });
+      AudioEngine.playButtonClick();
       return true;
     }
 
@@ -388,31 +405,43 @@ export class ControlSettingsModal {
       cfg.sideMargin
     );
 
-    // 6. Pasang Web App (PWA) / Layar Penuh Button
+    // 6. Audio Toggles (SFX & Musik Retro)
     const sec6Y = sec5Y + 54;
-    const pwaBtnW = colW;
-    const pwaBtnH = 32;
-    const pwaBtnX = col2X;
-    const pwaBtnY = sec6Y + 6;
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillText('🔊 Efek Suara & Musik Retro:', col2X, sec6Y);
 
-    ctx.fillStyle = PwaService.isInstallable ? '#0284c7' : '#1e293b';
-    ctx.fillRect(pwaBtnX, pwaBtnY, pwaBtnW, pwaBtnH);
-    ctx.strokeStyle = PwaService.isInstallable ? '#38bdf8' : '#475569';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(pwaBtnX, pwaBtnY, pwaBtnW, pwaBtnH);
+    const audioBtnW = (colW - 8) / 2;
+    const audioBtnH = 26;
+    const sfxBtnX = col2X;
+    const bgmBtnX = col2X + audioBtnW + 8;
+    const audioBtnY = sec6Y + 15;
 
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 9.5px sans-serif';
+    // SFX Button
+    const isSfx = AudioEngine.isSoundEnabled;
+    ctx.fillStyle = isSfx ? '#0284c7' : '#1e293b';
+    ctx.fillRect(sfxBtnX, audioBtnY, audioBtnW, audioBtnH);
+    ctx.strokeStyle = isSfx ? '#38bdf8' : '#334155';
+    ctx.lineWidth = isSfx ? 2 : 1;
+    ctx.strokeRect(sfxBtnX, audioBtnY, audioBtnW, audioBtnH);
+    ctx.fillStyle = isSfx ? '#ffffff' : '#64748b';
+    ctx.font = 'bold 9px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    let pwaText = '⛶ Beralih Mode Layar Penuh (Fullscreen)';
-    if (PwaService.isInstalled) {
-      pwaText = '✅ Web App Terpasang (Layar Penuh)';
-    } else if (PwaService.isInstallable) {
-      pwaText = '📲 Pasang Web App ke Layar HP';
-    }
-    const safePwaText = CanvasText.truncate(ctx, pwaText, pwaBtnW - 10);
-    ctx.fillText(safePwaText, pwaBtnX + pwaBtnW / 2, pwaBtnY + pwaBtnH / 2);
+    ctx.fillText(isSfx ? '🔊 SFX: ON' : '🔇 SFX: OFF', sfxBtnX + audioBtnW / 2, audioBtnY + audioBtnH / 2);
+
+    // BGM Button
+    const isBgm = AudioEngine.isMusicEnabled;
+    ctx.fillStyle = isBgm ? '#0284c7' : '#1e293b';
+    ctx.fillRect(bgmBtnX, audioBtnY, audioBtnW, audioBtnH);
+    ctx.strokeStyle = isBgm ? '#38bdf8' : '#334155';
+    ctx.lineWidth = isBgm ? 2 : 1;
+    ctx.strokeRect(bgmBtnX, audioBtnY, audioBtnW, audioBtnH);
+    ctx.fillStyle = isBgm ? '#ffffff' : '#64748b';
+    ctx.font = 'bold 9px sans-serif';
+    ctx.fillText(isBgm ? '🎵 BGM: ON' : '🔇 BGM: OFF', bgmBtnX + audioBtnW / 2, audioBtnY + audioBtnH / 2);
 
     // Footer Buttons: 1. Reset Default | 2. Ganti Akun / Logout | 3. Simpan & Tutup
     const footerGap = 8;
