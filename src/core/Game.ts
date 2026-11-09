@@ -28,6 +28,7 @@ import { QuestManager } from '../world/QuestManager.ts';
 import { MiniMapUI } from '../ui/MiniMapUI.ts';
 import { QuickPotionUI } from '../ui/QuickPotionUI.ts';
 import { VillageManager } from '../world/VillageManager.ts';
+import { AtmosphereEngine } from '../world/AtmosphereEngine.ts';
 
 export class Game {
   private canvas: HTMLCanvasElement;
@@ -43,10 +44,16 @@ export class Game {
   private onboardingUI: OnboardingUI;
   private controlSettingsModal: ControlSettingsModal;
 
-  // Audio, Quests, Mini-Map & Quick Potion
+  // Audio, Quests, Mini-Map, Quick Potion & Anime Atmosphere
   private questManager: QuestManager;
   private miniMapUI: MiniMapUI;
   private quickPotionUI: QuickPotionUI;
+  private atmosphereEngine: AtmosphereEngine;
+  private transitionCooldown: number = 0;
+
+  // Combat Impact Sparks & Anime Skill Invocation Banner
+  private hitSparks: { x: number; y: number; vx: number; vy: number; color: string; size: number; life: number; maxLife: number }[] = [];
+  private activeSkillBanner: { name: string; color: string; role: string; timer: number; maxTimer: number } | null = null;
 
   // Map & Dungeon state
   public currentMap: 'OVERWORLD' | 'DUNGEON' = 'OVERWORLD';
@@ -134,6 +141,19 @@ export class Game {
     this.villageManager = new VillageManager(this.questManager);
     this.miniMapUI = new MiniMapUI();
     this.quickPotionUI = new QuickPotionUI(this.player, this.floatingText);
+    this.atmosphereEngine = new AtmosphereEngine();
+
+    // Hook Anime Skill Invocation Banner & Camera Screen Shake
+    this.skillBarUI.onSkillCast = (skill) => {
+      this.camera.shake(3.8, 0.18);
+      this.activeSkillBanner = {
+        name: skill.name,
+        color: skill.color || '#38bdf8',
+        role: skill.role || this.player.role,
+        timer: 1.25,
+        maxTimer: 1.25
+      };
+    };
 
     // Create Guild Receptionist Elaine near spawn
     const guildX = 51 * CONSTANTS.TILE_SIZE;
@@ -303,6 +323,7 @@ export class Game {
     const hasSessionSave = this.restoreSessionSnapshot();
     if (hasSessionSave) {
       this.onboardingUI.setState('PLAYING');
+      AudioEngine.playBgm(this.currentMap);
       const roleName = ROLE_INFO[this.player.role]?.name || 'Petualang';
       this.floatingText.spawn(
         this.player.x + 10,
@@ -322,6 +343,7 @@ export class Game {
         if (!hasSessionSave) {
           if (hasPending) {
             this.onboardingUI.setState('PLAYING');
+            AudioEngine.playBgm(this.currentMap);
             this.authUI.saveCurrentGame();
             this.floatingText.spawn(
               this.player.x + 10,
@@ -335,6 +357,7 @@ export class Game {
           const hasSave = await this.authUI.loadCloudSave(user.id);
           if (hasSave) {
             this.onboardingUI.setState('PLAYING');
+            AudioEngine.playBgm(this.currentMap);
             const roleName = ROLE_INFO[this.player.role].name;
             this.floatingText.spawn(
               this.player.x + 10,
@@ -356,6 +379,7 @@ export class Game {
       this.player.username = username;
       this.player.costume = costume;
       this.authUI.isGuest = isGuest;
+      AudioEngine.playBgm(this.currentMap);
 
       // Initial save to cloud if logged in
       if (!isGuest) {
@@ -631,7 +655,30 @@ export class Game {
     ];
   }
 
+  private spawnHitSparks(x: number, y: number, isCrit: boolean): void {
+    const count = isCrit ? 9 : 5;
+    const colors = isCrit ? ['#fde047', '#facc15', '#ffffff', '#fb923c'] : ['#ffffff', '#cbd5e1', '#94a3b8'];
+    for (let i = 0; i < count; i++) {
+      const angle = Math.random() * Math.PI * 2;
+      const speed = isCrit ? (50 + Math.random() * 60) : (26 + Math.random() * 38);
+      this.hitSparks.push({
+        x,
+        y,
+        vx: Math.cos(angle) * speed,
+        vy: Math.sin(angle) * speed,
+        color: colors[Math.floor(Math.random() * colors.length)],
+        size: isCrit ? (2.2 + Math.random() * 2) : (1.5 + Math.random() * 1.5),
+        life: 0.18 + Math.random() * 0.12,
+        maxLife: 0.3
+      });
+    }
+  }
+
   public enterDungeon(): void {
+    if (this.transitionCooldown > 0) return;
+    this.transitionCooldown = 1.0;
+    this.input.consumeAction();
+
     this.currentMap = 'DUNGEON';
     this.player.x = this.dungeonMap.entranceSpawnX;
     this.player.y = this.dungeonMap.entranceSpawnY;
@@ -644,16 +691,26 @@ export class Game {
     this.camera.setWorldBounds(this.dungeonMap.width * CONSTANTS.TILE_SIZE, this.dungeonMap.height * CONSTANTS.TILE_SIZE);
     this.camera.update(this.player.x, this.player.y);
 
-    this.triggerMapTransition('🏰 GOA BAWAH TANAH', 'Dungeon Tingkat 1');
+    this.triggerMapTransition('「 GOA PURBA ABISAL · TINGKAT 1 」', '~ Sarang Bawah Tanah Raja Slime Purba ~');
     this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '⛩️ Memasuki Goa Bawah Tanah!', '#c084fc', 3.0);
     this.saveSessionSnapshot();
   }
 
-  public exitDungeon(): void {
+  public exitDungeon(isDeath: boolean = false): void {
+    if (this.transitionCooldown > 0 && !isDeath) return;
+    this.transitionCooldown = 1.0;
+    this.input.consumeAction();
+
     this.currentMap = 'OVERWORLD';
-    // Tempatkan pemain tepat di depan pintu masuk goa di Dunia Luar
-    this.player.x = 50 * CONSTANTS.TILE_SIZE + 6;
-    this.player.y = 35 * CONSTANTS.TILE_SIZE + 3;
+    if (isDeath) {
+      // Saat gugur di Dungeon, pemain sadar dengan selamat di balai serikat desa
+      this.player.x = 50 * CONSTANTS.TILE_SIZE + 6;
+      this.player.y = 50 * CONSTANTS.TILE_SIZE + 3;
+    } else {
+      // Tempatkan pemain di pelataran depan pintu masuk goa di Hutan Rimba
+      this.player.x = 50 * CONSTANTS.TILE_SIZE + 6;
+      this.player.y = 35 * CONSTANTS.TILE_SIZE + 3;
+    }
     this.player.direction = 'down';
 
     AudioEngine.playMapTransition(false);
@@ -663,7 +720,7 @@ export class Game {
     this.camera.setWorldBounds(CONSTANTS.MAP_WIDTH * CONSTANTS.TILE_SIZE, CONSTANTS.MAP_HEIGHT * CONSTANTS.TILE_SIZE);
     this.camera.update(this.player.x, this.player.y);
 
-    this.triggerMapTransition('🌤️ LEMBAH SERIKAT', 'Dunia Luar (Overworld)');
+    this.triggerMapTransition('「 LEMBAH SERIKAT OAKHAVEN 」', '~ Kawasan Aman Perlindungan Para Petualang ~');
     this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🌤️ Kembali ke Permukaan', '#facc15', 3.0);
     this.saveSessionSnapshot();
   }
@@ -801,6 +858,38 @@ export class Game {
       return;
     }
 
+    if (this.transitionCooldown > 0) {
+      this.transitionCooldown = Math.max(0, this.transitionCooldown - deltaTime);
+    }
+
+    if (this.activeSkillBanner) {
+      this.activeSkillBanner.timer -= deltaTime;
+      if (this.activeSkillBanner.timer <= 0) {
+        this.activeSkillBanner = null;
+      }
+    }
+
+    // Update Hit Sparks
+    for (let i = this.hitSparks.length - 1; i >= 0; i--) {
+      const spark = this.hitSparks[i];
+      spark.x += spark.vx * deltaTime;
+      spark.y += spark.vy * deltaTime;
+      spark.life -= deltaTime;
+      if (spark.life <= 0) {
+        this.hitSparks.splice(i, 1);
+      }
+    }
+
+    // Update Atmosphere Engine (Drifting Petals, Forest Mana Spores, Abyssal Motes)
+    this.atmosphereEngine.update(
+      deltaTime,
+      this.camera.x,
+      this.camera.y,
+      this.virtualWidth,
+      this.virtualHeight,
+      this.currentMap === 'DUNGEON'
+    );
+
     if (this.mapTransitionTimer > 0) {
       this.mapTransitionTimer -= deltaTime;
     }
@@ -885,28 +974,31 @@ export class Game {
       // Village NPC Interaction (Quest & Ambient)
       if (!this.villageManager.isDialogOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen) {
         const nearNPC = this.villageManager.isNearAnyNPC(playerCenterX, playerCenterY);
-        if (nearNPC && this.input.state.isAction) {
+        if (nearNPC && (this.input.isActionJustPressed || this.input.state.isAction)) {
+          this.input.consumeAction();
           this.villageManager.openDialog(nearNPC);
         }
       }
 
       // 4. Guild Receptionist Interaction
       if (!this.guildNPC.isAppraisalOpen && this.guildNPC.isNearPlayer(playerCenterX, playerCenterY)) {
-        if (this.input.state.isAction) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.input.consumeAction();
           this.guildNPC.openAppraisal();
         }
       }
 
       // Blacksmith Workshop Interaction
       if (!this.blacksmithNPC.isWorkshopOpen && this.blacksmithNPC.isNearPlayer(playerCenterX, playerCenterY)) {
-        if (this.input.state.isAction) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.input.consumeAction();
           this.blacksmithNPC.openWorkshop(this.player.role);
         }
       }
 
       // 5. Cave Entrance (Masuk Goa / Dungeon)
       if (this.caveEntrance.isNearPlayer(playerCenterX, playerCenterY)) {
-        if (this.input.state.isAction) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
           this.enterDungeon();
           return;
         }
@@ -916,7 +1008,8 @@ export class Game {
       for (const chest of this.chests) {
         chest.update(deltaTime);
         if (!chest.isOpen && chest.isNearPlayer(playerCenterX, playerCenterY)) {
-          if (this.input.state.isAction) {
+          if (this.input.isActionJustPressed || this.input.state.isAction) {
+            this.input.consumeAction();
             AudioEngine.playChestOpen();
             const rewards = chest.open();
             for (const reward of rewards) {
@@ -962,6 +1055,7 @@ export class Game {
             const died = this.player.takeDamage(atk);
             this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `-${atk} HP`, '#ef4444');
             AudioEngine.playPlayerHurt();
+            this.camera.shake(4.0, 0.16);
             if (died) {
               AudioEngine.playPlayerDeath();
               this.player.x = 50 * CONSTANTS.TILE_SIZE + 6;
@@ -989,6 +1083,8 @@ export class Game {
             const { damage, isCrit } = this.player.getAttackDamage();
             const res = monster.takeDamage(damage, playerCenterX, playerCenterY);
             AudioEngine.playHit(isCrit);
+            this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, isCrit);
+            this.camera.shake(isCrit ? 4.8 : 2.6, isCrit ? 0.16 : 0.10);
             const hitText = isCrit ? `💥 CRIT -${res.damage}!` : `-${res.damage}`;
             this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 10, hitText, isCrit ? '#facc15' : '#ffffff');
 
@@ -1010,6 +1106,8 @@ export class Game {
                 const spellDmg = effect.type === 'abnormal' ? 65 + this.player.level * 6 : 28 + this.player.level * 3.5;
                 const res = monster.takeDamage(spellDmg, effect.x, effect.y);
                 AudioEngine.playHit(false);
+                this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, true);
+                this.camera.shake(3.2, 0.12);
                 this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 8, `✨ -${res.damage}`, effect.color);
                 if (res.isDead) {
                   this.handleMonsterDefeated(monster);
@@ -1023,8 +1121,8 @@ export class Game {
       // --- DUNGEON SPECIFIC UPDATES ---
       // 4. Exit Ladder to Surface
       if (this.dungeonMap.isNearLadder(playerCenterX, playerCenterY)) {
-        if (this.input.state.isAction) {
-          this.exitDungeon();
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.exitDungeon(false);
           return;
         }
       }
@@ -1033,7 +1131,8 @@ export class Game {
       for (const chest of this.dungeonChests) {
         chest.update(deltaTime);
         if (!chest.isOpen && chest.isNearPlayer(playerCenterX, playerCenterY)) {
-          if (this.input.state.isAction) {
+          if (this.input.isActionJustPressed || this.input.state.isAction) {
+            this.input.consumeAction();
             AudioEngine.playChestOpen();
             const rewards = chest.open();
             for (const reward of rewards) {
@@ -1079,9 +1178,10 @@ export class Game {
             const died = this.player.takeDamage(atk);
             this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `-${atk} HP`, '#ef4444');
             AudioEngine.playPlayerHurt();
+            this.camera.shake(4.2, 0.18);
             if (died) {
               AudioEngine.playPlayerDeath();
-              this.exitDungeon(); // Safe respawn to town plaza
+              this.exitDungeon(true); // Safe respawn to town plaza
               this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur di Dungeon dan dipulangkan ke Kota!', '#ef4444', 3.5);
             }
           }
@@ -1106,6 +1206,8 @@ export class Game {
             const { damage, isCrit } = this.player.getAttackDamage();
             const res = monster.takeDamage(damage, playerCenterX, playerCenterY);
             AudioEngine.playHit(isCrit);
+            this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, isCrit);
+            this.camera.shake(isCrit ? 4.8 : 2.6, isCrit ? 0.16 : 0.10);
             const hitText = isCrit ? `💥 CRIT -${res.damage}!` : `-${res.damage}`;
             this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 10, hitText, isCrit ? '#facc15' : '#ffffff');
 
@@ -1127,6 +1229,8 @@ export class Game {
                 const spellDmg = effect.type === 'abnormal' ? 65 + this.player.level * 6 : 28 + this.player.level * 3.5;
                 const res = monster.takeDamage(spellDmg, effect.x, effect.y);
                 AudioEngine.playHit(false);
+                this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, true);
+                this.camera.shake(3.2, 0.12);
                 this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 8, `✨ -${res.damage}`, effect.color);
                 if (res.isDead) {
                   this.handleMonsterDefeated(monster);
@@ -1144,8 +1248,8 @@ export class Game {
     // 11. Update Auth & Cloud Auto-Save
     this.authUI.update(deltaTime);
 
-    // 12. Update Camera to follow player
-    this.camera.update(playerCenterX, playerCenterY);
+    // 12. Update Camera to follow player with smooth interpolation
+    this.camera.update(playerCenterX, playerCenterY, deltaTime);
 
     // 13. Update HUD Coordinates & Player Health/Mana Bar
     if (this.coordsEl) {
@@ -1163,9 +1267,13 @@ export class Game {
             ? '<div style="margin-top: 3px; font-size: 9.5px; color: #94a3b8;">🥊 Tinju Tangan Kosong</div>'
             : '<div style="margin-top: 3px; font-size: 9.5px; color: #94a3b8;">⚔️ Senjata Bawaan Dasar</div>');
 
+      const rank = this.player.adventurerRank;
       this.coordsEl.innerHTML = `
-        <div style="font-weight: 700; color: ${roleInfo.color}; margin-bottom: 2px;">
-          ${this.player.username} · Lv.${this.player.level} [${roleInfo.tag}]
+        <div style="font-weight: 700; color: ${roleInfo.color}; margin-bottom: 2px; display: flex; align-items: center; gap: 5px; flex-wrap: wrap;">
+          <span>${this.player.username} · Lv.${this.player.level} [${roleInfo.tag}]</span>
+          <span style="padding: 1px 5px; font-size: 8.5px; border-radius: 3px; font-weight: 800; background: ${rank.bg}; color: ${rank.color}; border: 1px solid ${rank.border};">
+            ${rank.badge} ${rank.name}
+          </span>
         </div>
         ${weaponHtml}
         <div>${locText}</div>
@@ -1251,6 +1359,12 @@ export class Game {
       // 7. Render Spell Effects
       this.skillBarUI.renderWorldEffects(ctx);
 
+      // 7.5 Render Ambient Atmosphere (Falling Petals, Forest Mana Spores)
+      this.atmosphereEngine.render(ctx);
+
+      // 7.6 Render Combat Hit Sparks
+      this.renderHitSparks(ctx);
+
       // 8. Render Floating Texts
       this.floatingText.render(ctx);
     } else {
@@ -1281,6 +1395,12 @@ export class Game {
 
       // 7. Render Atmospheric Subterranean Torch Lighting & Fog of War
       this.dungeonMap.renderAtmosphericLighting(ctx, this.camera, playerCenterX, playerCenterY);
+
+      // 7.5 Render Subterranean Abyssal Mana Motes
+      this.atmosphereEngine.render(ctx);
+
+      // 7.6 Render Combat Hit Sparks
+      this.renderHitSparks(ctx);
 
       // 8. Render Floating Texts (Crisp & Readable above darkness)
       this.floatingText.render(ctx);
@@ -1426,31 +1546,11 @@ export class Game {
         ctx.restore();
       }
 
-      // 16. Map Transition Announcement Banner
-      if (this.mapTransitionTimer > 0) {
-        ctx.save();
-        const transAlpha = Math.min(1, Math.min(this.mapTransitionTimer, 1));
-        ctx.globalAlpha = transAlpha;
-        const tW = 260;
-        const tH = 44;
-        const tX = (screenWidth - tW) / 2;
-        const tY = 48;
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
-        ctx.fillRect(tX, tY, tW, tH);
-        ctx.strokeStyle = this.currentMap === 'DUNGEON' ? '#c084fc' : '#facc15';
-        ctx.lineWidth = 1.8;
-        ctx.strokeRect(tX, tY, tW, tH);
+      // 16. Anime Location Title Card
+      this.renderAnimeLocationTitleCard(ctx, screenWidth, screenHeight);
 
-        ctx.font = 'bold 12px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.fillStyle = this.currentMap === 'DUNGEON' ? '#f0abfc' : '#fef08a';
-        ctx.fillText(this.mapTransitionTitle, tX + tW / 2, tY + 18);
-
-        ctx.font = '9.5px sans-serif';
-        ctx.fillStyle = '#94a3b8';
-        ctx.fillText(this.mapTransitionSubtitle, tX + tW / 2, tY + 34);
-        ctx.restore();
-      }
+      // 16.5 Anime Skill Invocation Cut-In Banner
+      this.renderSkillCutInBanner(ctx, screenWidth, screenHeight);
 
       // 17. Topmost Modal: Premium In-Game Notification / Confirm Dialog
       NotificationModal.render(ctx, screenWidth, screenHeight);
@@ -1500,6 +1600,150 @@ export class Game {
       ctx.fillStyle = q.status === 'COMPLETED' ? '#facc15' : q.themeColor;
       ctx.fillRect(pbX, pbY, Math.round(pbW * pct), pbH);
     }
+    ctx.restore();
+  }
+
+  private renderHitSparks(ctx: CanvasRenderingContext2D): void {
+    if (this.hitSparks.length === 0) return;
+    ctx.save();
+    for (const spark of this.hitSparks) {
+      const alpha = Math.max(0, Math.min(1, spark.life / spark.maxLife));
+      ctx.globalAlpha = alpha;
+      ctx.fillStyle = spark.color;
+      ctx.beginPath();
+      ctx.arc(spark.x, spark.y, spark.size, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    ctx.restore();
+  }
+
+  private renderSkillCutInBanner(ctx: CanvasRenderingContext2D, screenWidth: number, screenHeight: number): void {
+    if (!this.activeSkillBanner) return;
+
+    const banner = this.activeSkillBanner;
+    // Fade in during first 0.1s, stay full, fade out during last 0.25s
+    const alpha = Math.min(1, Math.min(banner.timer / 0.25, (banner.maxTimer - banner.timer) / 0.1));
+
+    ctx.save();
+    ctx.globalAlpha = Math.max(0, alpha);
+
+    const bannerHeight = 44;
+    const centerY = screenHeight * 0.30;
+    const bannerY = centerY - bannerHeight / 2;
+
+    // Anime slanted cut-in banner across screen
+    const slant = 28;
+    ctx.beginPath();
+    ctx.moveTo(0, bannerY);
+    ctx.lineTo(screenWidth, bannerY - slant * 0.25);
+    ctx.lineTo(screenWidth, bannerY + bannerHeight + slant * 0.25);
+    ctx.lineTo(0, bannerY + bannerHeight);
+    ctx.closePath();
+
+    // Gradient fill using the skill/role color
+    const grad = ctx.createLinearGradient(0, bannerY, screenWidth, bannerY);
+    grad.addColorStop(0, 'rgba(15, 23, 42, 0.94)');
+    grad.addColorStop(0.25, banner.color + 'cc');
+    grad.addColorStop(0.75, banner.color + 'aa');
+    grad.addColorStop(1, 'rgba(15, 23, 42, 0.94)');
+    ctx.fillStyle = grad;
+    ctx.fill();
+
+    // Glowing border lines
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 1.6;
+    ctx.stroke();
+
+    // Anime speed streaks across the cut-in
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.3)';
+    ctx.lineWidth = 1;
+    for (let i = 0; i < 5; i++) {
+      const streakY = bannerY + 6 + i * 7;
+      const streakX = ((Date.now() * 0.7 + i * 130) % (screenWidth + 180)) - 90;
+      ctx.beginPath();
+      ctx.moveTo(streakX, streakY);
+      ctx.lineTo(streakX + 65 + (i % 3) * 25, streakY - slant * 0.12);
+      ctx.stroke();
+    }
+
+    // Role tag & Skill Name typography
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    ctx.font = 'bold 9.5px sans-serif';
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillText(`【 ${banner.role} · SKILL ACTIVATION 】`, screenWidth / 2, centerY - 9);
+
+    ctx.font = '900 15px sans-serif';
+    ctx.fillStyle = '#ffffff';
+    ctx.shadowColor = banner.color;
+    ctx.shadowBlur = 10;
+    ctx.fillText(banner.name.toUpperCase(), screenWidth / 2, centerY + 9);
+
+    ctx.restore();
+  }
+
+  private renderAnimeLocationTitleCard(ctx: CanvasRenderingContext2D, screenWidth: number, screenHeight: number): void {
+    if (this.mapTransitionTimer <= 0) return;
+
+    ctx.save();
+    // Smooth fade in / out
+    const alpha = Math.min(1, Math.min(this.mapTransitionTimer / 0.5, (3.2 - this.mapTransitionTimer) / 0.4));
+    ctx.globalAlpha = Math.max(0, alpha);
+
+    const cardW = Math.min(340, screenWidth - 32);
+    const cardH = 50;
+    const cardX = (screenWidth - cardW) / 2;
+    const cardY = 50;
+
+    const isDungeon = this.currentMap === 'DUNGEON';
+    const mainTheme = isDungeon ? '#c084fc' : '#facc15';
+    const subTheme = isDungeon ? '#f0abfc' : '#fef08a';
+
+    // Dark anime backdrop with gold/purple trim
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, cardW, cardH, 8);
+    ctx.fill();
+
+    // Double ornamental borders with gold/violet sheen
+    ctx.strokeStyle = mainTheme;
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+
+    ctx.strokeStyle = 'rgba(255, 255, 255, 0.15)';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cardX + 3, cardY + 3, cardW - 6, cardH - 6);
+
+    // Diamond corner markers
+    const drawDiamond = (dx: number, dy: number) => {
+      ctx.fillStyle = mainTheme;
+      ctx.beginPath();
+      ctx.moveTo(dx, dy - 3);
+      ctx.lineTo(dx + 3, dy);
+      ctx.lineTo(dx, dy + 3);
+      ctx.lineTo(dx - 3, dy);
+      ctx.closePath();
+      ctx.fill();
+    };
+    drawDiamond(cardX + 7, cardY + cardH / 2);
+    drawDiamond(cardX + cardW - 7, cardY + cardH / 2);
+
+    // Title & Subtitle with anime fantasy flair
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+
+    ctx.font = 'bold 12.5px sans-serif';
+    ctx.fillStyle = subTheme;
+    ctx.shadowColor = mainTheme;
+    ctx.shadowBlur = 8;
+    ctx.fillText(this.mapTransitionTitle, cardX + cardW / 2, cardY + 18);
+
+    ctx.shadowBlur = 0;
+    ctx.font = 'italic 9.5px sans-serif';
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillText(this.mapTransitionSubtitle, cardX + cardW / 2, cardY + 35);
+
     ctx.restore();
   }
 }

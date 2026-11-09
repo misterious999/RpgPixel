@@ -17,6 +17,7 @@ export class SkillBarUI {
   private player: Player;
   private floatingText: FloatingTextManager;
   public visualEffects: VisualEffect[] = [];
+  public onSkillCast?: (skill: any) => void;
 
   constructor(player: Player, floatingText: FloatingTextManager) {
     this.player = player;
@@ -30,7 +31,7 @@ export class SkillBarUI {
       { dx: -114, dy: -18 }, // S1 (Left of RUN)
       { dx: -96,  dy: -64 }, // S2 (Upper-left)
       { dx: -50,  dy: -82 }, // S3 (Top-center)
-      { dx: 4,    dy: -66 }  // S4 (Above A)
+      { dx: 6,    dy: -74 }  // S4 (Above A, nyaman tanpa tabrakan sentuh)
     ];
     const off = offsets[index] || { dx: 0, dy: 0 };
     return {
@@ -99,6 +100,9 @@ export class SkillBarUI {
 
     // Animasi karakter mengeluarkan skill dinamis untuk setiap role
     this.player.playSkillCastAnimation(skill);
+    if (this.onSkillCast) {
+      this.onSkillCast(skill);
+    }
 
     // Audio SFX Synthesizer
     if (skill.id.includes('fire')) AudioEngine.playSpell('fire');

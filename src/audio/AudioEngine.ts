@@ -38,6 +38,9 @@ export class AudioEngine {
       if (this.ctx && this.ctx.state === 'suspended') {
         this.ctx.resume();
       }
+      if (this.currentMapBgm && this.isMusicEnabled && !this.bgmInterval) {
+        this.playBgm(this.currentMapBgm);
+      }
       window.removeEventListener('click', unlockAudio);
       window.removeEventListener('touchstart', unlockAudio);
       window.removeEventListener('keydown', unlockAudio);

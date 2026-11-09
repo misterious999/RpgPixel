@@ -77,6 +77,17 @@ export class Player {
   // Player Inventory
   public inventory: Inventory = new Inventory(16);
 
+  // Adventurer Guild Rank (Anime Style: F to S-Rank)
+  public get adventurerRank(): { rank: string; title: string; color: string; badge: string } {
+    if (this.level >= 22) return { rank: 'S', title: 'Petualang Legendaris', color: '#ec4899', badge: '👑 S-RANK' };
+    if (this.level >= 17) return { rank: 'A', title: 'Petualang Platina', color: '#38bdf8', badge: '💎 A-RANK' };
+    if (this.level >= 12) return { rank: 'B', title: 'Petualang Emas', color: '#eab308', badge: '🏆 B-RANK' };
+    if (this.level >= 8)  return { rank: 'C', title: 'Petualang Perak', color: '#e2e8f0', badge: '🥈 C-RANK' };
+    if (this.level >= 5)  return { rank: 'D', title: 'Petualang Perunggu', color: '#f59e0b', badge: '🥉 D-RANK' };
+    if (this.level >= 3)  return { rank: 'E', title: 'Petualang Besi', color: '#94a3b8', badge: '⚔️ E-RANK' };
+    return { rank: 'F', title: 'Petualang Pemula', color: '#64748b', badge: '🔰 F-RANK' };
+  }
+
   // Collision box relative to player (feet area)
   public collisionBox = {
     offsetX: 4,

@@ -24,6 +24,8 @@ export class InputManager {
   private actionTouchId: number | null = null;
   private sprintTouchId: number | null = null;
   private touchInterceptor?: (touchX: number, touchY: number) => boolean;
+  public isActionJustPressed: boolean = false;
+  private prevAction: boolean = false;
 
   public state: InputState = {
     axisX: 0,
@@ -36,6 +38,15 @@ export class InputManager {
     ControlSettingsManager.load();
     this.setupKeyboardListeners();
     this.setupTouchListeners();
+  }
+
+  public consumeAction(): void {
+    this.state.isAction = false;
+    this.isActionJustPressed = false;
+    this.prevAction = false;
+    this.actionTouchId = null;
+    this.keys.delete('Space');
+    this.keys.delete('KeyE');
   }
 
   public setTouchInterceptor(fn: (touchX: number, touchY: number) => boolean): void {
@@ -186,7 +197,10 @@ export class InputManager {
     this.state.axisX = x;
     this.state.axisY = y;
     this.state.isSprint = keyboardSprint || this.sprintTouchId !== null;
-    this.state.isAction = keyboardAction || this.actionTouchId !== null;
+    const currentAction = keyboardAction || this.actionTouchId !== null;
+    this.isActionJustPressed = currentAction && !this.prevAction;
+    this.prevAction = currentAction;
+    this.state.isAction = currentAction;
   }
 
   public renderTouchUI(ctx: CanvasRenderingContext2D, width: number, height: number): void {

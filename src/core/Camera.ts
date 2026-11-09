@@ -9,9 +9,20 @@ export class Camera {
   public worldHeight: number = CONSTANTS.MAP_HEIGHT * CONSTANTS.TILE_SIZE;
   private lerpSpeed: number = 0.12;
 
+  // Dynamic Anime Impact Screen Shake
+  private shakeTimer: number = 0;
+  private shakeIntensity: number = 0;
+  private shakeOffsetX: number = 0;
+  private shakeOffsetY: number = 0;
+
   constructor(viewportWidth: number, viewportHeight: number) {
     this.viewportWidth = viewportWidth;
     this.viewportHeight = viewportHeight;
+  }
+
+  public shake(intensity: number = 3.5, duration: number = 0.18): void {
+    this.shakeIntensity = intensity;
+    this.shakeTimer = duration;
   }
 
   public setWorldBounds(widthPx: number, heightPx: number): void {
@@ -19,7 +30,7 @@ export class Camera {
     this.worldHeight = heightPx;
   }
 
-  public update(targetX: number, targetY: number): void {
+  public update(targetX: number, targetY: number, deltaTime: number = 0.016): void {
     // Camera center should align with target center
     const desiredX = targetX - this.viewportWidth / 2;
     const desiredY = targetY - this.viewportHeight / 2;
@@ -27,6 +38,20 @@ export class Camera {
     // Smooth movement (lerp)
     this.x += (desiredX - this.x) * this.lerpSpeed;
     this.y += (desiredY - this.y) * this.lerpSpeed;
+
+    // Screen Shake effect
+    if (this.shakeTimer > 0) {
+      this.shakeTimer -= deltaTime;
+      const decay = Math.max(0, this.shakeTimer / 0.18);
+      this.shakeOffsetX = (Math.random() - 0.5) * 2 * this.shakeIntensity * decay;
+      this.shakeOffsetY = (Math.random() - 0.5) * 2 * this.shakeIntensity * decay;
+    } else {
+      this.shakeOffsetX = 0;
+      this.shakeOffsetY = 0;
+    }
+
+    this.x += this.shakeOffsetX;
+    this.y += this.shakeOffsetY;
 
     // Clamp camera within map bounds
     if (this.worldWidth > this.viewportWidth) {

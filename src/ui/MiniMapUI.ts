@@ -224,7 +224,7 @@ export class MiniMapUI {
       const toRadarX = (tx: number) => radarX + ((tx - srcX) / srcW) * radarW;
       const toRadarY = (ty: number) => radarY + ((ty - srcY) / srcH) * radarH;
 
-      // 1. Tampilkan Titik Ikon Khusus di Overworld
+      // 1. Tampilkan Titik Ikon Khusus di Overworld / Dungeon
       if (isOverworld) {
         // Guild Elaine (Emas)
         const gx = toRadarX(guildX / CONSTANTS.TILE_SIZE);
@@ -245,6 +245,17 @@ export class MiniMapUI {
         ctx.beginPath();
         ctx.arc(cx, cy, 3, 0, Math.PI * 2);
         ctx.fill();
+      } else {
+        // Tangga Keluar Dungeon ke Permukaan (Ungu Bercahaya)
+        const lx = toRadarX(dungeonMap.ladderX / CONSTANTS.TILE_SIZE);
+        const ly = toRadarY(dungeonMap.ladderY / CONSTANTS.TILE_SIZE);
+        ctx.fillStyle = '#c084fc';
+        ctx.beginPath();
+        ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fde047';
+        ctx.lineWidth = 1;
+        ctx.stroke();
       }
 
       // 2. Peti Harta Karun (Kuning Bintang)
@@ -389,6 +400,17 @@ export class MiniMapUI {
         ctx.beginPath();
         ctx.arc(cx, cy, 5, 0, Math.PI * 2);
         ctx.fill();
+      } else {
+        // Tangga Keluar Dungeon ke Permukaan
+        const lx = toMapX(dungeonMap.ladderX / CONSTANTS.TILE_SIZE);
+        const ly = toMapY(dungeonMap.ladderY / CONSTANTS.TILE_SIZE);
+        ctx.fillStyle = '#c084fc';
+        ctx.beginPath();
+        ctx.arc(lx, ly, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fde047';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
       }
 
       // Peti Harta Karun

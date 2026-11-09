@@ -5,19 +5,34 @@ export interface FloatingMessage {
   color: string;
   lifetime: number;
   maxLifetime: number;
+  fontSize: number;
+  isCrit: boolean;
+  scale: number;
 }
 
 export class FloatingTextManager {
   private messages: FloatingMessage[] = [];
 
-  public spawn(x: number, y: number, text: string, color: string = '#facc15', duration: number = 1.2): void {
+  public spawn(
+    x: number,
+    y: number,
+    text: string,
+    color: string = '#facc15',
+    duration: number = 1.2,
+    fontSize: number = 10
+  ): void {
+    const isCrit = text.includes('CRIT') || text.includes('LEVEL UP') || text.includes('DIKALAHKAN');
+    const actualFontSize = isCrit ? Math.max(fontSize, 13) : fontSize;
     this.messages.push({
       x,
       y,
       text,
       color,
       lifetime: duration,
-      maxLifetime: duration
+      maxLifetime: duration,
+      fontSize: actualFontSize,
+      isCrit,
+      scale: isCrit ? 1.5 : 1.25 // Anime Pop-In Scale
     });
   }
 
@@ -25,7 +40,16 @@ export class FloatingTextManager {
     for (let i = this.messages.length - 1; i >= 0; i--) {
       const msg = this.messages[i];
       msg.lifetime -= deltaTime;
-      msg.y -= deltaTime * 20; // float upwards
+      // Smooth anime float upwards with easing
+      const progress = 1 - msg.lifetime / msg.maxLifetime;
+      const floatSpeed = msg.isCrit ? 26 : 20;
+      msg.y -= deltaTime * floatSpeed;
+
+      // Pop-in scale settles to 1.0
+      if (msg.scale > 1.0) {
+        msg.scale = Math.max(1.0, msg.scale - deltaTime * 3.5);
+      }
+
       if (msg.lifetime <= 0) {
         this.messages.splice(i, 1);
       }
@@ -36,21 +60,36 @@ export class FloatingTextManager {
     if (this.messages.length === 0) return;
 
     ctx.save();
-    ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
 
     for (const msg of this.messages) {
-      const alpha = Math.max(0, msg.lifetime / msg.maxLifetime);
-      ctx.globalAlpha = alpha;
+      const alpha = Math.max(0, Math.min(1, msg.lifetime / (msg.maxLifetime * 0.4)));
+      ctx.globalAlpha = Math.min(1, alpha);
 
-      // Dark shadow outline for readability
-      ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
-      ctx.lineWidth = 3;
-      ctx.strokeText(msg.text, msg.x, msg.y);
+      ctx.save();
+      ctx.translate(Math.floor(msg.x), Math.floor(msg.y));
+      ctx.scale(msg.scale, msg.scale);
+
+      ctx.font = `900 ${msg.fontSize}px sans-serif`;
+
+      // Thick dark shadow outline for readability
+      ctx.strokeStyle = msg.isCrit ? '#78350f' : 'rgba(15, 23, 42, 0.9)';
+      ctx.lineWidth = msg.isCrit ? 4.5 : 3;
+      ctx.strokeText(msg.text, 0, 0);
+
+      if (msg.isCrit) {
+        // Outer glow stroke for critical hits
+        ctx.strokeStyle = '#fef08a';
+        ctx.lineWidth = 1.5;
+        ctx.strokeText(msg.text, 0, 0);
+      }
 
       // Main colored text
       ctx.fillStyle = msg.color;
-      ctx.fillText(msg.text, msg.x, msg.y);
+      ctx.fillText(msg.text, 0, 0);
+
+      ctx.restore();
     }
 
     ctx.restore();

@@ -228,7 +228,14 @@ export class InventoryUI {
       this.floatingText.spawn(this.player.x + 10, this.player.y - 10, `+${healed} HP Pulih!`, '#4ade80');
 
       if (!this.inventory.getSlot(this.selectedSlotIndex)) {
-        this.selectedSlotIndex = null;
+        let nextIndex: number | null = null;
+        for (let i = 0; i < this.inventory.capacity; i++) {
+          if (this.inventory.slots[i]) {
+            nextIndex = i;
+            break;
+          }
+        }
+        this.selectedSlotIndex = nextIndex ?? 0;
       }
     } else if (def.id === 'MAGIC_FLOWER' || def.id === 'MANA_POTION') {
       if (this.player.mp >= this.player.maxMp) {
@@ -241,7 +248,14 @@ export class InventoryUI {
       this.floatingText.spawn(this.player.x + 10, this.player.y - 10, `+${restored} MP Pulih!`, '#38bdf8');
 
       if (!this.inventory.getSlot(this.selectedSlotIndex)) {
-        this.selectedSlotIndex = null;
+        let nextIndex: number | null = null;
+        for (let i = 0; i < this.inventory.capacity; i++) {
+          if (this.inventory.slots[i]) {
+            nextIndex = i;
+            break;
+          }
+        }
+        this.selectedSlotIndex = nextIndex ?? 0;
       }
     }
   }
@@ -586,11 +600,12 @@ export class InventoryUI {
 
     ctx.fillStyle = curRole.color;
     ctx.font = 'bold 10.5px sans-serif';
-    ctx.fillText(`[${curRole.tag}] ${curRole.name}`, portX + portSize + 10, portY + 20);
+    ctx.fillText(`[${curRole.tag}] ${curRole.name}`, portX + portSize + 10, portY + 19);
 
-    ctx.fillStyle = '#fde047';
+    const rank = this.player.adventurerRank;
+    ctx.fillStyle = rank.color;
     ctx.font = 'bold 10px sans-serif';
-    ctx.fillText(`Tingkat: Level ${this.player.level}`, portX + portSize + 10, portY + 38);
+    ctx.fillText(`${rank.badge} · Lv.${this.player.level}`, portX + portSize + 10, portY + 36);
 
     // EXP Bar
     const expBarY = portY + portSize + 8;

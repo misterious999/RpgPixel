@@ -719,20 +719,39 @@ export class VillageManager {
     ctx.fillStyle = npc.roleType === 'QUEST' ? '#fde047' : '#f8fafc';
     ctx.fillText(npc.name, x + npc.width / 2, labelY);
 
-    // Indikator Interaksi Prompt [A] saat dekat
+    // Indikator Interaksi Prompt [A] & Anime Emote Bubble saat dekat
     if (isNear) {
-      const bob = Math.sin(this.animTimer) * 2;
+      const bob = Math.sin(this.animTimer * 1.5) * 2.5;
       const promptY = y - 18 + bob;
 
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-      ctx.fillRect(x + npc.width / 2 - 40, promptY - 10, 80, 14);
+      // Anime Emote Bubble di atas kepala NPC
+      const emoteY = promptY - 14;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.95)';
+      ctx.beginPath();
+      ctx.arc(x + npc.width / 2, emoteY, 7.5, 0, Math.PI * 2);
+      ctx.fill();
       ctx.strokeStyle = npc.accentColor;
       ctx.lineWidth = 1.2;
-      ctx.strokeRect(x + npc.width / 2 - 40, promptY - 10, 80, 14);
+      ctx.stroke();
+
+      ctx.font = '8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      const emoteIcon = npc.isCat ? '🐾' : (npc.roleType === 'QUEST' ? '📜' : '💬');
+      ctx.fillText(emoteIcon, x + npc.width / 2, emoteY);
+
+      // Prompt Box Interaksi
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+      ctx.beginPath();
+      ctx.roundRect(x + npc.width / 2 - 42, promptY - 9, 84, 15, 4);
+      ctx.fill();
+      ctx.strokeStyle = npc.accentColor;
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
 
       ctx.font = 'bold 8px sans-serif';
       ctx.fillStyle = '#fef08a';
-      ctx.fillText(npc.actionPrompt, x + npc.width / 2, promptY);
+      ctx.fillText(npc.actionPrompt, x + npc.width / 2, promptY - 1);
     }
 
     ctx.restore();
