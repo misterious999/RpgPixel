@@ -502,6 +502,12 @@ export class MiniMapUI {
           } else if (m.type === 'BOSS_SLIME') {
             mColor = '#ec4899';
             radius = 3.5;
+          } else if (m.type === 'BOSS_ANCIENT_ENT') {
+            mColor = '#10b981';
+            radius = 4.2;
+          } else if (m.type === 'BOSS_OBSIDIAN_BEHEMOTH') {
+            mColor = '#8b5cf6';
+            radius = 4.2;
           } else if (isOverworld) {
             mColor = m.tier === 'MID' ? `rgba(245, 158, 11, ${0.7 + pulse * 0.3})` : `rgba(34, 197, 94, ${0.7 + pulse * 0.3})`;
           } else if (m.tier === 'HIGH') {
@@ -669,6 +675,26 @@ export class MiniMapUI {
         ctx.beginPath();
         ctx.arc(px, py, 5, 0, Math.PI * 2);
         ctx.fill();
+      } else if (currentMap === 'DUNGEON_ELDORIA' && dungeonEldoria) {
+        const lx = toMapX(dungeonEldoria.ladderX / CONSTANTS.TILE_SIZE);
+        const ly = toMapY(dungeonEldoria.ladderY / CONSTANTS.TILE_SIZE);
+        ctx.fillStyle = '#34d399';
+        ctx.beginPath();
+        ctx.arc(lx, ly, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fde047';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      } else if (currentMap === 'DUNGEON_STONEWATCH' && dungeonStonewatch) {
+        const lx = toMapX(dungeonStonewatch.ladderX / CONSTANTS.TILE_SIZE);
+        const ly = toMapY(dungeonStonewatch.ladderY / CONSTANTS.TILE_SIZE);
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.arc(lx, ly, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fde047';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
       }
 
       // Peti Harta Karun
@@ -700,6 +726,12 @@ export class MiniMapUI {
           } else if (m.type === 'BOSS_SLIME') {
             mColor = '#ec4899';
             mRadius = 5;
+          } else if (m.type === 'BOSS_ANCIENT_ENT') {
+            mColor = '#10b981';
+            mRadius = 5.5;
+          } else if (m.type === 'BOSS_OBSIDIAN_BEHEMOTH') {
+            mColor = '#8b5cf6';
+            mRadius = 5.5;
           } else if (isOverworld) {
             mColor = m.tier === 'MID' ? '#f59e0b' : '#22c55e';
             mRadius = m.tier === 'MID' ? 3.5 : 2.5;
@@ -769,6 +801,22 @@ export class MiniMapUI {
           { color: '#38bdf8', label: 'Portal Kembali ke Lantai 2' },
           { color: '#f97316', label: 'Raja Naga Api Ignis (Bos Lt.3)' },
           { color: '#a855f7', label: 'Monster Neraka Abisal' },
+          { color: '#fde047', label: 'Peti Harta Karun' }
+        ];
+      } else if (currentMap === 'DUNGEON_ELDORIA') {
+        legends = [
+          { color: '#38bdf8', label: 'Posisi Kamu (Hero)' },
+          { color: '#34d399', label: 'Tangga Keluar ke Desa Eldoria' },
+          { color: '#10b981', label: 'Ent Purba Pelindung Hutan (Bos)' },
+          { color: '#4ade80', label: 'Monster Roh Hutan Purba' },
+          { color: '#fde047', label: 'Peti Harta Karun' }
+        ];
+      } else if (currentMap === 'DUNGEON_STONEWATCH') {
+        legends = [
+          { color: '#38bdf8', label: 'Posisi Kamu (Hero)' },
+          { color: '#f59e0b', label: 'Tangga Keluar ke Stonewatch' },
+          { color: '#8b5cf6', label: 'Obsidian Behemoth Abisal (Bos)' },
+          { color: '#fb923c', label: 'Monster Tambang Terkutuk' },
           { color: '#fde047', label: 'Peti Harta Karun' }
         ];
       }

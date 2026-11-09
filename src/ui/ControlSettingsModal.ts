@@ -19,7 +19,7 @@ export class ControlSettingsModal {
   }
 
   public handleTouch(touchX: number, touchY: number, screenWidth: number, screenHeight: number): boolean {
-    this.gearBtn.x = screenWidth - 88;
+    this.gearBtn.x = screenWidth - 86;
 
     // 1. Gear icon toggle check
     if (
@@ -237,7 +237,7 @@ export class ControlSettingsModal {
 
   public render(ctx: CanvasRenderingContext2D, screenWidth: number, screenHeight: number): void {
     ctx.save();
-    this.gearBtn.x = screenWidth - 88;
+    this.gearBtn.x = screenWidth - 86;
 
     // 1. Gear Icon Button
     const { x: gx, y: gy, size: gs } = this.gearBtn;

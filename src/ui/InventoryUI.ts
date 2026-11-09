@@ -51,7 +51,7 @@ export class InventoryUI {
     screenWidth: number,
     screenHeight: number
   ): boolean {
-    this.backpackBtn.x = screenWidth - 46;
+    this.backpackBtn.x = screenWidth - 44;
 
     // 1. Check Backpack Toggle Button
     if (
@@ -267,7 +267,7 @@ export class InventoryUI {
 
   public render(ctx: CanvasRenderingContext2D, screenWidth: number, screenHeight: number): void {
     ctx.save();
-    this.backpackBtn.x = screenWidth - 46;
+    this.backpackBtn.x = screenWidth - 44;
 
     // 1. Always Render Backpack Icon Button in top right
     const { x: bx, y: by, size: bs } = this.backpackBtn;
@@ -436,6 +436,8 @@ export class InventoryUI {
           // Effect Tag
           const effectText = def.id === 'ADVENTURER_CARD'
             ? `🪪 Pemilik: ${this.player.username} · Role: ${ROLE_INFO[this.player.role]?.name || this.player.role}`
+            : (def.id === 'MANA_POTION' || def.id === 'MAGIC_FLOWER')
+            ? `✨ Efek: +${def.effectValue} MP Pulih`
             : def.effectValue
             ? `✨ Efek: +${def.effectValue} HP Pulih`
             : `✨ Tipe: ${catName}`;

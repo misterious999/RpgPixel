@@ -424,7 +424,7 @@ export class VillageManager {
     }
 
     const modalWidth = Math.min(500, screenWidth - 24);
-    const modalHeight = Math.min(260, screenHeight - 20);
+    const modalHeight = Math.min(270, screenHeight - 16);
     const modalX = (screenWidth - modalWidth) / 2;
     const modalY = (screenHeight - modalHeight) / 2;
 
@@ -483,12 +483,12 @@ export class VillageManager {
         }
       } else {
         // 3 Pilihan Jawaban Teka-Teki
-        const optW = modalWidth - 36;
+        const optW = modalWidth - 32;
         const optH = 26;
-        const optX = modalX + 18;
+        const optX = modalX + 16;
 
         for (let i = 0; i < 3; i++) {
-          const optY = modalY + 144 + i * 32;
+          const optY = modalY + 164 + i * 32;
           if (touchX >= optX && touchX <= optX + optW && touchY >= optY && touchY <= optY + optH) {
             if (i === 0) {
               // Jawaban Benar (Pilihan A)
@@ -1066,7 +1066,7 @@ export class VillageManager {
     const npc = this.activeDialogNPC;
 
     const modalWidth = Math.min(500, screenWidth - 24);
-    const modalHeight = Math.min(260, screenHeight - 20);
+    const modalHeight = Math.min(270, screenHeight - 16);
     const modalX = (screenWidth - modalWidth) / 2;
     const modalY = (screenHeight - modalHeight) / 2;
 
@@ -1260,12 +1260,33 @@ export class VillageManager {
         ctx.font = 'bold 11px sans-serif';
         ctx.fillText('✓ MENGERTI / JELAJAHI', btnX + btnW / 2, btnY + btnH / 2);
       } else {
-        // Tampilkan 3 Pilihan Jawaban Teka-Teki
-        const optW = modalWidth - 36;
-        const optH = 25;
-        const optX = modalX + 18;
+        // Tampilkan Box Teka-Teki Kuno & 3 Pilihan Jawaban
+        const riddleBoxX = modalX + 16;
+        const riddleBoxY = modalY + 124;
+        const riddleBoxW = modalWidth - 32;
+        const riddleBoxH = 34;
+
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(riddleBoxX, riddleBoxY, riddleBoxW, riddleBoxH);
+        ctx.strokeStyle = npc.accentColor;
+        ctx.lineWidth = 1.2;
+        ctx.strokeRect(riddleBoxX, riddleBoxY, riddleBoxW, riddleBoxH);
 
         const isEldoria = npc.riddleId === 'ELDORIA';
+        const riddleVerse = isEldoria
+          ? '📜 "Bertumbuh tanpa kaki, berakar ke bumi, nafas seisi rimba. Apakah aku?"'
+          : '📜 "Lahir di perut bumi, ditempa di bara api, perisai kurcaci. Apakah aku?"';
+
+        ctx.fillStyle = '#fef08a';
+        ctx.font = 'italic bold 9.5px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText(riddleVerse, riddleBoxX + riddleBoxW / 2, riddleBoxY + riddleBoxH / 2);
+
+        const optW = modalWidth - 32;
+        const optH = 26;
+        const optX = modalX + 16;
+
         const options = isEldoria
           ? [
               'A) 🌿 Pohon Purba (Akar Kehidupan Rimba)',
@@ -1273,13 +1294,13 @@ export class VillageManager {
               'C) ⚔️ Pedang Baja Milik Ksatria'
             ]
           : [
-              'A) 🕳️ Sebuah Lubang Galian Tambang',
+              'A) ⚒️ Batangan Besi Abisal Ditempa (Logam Kurcaci)',
               'B) 💰 Tumpukan Koin Emas Tambang',
               'C) 🔥 Kobaran Api Tungku Peleburan'
             ];
 
         for (let i = 0; i < 3; i++) {
-          const optY = modalY + 144 + i * 32;
+          const optY = modalY + 164 + i * 32;
           ctx.fillStyle = '#1e293b';
           ctx.fillRect(optX, optY, optW, optH);
           ctx.strokeStyle = i === 0 ? '#38bdf8' : '#475569';

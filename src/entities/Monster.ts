@@ -1707,11 +1707,11 @@ export class Monster {
       else if (this.tier === 'HIGH') tagColor = '#d8b4fe';
 
       ctx.fillStyle = tagColor;
-      ctx.fillText(
-        isBoss ? `👑 ${this.name} [Lv.${this.level}]` : `[Lv.${this.level} • ${this.tierLabel}] ${this.name}`,
-        x + this.width / 2,
-        barY - 3
-      );
+      const tagText = isBoss ? `👑 ${this.name} [Lv.${this.level}]` : `[Lv.${this.level} • ${this.tierLabel}] ${this.name}`;
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2.0;
+      ctx.strokeText(tagText, x + this.width / 2, barY - 3);
+      ctx.fillText(tagText, x + this.width / 2, barY - 3);
     }
   }
 }

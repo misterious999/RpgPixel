@@ -329,7 +329,7 @@ export class Game {
       }
 
       // Gelar & Achievement Button (👑)
-      const titleBtn = { x: this.screenWidth - 180, y: 10, size: 34 };
+      const titleBtn = { x: this.screenWidth - 128, y: 10, size: 34 };
       if (
         touchX >= titleBtn.x &&
         touchX <= titleBtn.x + titleBtn.size &&
@@ -341,7 +341,7 @@ export class Game {
       }
 
       // Fullscreen Button (⛶)
-      const fsBtn = { x: this.screenWidth - 138, y: 10, size: 34 };
+      const fsBtn = { x: this.screenWidth - 170, y: 10, size: 34 };
       if (
         touchX >= fsBtn.x &&
         touchX <= fsBtn.x + fsBtn.size &&
@@ -354,12 +354,12 @@ export class Game {
 
       // Install App Button (📲) if installable
       if (PwaService.isInstallable) {
-        const instBtn = { x: this.screenWidth - 232, y: 10, w: 86, h: 34 };
+        const instBtn = { x: this.screenWidth - 254, y: 10, size: 34 };
         if (
           touchX >= instBtn.x &&
-          touchX <= instBtn.x + instBtn.w &&
+          touchX <= instBtn.x + instBtn.size &&
           touchY >= instBtn.y &&
-          touchY <= instBtn.y + instBtn.h
+          touchY <= instBtn.y + instBtn.size
         ) {
           PwaService.promptInstall();
           return true;
@@ -3501,30 +3501,41 @@ export class Game {
       ctx.fillText(timeStr, timeX + timeWidth / 2, timeY + 11);
       ctx.restore();
 
-      // Top-Left: Active Food Buffs HUD Badges
-      let buffX = 10;
-      const buffY = 72;
-      if (this.player.foodBuffAtkTimer > 0) {
-        const m = Math.floor(this.player.foodBuffAtkTimer / 60);
-        const s = Math.floor(this.player.foodBuffAtkTimer % 60);
-        this.renderBuffBadge(ctx, buffX, buffY, '🥩 +20% ATK', `${m}:${s.toString().padStart(2, '0')}`, '#fb923c');
-        buffX += 88;
-      }
-      if (this.player.foodBuffMpTimer > 0) {
-        const m = Math.floor(this.player.foodBuffMpTimer / 60);
-        const s = Math.floor(this.player.foodBuffMpTimer % 60);
-        this.renderBuffBadge(ctx, buffX, buffY, '🍮 Regen MP', `${m}:${s.toString().padStart(2, '0')}`, '#38bdf8');
-        buffX += 88;
-      }
-      if (this.player.foodBuffExpSpeedTimer > 0) {
-        const m = Math.floor(this.player.foodBuffExpSpeedTimer / 60);
-        const s = Math.floor(this.player.foodBuffExpSpeedTimer % 60);
-        this.renderBuffBadge(ctx, buffX, buffY, '🍲 +Speed/EXP', `${m}:${s.toString().padStart(2, '0')}`, '#4ade80');
-        buffX += 88;
+      // Top-Center: Active Food Buffs HUD Badges (placed directly beneath Day/Night banner)
+      let activeBuffsCount = 0;
+      if (this.player.foodBuffAtkTimer > 0) activeBuffsCount++;
+      if (this.player.foodBuffMpTimer > 0) activeBuffsCount++;
+      if (this.player.foodBuffExpSpeedTimer > 0) activeBuffsCount++;
+
+      if (activeBuffsCount > 0) {
+        const buffBadgeW = 84;
+        const buffSpacing = 4;
+        const totalBuffsW = activeBuffsCount * buffBadgeW + (activeBuffsCount - 1) * buffSpacing;
+        let buffX = (screenWidth - totalBuffsW) / 2;
+        const buffY = 36;
+
+        if (this.player.foodBuffAtkTimer > 0) {
+          const m = Math.floor(this.player.foodBuffAtkTimer / 60);
+          const s = Math.floor(this.player.foodBuffAtkTimer % 60);
+          this.renderBuffBadge(ctx, buffX, buffY, '🥩 +20% ATK', `${m}:${s.toString().padStart(2, '0')}`, '#fb923c');
+          buffX += buffBadgeW + buffSpacing;
+        }
+        if (this.player.foodBuffMpTimer > 0) {
+          const m = Math.floor(this.player.foodBuffMpTimer / 60);
+          const s = Math.floor(this.player.foodBuffMpTimer % 60);
+          this.renderBuffBadge(ctx, buffX, buffY, '🍮 Regen MP', `${m}:${s.toString().padStart(2, '0')}`, '#38bdf8');
+          buffX += buffBadgeW + buffSpacing;
+        }
+        if (this.player.foodBuffExpSpeedTimer > 0) {
+          const m = Math.floor(this.player.foodBuffExpSpeedTimer / 60);
+          const s = Math.floor(this.player.foodBuffExpSpeedTimer % 60);
+          this.renderBuffBadge(ctx, buffX, buffY, '🍲 +Speed/EXP', `${m}:${s.toString().padStart(2, '0')}`, '#4ade80');
+          buffX += buffBadgeW + buffSpacing;
+        }
       }
 
       // Top HUD: Gelar & Title Button (👑)
-      const titleBtnX = screenWidth - 180;
+      const titleBtnX = screenWidth - 128;
       const titleBtnY = 10;
       const titleBtnSize = 34;
 
@@ -3545,7 +3556,7 @@ export class Game {
       ctx.restore();
 
       // 13. Top HUD: Fullscreen Icon (⛶)
-      const fsX = screenWidth - 138;
+      const fsX = screenWidth - 170;
       const fsY = 10;
       const fsSize = 34;
 
@@ -3566,20 +3577,23 @@ export class Game {
 
       // Top HUD: Install Web App Button (📲) if installable
       if (PwaService.isInstallable) {
-        const instX = screenWidth - 232;
+        const instX = screenWidth - 254;
         const instY = 10;
-        const instW = 86;
-        const instH = 34;
+        const instSize = 34;
 
-        ctx.fillStyle = 'rgba(2, 132, 199, 0.9)';
-        ctx.fillRect(instX, instY, instW, instH);
+        ctx.fillStyle = 'rgba(2, 132, 199, 0.85)';
+        ctx.beginPath();
+        ctx.arc(instX + instSize / 2, instY + instSize / 2, instSize / 2, 0, Math.PI * 2);
+        ctx.fill();
         ctx.strokeStyle = '#38bdf8';
         ctx.lineWidth = 1.5;
-        ctx.strokeRect(instX, instY, instW, instH);
+        ctx.stroke();
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 9.5px sans-serif';
-        ctx.fillText('📲 Pasang App', instX + instW / 2, instY + instH / 2);
+        ctx.font = '15px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('📲', instX + instSize / 2, instY + instSize / 2);
       }
       ctx.restore();
 
@@ -3621,8 +3635,9 @@ export class Game {
         ctx.strokeRect(pX, pY, pW, pH);
         ctx.font = 'bold 10px sans-serif';
         ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.fillStyle = '#fef08a';
-        ctx.fillText('Tekan [A] Naik Tangga (Keluar Goa)', pX + pW / 2, pY + 17);
+        ctx.fillText('Tekan [A] Naik Tangga (Keluar Goa)', pX + pW / 2, pY + pH / 2);
         ctx.restore();
       }
 
@@ -3639,8 +3654,9 @@ export class Game {
         ctx.strokeRect(pX, pY, pW, pH);
         ctx.font = 'bold 10px sans-serif';
         ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.fillStyle = '#e879f9';
-        ctx.fillText('Tekan [A] Masuk Makam Kuno Lantai 2 ▼', pX + pW / 2, pY + 17);
+        ctx.fillText('Tekan [A] Masuk Makam Kuno Lantai 2 ▼', pX + pW / 2, pY + pH / 2);
         ctx.restore();
       }
 
@@ -3657,8 +3673,9 @@ export class Game {
         ctx.strokeRect(pX, pY, pW, pH);
         ctx.font = 'bold 10px sans-serif';
         ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.fillStyle = '#93c5fd';
-        ctx.fillText('Tekan [A] Naik Tangga (Lantai 1) ▲', pX + pW / 2, pY + 17);
+        ctx.fillText('Tekan [A] Naik Tangga (Lantai 1) ▲', pX + pW / 2, pY + pH / 2);
         ctx.restore();
       }
 
@@ -3675,8 +3692,9 @@ export class Game {
         ctx.strokeRect(pX, pY, pW, pH);
         ctx.font = 'bold 10px sans-serif';
         ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.fillStyle = '#fdba74';
-        ctx.fillText('Tekan [A] Masuk Neraka Abisal Lantai 3 ▼', pX + pW / 2, pY + 17);
+        ctx.fillText('Tekan [A] Masuk Neraka Abisal Lantai 3 ▼', pX + pW / 2, pY + pH / 2);
         ctx.restore();
       }
 
@@ -3693,8 +3711,9 @@ export class Game {
         ctx.strokeRect(pX, pY, pW, pH);
         ctx.font = 'bold 10px sans-serif';
         ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.fillStyle = '#93c5fd';
-        ctx.fillText('Tekan [A] Masuk Portal Naik (Lantai 2) ▲', pX + pW / 2, pY + 17);
+        ctx.fillText('Tekan [A] Masuk Portal Naik (Lantai 2) ▲', pX + pW / 2, pY + pH / 2);
         ctx.restore();
       }
 
@@ -3713,11 +3732,12 @@ export class Game {
         ctx.strokeRect(pX, pY, pW, pH);
         ctx.font = 'bold 10px sans-serif';
         ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.fillStyle = this.isEldoriaDungeonUnlocked ? '#86efac' : '#fca5a5';
         ctx.fillText(
           this.isEldoriaDungeonUnlocked ? 'Tekan [A] Masuk Kuil Roh Hutan 🌿' : 'Pecahkan Teka-Teki Elder Sylas 🔒',
           pX + pW / 2,
-          pY + 17
+          pY + pH / 2
         );
         ctx.restore();
       }
@@ -3737,11 +3757,12 @@ export class Game {
         ctx.strokeRect(pX, pY, pW, pH);
         ctx.font = 'bold 10px sans-serif';
         ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.fillStyle = this.isStonewatchDungeonUnlocked ? '#fde68a' : '#fca5a5';
         ctx.fillText(
           this.isStonewatchDungeonUnlocked ? 'Tekan [A] Masuk Tambang Abisal ⚒️' : 'Pecahkan Teka-Teki Kapten Borin 🔒',
           pX + pW / 2,
-          pY + 17
+          pY + pH / 2
         );
         ctx.restore();
       }
@@ -3760,8 +3781,9 @@ export class Game {
         ctx.strokeRect(pX, pY, pW, pH);
         ctx.font = 'bold 10px sans-serif';
         ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.fillStyle = '#86efac';
-        ctx.fillText('Tekan [A] Naik Tangga (Desa Eldoria) ▲', pX + pW / 2, pY + 17);
+        ctx.fillText('Tekan [A] Naik Tangga (Desa Eldoria) ▲', pX + pW / 2, pY + pH / 2);
         ctx.restore();
       }
 
@@ -3779,8 +3801,9 @@ export class Game {
         ctx.strokeRect(pX, pY, pW, pH);
         ctx.font = 'bold 10px sans-serif';
         ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
         ctx.fillStyle = '#fde68a';
-        ctx.fillText('Tekan [A] Naik Tangga (Desa Stonewatch) ▲', pX + pW / 2, pY + 17);
+        ctx.fillText('Tekan [A] Naik Tangga (Desa Stonewatch) ▲', pX + pW / 2, pY + pH / 2);
         ctx.restore();
       }
 
@@ -4144,8 +4167,8 @@ export class Game {
 
     ctx.save();
     const startX = 10;
-    const startY = 110; // tepat di bawah koordinat HUD
-    const cardW = 165;
+    const startY = 138; // Tepat dan rapi di bawah kotak info HUD status
+    const cardW = 175;
 
     for (let i = 0; i < Math.min(2, activeQuests.length); i++) {
       const q = activeQuests[i];

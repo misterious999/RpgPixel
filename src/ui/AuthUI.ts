@@ -3,9 +3,7 @@ import { Player } from '../entities/Player.ts';
 import { Chest } from '../world/Chest.ts';
 import { FloatingTextManager } from './FloatingText.ts';
 import { RoleType } from '../types/GameTypes.ts';
-import { PwaService } from '../services/PwaService.ts';
 import { NotificationModal } from './NotificationModal.ts';
-import { CanvasText } from '../utils/CanvasText.ts';
 import { CONSTANTS } from '../core/Constants.ts';
 
 export class AuthUI {
@@ -191,102 +189,69 @@ export class AuthUI {
   }
 
   public handleTouch(touchX: number, touchY: number, screenWidth: number): boolean {
-    const baseRight = PwaService.isInstallable ? 240 : 150;
+    const btnX = screenWidth - 212;
+    const btnY = 10;
+    const btnSize = 34;
 
-    if (this.isGuest) {
-      // 1. Tombol Keluar untuk Akun Tamu
-      const logoutBtnW = 58;
-      const logoutBtnH = 30;
-      const logoutBtnX = screenWidth - baseRight - logoutBtnW;
-      const logoutBtnY = 12;
-
-      if (
-        touchX >= logoutBtnX &&
-        touchX <= logoutBtnX + logoutBtnW &&
-        touchY >= logoutBtnY &&
-        touchY <= logoutBtnY + logoutBtnH
-      ) {
+    if (
+      touchX >= btnX &&
+      touchX <= btnX + btnSize &&
+      touchY >= btnY &&
+      touchY <= btnY + btnSize
+    ) {
+      if (this.isGuest) {
         NotificationModal.confirm({
-          title: 'KELUAR DARI AKUN TAMU',
-          message: 'Keluar ke menu utama? Anda dapat login dengan akun Google atau membuat petualangan baru.',
-          icon: '🚪',
-          confirmText: 'Ya, Keluar',
-          cancelText: 'Tetap Main',
-          variant: 'danger',
-          onConfirm: () => {
-            this.performLogout();
-          }
-        });
-        return true;
-      }
-
-      // 2. Guest: Option to bind account to Google
-      const bindBtnW = 96;
-      const bindBtnH = 30;
-      const bindBtnX = logoutBtnX - bindBtnW - 6;
-      const bindBtnY = 12;
-
-      if (
-        touchX >= bindBtnX &&
-        touchX <= bindBtnX + bindBtnW &&
-        touchY >= bindBtnY &&
-        touchY <= bindBtnY + bindBtnH
-      ) {
-        NotificationModal.confirm({
-          title: 'HUBUNGKAN DENGAN GOOGLE',
-          message: 'Hubungkan petualangan Anda dengan akun Google sekarang agar progres level, role, dan inventori tersimpan abadi di Cloud?',
-          icon: '☁️',
-          confirmText: 'Hubungkan Google',
-          cancelText: 'Nanti Saja',
+          title: 'MODE OFFLINE (AKUN TAMU)',
+          message: 'Anda saat ini bermain sebagai Akun Tamu. Sambungkan akun Google agar seluruh progres level, role, dan senjata tersimpan aman di Cloud, atau keluar untuk ganti akun?',
+          icon: '📴',
+          confirmText: '☁️ Hubungkan Google',
+          cancelText: '🚪 Keluar Tamu',
           variant: 'primary',
           onConfirm: () => {
             SupabaseService.loginWithGoogle();
+          },
+          onCancel: () => {
+            NotificationModal.confirm({
+              title: 'KELUAR DARI AKUN TAMU',
+              message: 'Keluar ke menu utama? Anda dapat login dengan akun Google atau membuat petualangan baru.',
+              icon: '🚪',
+              confirmText: 'Ya, Keluar',
+              cancelText: 'Tetap Main',
+              variant: 'danger',
+              onConfirm: () => {
+                this.performLogout();
+              }
+            });
           }
         });
         return true;
       }
-      return false;
-    }
 
-    const user = SupabaseService.currentUser;
-    if (user) {
-      // 1. "💾 Simpan" button
-      const saveBtnW = 60;
-      const saveBtnH = 30;
-      const saveBtnX = screenWidth - baseRight - saveBtnW;
-      const saveBtnY = 12;
-
-      if (
-        touchX >= saveBtnX &&
-        touchX <= saveBtnX + saveBtnW &&
-        touchY >= saveBtnY &&
-        touchY <= saveBtnY + saveBtnH
-      ) {
-        this.saveCurrentGame();
-        return true;
-      }
-
-      // 2. "Keluar / Ganti Akun" button
-      const logoutBtnW = 58;
-      const logoutBtnH = 30;
-      const logoutBtnX = saveBtnX - logoutBtnW - 6;
-      const logoutBtnY = 12;
-
-      if (
-        touchX >= logoutBtnX &&
-        touchX <= logoutBtnX + logoutBtnW &&
-        touchY >= logoutBtnY &&
-        touchY <= logoutBtnY + logoutBtnH
-      ) {
+      const user = SupabaseService.currentUser;
+      if (user) {
+        const name = this.player.username || user.user_metadata?.full_name || 'Petualang';
         NotificationModal.confirm({
-          title: 'KELUAR & GANTI AKUN',
-          message: 'Apakah Anda ingin keluar untuk berganti akun? Progres permainan akan disimpan terlebih dahulu ke Cloud.',
-          icon: '🚪',
-          confirmText: 'Simpan & Keluar',
-          cancelText: 'Tetap Main',
-          variant: 'danger',
+          title: `AKUN CLOUD (${name})`,
+          message: `Progres tersinkronisasi dengan Google Cloud.\nTerakhir disimpan: ${this.lastSavedTimeText || 'Sinkronisasi Otomatis'}.\n\nSimpan progres sekarang atau keluar untuk ganti akun?`,
+          icon: '☁️',
+          confirmText: '💾 Simpan Sekarang',
+          cancelText: '🚪 Keluar Akun',
+          variant: 'primary',
           onConfirm: () => {
-            this.performLogout();
+            this.saveCurrentGame();
+          },
+          onCancel: () => {
+            NotificationModal.confirm({
+              title: 'KELUAR & GANTI AKUN',
+              message: 'Progres akan disimpan terlebih dahulu ke Cloud sebelum keluar. Lanjutkan?',
+              icon: '🚪',
+              confirmText: 'Simpan & Keluar',
+              cancelText: 'Tetap Main',
+              variant: 'danger',
+              onConfirm: () => {
+                this.performLogout();
+              }
+            });
           }
         });
         return true;
@@ -298,47 +263,36 @@ export class AuthUI {
 
   public render(ctx: CanvasRenderingContext2D, screenWidth: number): void {
     ctx.save();
-    const baseRight = PwaService.isInstallable ? 240 : 150;
+    const btnX = screenWidth - 212;
+    const btnY = 10;
+    const btnSize = 34;
+    const cx = btnX + btnSize / 2;
+    const cy = btnY + btnSize / 2;
 
     if (this.isGuest) {
-      // 1. Tombol Keluar (Logout) Akun Tamu
-      const logoutBtnW = 58;
-      const logoutBtnH = 30;
-      const logoutBtnX = screenWidth - baseRight - logoutBtnW;
-      const logoutBtnY = 12;
+      // Guest Button
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.beginPath();
+      ctx.arc(cx, cy, btnSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
 
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.22)';
-      ctx.fillRect(logoutBtnX, logoutBtnY, logoutBtnW, logoutBtnH);
-      ctx.strokeStyle = '#ef4444';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(logoutBtnX, logoutBtnY, logoutBtnW, logoutBtnH);
-
-      ctx.fillStyle = '#fca5a5';
-      ctx.font = 'bold 10px sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '15px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('🚪 Keluar', logoutBtnX + logoutBtnW / 2, logoutBtnY + logoutBtnH / 2);
+      ctx.fillText('☁️', cx, cy - 1);
 
-      // 2. Guest Profile Tag Pill
-      const pillW = 96;
-      const pillH = 30;
-      const pillX = logoutBtnX - pillW - 6;
-      const pillY = 12;
-
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-      ctx.fillRect(pillX, pillY, pillW, pillH);
-      ctx.strokeStyle = '#f59e0b';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(pillX, pillY, pillW, pillH);
-
+      // Amber dot (Offline)
       ctx.fillStyle = '#f59e0b';
-      ctx.font = 'bold 9px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText('📴 Mode Offline', pillX + 8, pillY + 4);
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '8px sans-serif';
-      ctx.fillText('Hubungkan ☁️', pillX + 8, pillY + 16);
+      ctx.beginPath();
+      ctx.arc(btnX + 26, btnY + 26, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1;
+      ctx.stroke();
 
       ctx.restore();
       return;
@@ -348,94 +302,38 @@ export class AuthUI {
     if (user) {
       const name = this.player.username || user.user_metadata?.full_name || 'Petualang';
 
-      const saveBtnW = 60;
-      const saveBtnH = 30;
-      const saveBtnX = screenWidth - baseRight - saveBtnW;
-      const saveBtnY = 12;
-
-      const logoutBtnW = 58;
-      const logoutBtnH = 30;
-      const logoutBtnX = saveBtnX - logoutBtnW - 6;
-      const logoutBtnY = 12;
-
-      // 1. "Keluar" (Logout) button
-      ctx.fillStyle = 'rgba(239, 68, 68, 0.22)';
-      ctx.fillRect(logoutBtnX, logoutBtnY, logoutBtnW, logoutBtnH);
-      ctx.strokeStyle = '#ef4444';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(logoutBtnX, logoutBtnY, logoutBtnW, logoutBtnH);
-
-      ctx.fillStyle = '#fca5a5';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('🚪 Keluar', logoutBtnX + logoutBtnW / 2, logoutBtnY + logoutBtnH / 2);
-
-      // 2. "💾 Simpan" Button
-      ctx.fillStyle = this.isSaving ? 'rgba(56, 189, 248, 0.4)' : 'rgba(16, 185, 129, 0.25)';
-      ctx.fillRect(saveBtnX, saveBtnY, saveBtnW, saveBtnH);
-      ctx.strokeStyle = '#10b981';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(saveBtnX, saveBtnY, saveBtnW, saveBtnH);
-
-      ctx.fillStyle = '#a7f3d0';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(this.isSaving ? 'Menyimpan..' : '💾 Simpan', saveBtnX + saveBtnW / 2, saveBtnY + saveBtnH / 2);
-
-      // 3. User Avatar Pill
-      const pillW = 95;
-      const pillH = 30;
-      const pillX = logoutBtnX - pillW - 6;
-      const pillY = 12;
-
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-      ctx.fillRect(pillX, pillY, pillW, pillH);
-      ctx.strokeStyle = 'rgba(255, 255, 255, 0.2)';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(pillX, pillY, pillW, pillH);
-
-      // Avatar circle
-      const avX = pillX + 17;
-      const avY = pillY + pillH / 2;
-      const avR = 12;
-
-      ctx.save();
+      ctx.fillStyle = this.isSaving ? 'rgba(56, 189, 248, 0.35)' : 'rgba(15, 23, 42, 0.85)';
       ctx.beginPath();
-      ctx.arc(avX, avY, avR, 0, Math.PI * 2);
-      ctx.clip();
+      ctx.arc(cx, cy, btnSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = this.isSaving ? '#38bdf8' : '#10b981';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
 
+      // Avatar or Icon inside
       if (this.avatarImg && this.avatarImg.complete) {
-        ctx.drawImage(this.avatarImg, avX - avR, avY - avR, avR * 2, avR * 2);
+        ctx.save();
+        ctx.beginPath();
+        ctx.arc(cx, cy, 11, 0, Math.PI * 2);
+        ctx.clip();
+        ctx.drawImage(this.avatarImg, cx - 11, cy - 11, 22, 22);
+        ctx.restore();
       } else {
         ctx.fillStyle = '#38bdf8';
-        ctx.fillRect(avX - avR, avY - avR, avR * 2, avR * 2);
-        ctx.fillStyle = '#ffffff';
         ctx.font = 'bold 12px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(name.charAt(0).toUpperCase(), avX, avY);
+        ctx.fillText(name.charAt(0).toUpperCase(), cx, cy);
       }
-      ctx.restore();
 
-      // Display Name
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      const displayName = CanvasText.truncate(ctx, name, 55);
-      ctx.fillText(displayName, pillX + 34, pillY + 6);
-
-      // Cloud status dot
+      // Green dot (Online Sync)
       ctx.fillStyle = '#22c55e';
       ctx.beginPath();
-      ctx.arc(pillX + 38, pillY + 23, 3, 0, Math.PI * 2);
+      ctx.arc(btnX + 26, btnY + 26, 3.5, 0, Math.PI * 2);
       ctx.fill();
-
-      ctx.fillStyle = '#94a3b8';
-      ctx.font = '8px sans-serif';
-      ctx.fillText(this.lastSavedTimeText ? `Save ${this.lastSavedTimeText}` : '🌐 Online Sync', pillX + 44, pillY + 19);
+      ctx.strokeStyle = '#0f172a';
+      ctx.lineWidth = 1;
+      ctx.stroke();
     }
 
     ctx.restore();

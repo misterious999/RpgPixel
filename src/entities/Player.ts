@@ -1135,6 +1135,8 @@ export class Player {
 
     // 15. Floating Header (Role Badge, Title & Username)
     ctx.globalAlpha = 1.0;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'alphabetic';
 
     if (this.equippedTitle) {
       ctx.font = 'bold 7.5px sans-serif';
@@ -1146,7 +1148,6 @@ export class Player {
     }
 
     ctx.font = 'bold 8.5px sans-serif';
-    ctx.textAlign = 'center';
 
     let tagText = `[${ROLE_INFO[this.role].tag} Lv.${this.level}]`;
     let tagColor = ROLE_INFO[this.role].color;
