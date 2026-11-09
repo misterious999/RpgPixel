@@ -25,6 +25,7 @@ export class AudioEngine {
     | 'INTERIOR_GUILD'
     | 'INTERIOR_BLACKSMITH'
     | 'INTERIOR_APOTHECARY'
+    | 'INTERIOR_KITCHEN'
     | 'INTERIOR_ELDORIA'
     | 'INTERIOR_STONEWATCH'
     | null = null;
@@ -673,6 +674,7 @@ export class AudioEngine {
       | 'INTERIOR_GUILD'
       | 'INTERIOR_BLACKSMITH'
       | 'INTERIOR_APOTHECARY'
+      | 'INTERIOR_KITCHEN'
       | 'INTERIOR_ELDORIA'
       | 'INTERIOR_STONEWATCH'
   ): void {

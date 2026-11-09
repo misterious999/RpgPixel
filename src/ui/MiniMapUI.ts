@@ -210,7 +210,7 @@ export class MiniMapUI {
     ctx: CanvasRenderingContext2D,
     screenWidth: number,
     screenHeight: number,
-    currentMap: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | 'DUNGEON_ELDORIA' | 'DUNGEON_STONEWATCH' | 'INTERIOR_GUILD' | 'INTERIOR_BLACKSMITH' | 'INTERIOR_APOTHECARY' | 'INTERIOR_ELDORIA' | 'INTERIOR_STONEWATCH',
+    currentMap: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | 'DUNGEON_ELDORIA' | 'DUNGEON_STONEWATCH' | 'INTERIOR_GUILD' | 'INTERIOR_BLACKSMITH' | 'INTERIOR_APOTHECARY' | 'INTERIOR_KITCHEN' | 'INTERIOR_ELDORIA' | 'INTERIOR_STONEWATCH',
     tileMap: TileMap,
     dungeonMap: DungeonMap,
     player: Player,
@@ -307,6 +307,12 @@ export class MiniMapUI {
         mapTitle = '🍃 Toko Ramuan & Inn';
         fullMapTitle = '🍃 Toko Ramuan Mistis & Penginapan Lily';
         titleColor = '#34d399';
+        mapTileWidth = 16;
+        mapTileHeight = 12;
+      } else if (currentMap === 'INTERIOR_KITCHEN') {
+        mapTitle = '🍳 Dapur Petualang';
+        fullMapTitle = '🍳 Dapur & Kedai Kuliner Petualang Chef Gaston';
+        titleColor = '#f59e0b';
         mapTileWidth = 16;
         mapTileHeight = 12;
       } else if (currentMap === 'INTERIOR_ELDORIA') {

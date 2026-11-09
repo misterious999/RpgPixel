@@ -53,7 +53,7 @@ export class VillageManager {
     const ts = CONSTANTS.TILE_SIZE;
 
     this.npcs = [
-      // --- 4 NPC MISI GUILD SERIKAT (Mengapit Balai Serikat) ---
+      // --- 4 NPC MISI GUILD SERIKAT (Ditempatkan di dalam Balai Serikat Guild) ---
       {
         id: 'galahad',
         name: 'Kapten Galahad',
@@ -70,7 +70,8 @@ export class VillageManager {
         avatarIcon: '🛡️',
         greetingText: 'Salam damai, Petualang! Wilayah lembah butuh pahlawan tangguh.',
         loreText: 'Kawanan Slime Hutan tingkat bawah di pedalaman rimba luar mulai meresahkan pengelana. Kalahkan 4 Slime Hutan demi menjaga ketertiban perbatasan!',
-        actionPrompt: '🛡️ [A] Misi Slime'
+        actionPrompt: '🛡️ [A] Misi Slime',
+        isInsideBuilding: true
       },
       {
         id: 'kaelen',
@@ -88,7 +89,8 @@ export class VillageManager {
         avatarIcon: '🏹',
         greetingText: 'Ssshh... Angin utara membawa kabar tentang serigala rimba yang ganas.',
         loreText: 'Kawanan serigala buas tingkat menengah mengintai di hutan lebat sekitar gerbang dungeon. Kalahkan 3 Serigala Rimba untuk membuka jalan para pengelana!',
-        actionPrompt: '🏹 [A] Misi Serigala'
+        actionPrompt: '🏹 [A] Misi Serigala',
+        isInsideBuilding: true
       },
       {
         id: 'ignis',
@@ -106,7 +108,8 @@ export class VillageManager {
         avatarIcon: '🔮',
         greetingText: 'Goa purba di utara memancarkan gelombang energi magis yang misterius!',
         loreText: 'Dungeon bawah tanah dipenuhi kelelawar gua purba dan kristal abisal. Beranikan dirimu menuruni gua dan basmi 4 Kelelawar Gua!',
-        actionPrompt: '🔮 [A] Misi Goa'
+        actionPrompt: '🔮 [A] Misi Goa',
+        isInsideBuilding: true
       },
       {
         id: 'morgrim',
@@ -124,7 +127,8 @@ export class VillageManager {
         avatarIcon: '⚔️',
         greetingText: 'Hahaha! Hanya mereka yang bernyali baja yang pantas bicara denganku!',
         loreText: 'Di ruang altar terdalam gua bawah tanah, bersemayam Raja Slime Purba berkekuatan dahsyat. Buktikan kekuatanmu dan taklukkan sang raja!',
-        actionPrompt: '👑 [A] Misi Raja Goa'
+        actionPrompt: '👑 [A] Misi Raja Goa',
+        isInsideBuilding: true
       },
 
       // --- 5 NPC AMBIENT / PAJANGAN (Warga Pedesaan Oakhaven) ---
@@ -383,6 +387,21 @@ export class VillageManager {
       return true;
     }
 
+    // 3.5 Bengkel Pandai Besi Brokk (Barat Daya Balai: 44.8*ts, 47*ts)
+    const bsX = 44.8 * ts;
+    const bsY = 47 * ts;
+    const bsW = 76;
+    const bsH = 64;
+    if (box.x < bsX + bsW && box.x + box.width > bsX && box.y < bsY + bsH && box.y + box.height > bsY + 22) {
+      // Izinkan lewat di depan pintu masuk (tengah bawah) agar bisa melangkah masuk ke pintu
+      const doorLeft = bsX + bsW / 2 - 12;
+      const doorRight = bsX + bsW / 2 + 12;
+      if (box.x >= doorLeft && box.x + box.width <= doorRight + 16 && box.y >= bsY + bsH - 14) {
+        return false;
+      }
+      return true;
+    }
+
     // 4. Kedai Petualang Oakhaven (Tenggara: 56*ts, 51.5*ts)
     const h3x = 56 * ts;
     const h3y = 51 * ts;
@@ -497,12 +516,12 @@ export class VillageManager {
         }
       } else {
         // 3 Pilihan Jawaban Teka-Teki
-        const optW = modalWidth - 32;
-        const optH = 26;
-        const optX = modalX + 16;
+        const optW = modalWidth - 28;
+        const optH = 24;
+        const optX = modalX + 14;
 
         for (let i = 0; i < 3; i++) {
-          const optY = modalY + 164 + i * 32;
+          const optY = modalY + 154 + i * 28;
           if (touchX >= optX && touchX <= optX + optW && touchY >= optY && touchY <= optY + optH) {
             if (i === 0) {
               // Jawaban Benar (Pilihan A)
@@ -530,12 +549,13 @@ export class VillageManager {
       }
     } else {
       // Ambient NPC: Button [Mengerti / Tutup]
-      const btnW = 130;
-      const btnH = 30;
+      const btnW = Math.min(150, modalWidth - 40);
+      const btnH = 28;
       const btnX = modalX + (modalWidth - btnW) / 2;
-      const btnY = modalY + modalHeight - 42;
+      const btnY = modalY + modalHeight - 38;
 
-      if (touchX >= btnX && touchX <= btnX + btnW && touchY >= btnY && touchY <= btnY + btnH) {
+      // Hit-box with slight touch tolerance padding for reliable mobile taps
+      if (touchX >= btnX - 4 && touchX <= btnX + btnW + 4 && touchY >= btnY - 4 && touchY <= btnY + btnH + 4) {
         this.closeDialog();
         AudioEngine.playButtonClick();
         return true;
@@ -664,15 +684,20 @@ export class VillageManager {
     const h1y = 43 * ts;
     this.drawCottage(ctx, h1x, h1y, 76, 64, '#991b1b', '#b45309', 'Balai Desa Aldrich');
 
+    // 3.5 BENGKEL PANDAI BESI BROKK (Barat Daya Balai: 44.8*ts, 47*ts, Pintu Masuk di 46*ts, 49*ts)
+    const bsX = 44.8 * ts;
+    const bsY = 47 * ts;
+    this.drawBlacksmithWorkshop(ctx, bsX, bsY, 76, 64);
+
     // 4. TOKO BUNGA LILY (Timur Laut: 56*ts, 43*ts)
     const h2x = 56 * ts;
     const h2y = 43 * ts;
     this.drawCottage(ctx, h2x, h2y, 74, 64, '#15803d', '#d97706', 'Toko Bunga Lily');
 
-    // 5. KEDAI & PENGINAPAN PETUALANG (Tenggara: 56*ts, 51*ts)
+    // 5. KEDAI & DAPUR KULINER PETUALANG (Tenggara: 56*ts, 51*ts)
     const h3x = 56 * ts;
     const h3y = 51 * ts;
-    this.drawCottage(ctx, h3x, h3y, 78, 66, '#78350f', '#ca8a04', 'Kedai Petualang');
+    this.drawCottage(ctx, h3x, h3y, 78, 66, '#78350f', '#ca8a04', 'Dapur & Kedai Petualang');
 
     // Bangku santai luar kedai di mana Bucky duduk
     ctx.fillStyle = '#92400e';
@@ -909,6 +934,146 @@ export class VillageManager {
     ctx.font = 'bold 7px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(nameTag, x + w / 2, y + h + 4);
+  }
+
+  /**
+   * Render Bangunan Bengkel Pandai Besi Master Brokk di Oakhaven (Atap Slate Arang, Dinding Batu Basalt, Cerobong Asap & Plang Anvil)
+   */
+  private drawBlacksmithWorkshop(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number
+  ): void {
+    // 1. Dark Charred Basalt Stone Foundation
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(x + 2, y + h - 10, w - 4, 10);
+
+    // 2. Heavy Masonry Stone Walls (Charcoal Grey Basalt)
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(x + 4, y + 20, w - 8, h - 28);
+
+    // Stone Pillar Bracing on Corners
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(x + 4, y + 20, 6, h - 28);
+    ctx.fillRect(x + w - 10, y + 20, 6, h - 28);
+
+    // Stone brick lines
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(x + 4, y + 20, w - 8, h - 28);
+
+    // 3. Fiery Forge Glowing Window (Kiri: jendela tempa memperlihatkan api jingga)
+    ctx.fillStyle = '#ea580c';
+    ctx.fillRect(x + 12, y + 28, 14, 13);
+    const forgeFlicker = Math.sin(this.animTimer * 8) * 1.5;
+    ctx.fillStyle = '#fde047';
+    ctx.fillRect(x + 14, y + 30 + forgeFlicker, 10, 8);
+    ctx.strokeStyle = '#7c2d12';
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(x + 12, y + 28, 14, 13);
+    // Iron Window Grille
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(x + 18, y + 28, 2, 13);
+    ctx.fillRect(x + 12, y + 34, 14, 2);
+
+    // 4. Heavy Reinforced Iron-Banded Oak Door at bottom center (pintu masuk ke interior)
+    const doorX = x + w / 2 - 8;
+    const doorY = y + h - 26;
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(doorX, doorY, 16, 24);
+    // Iron banding on door
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(doorX, doorY + 4, 16, 2.5);
+    ctx.fillRect(doorX, doorY + 14, 16, 2.5);
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(doorX + 11, doorY + 11, 2.5, 2.5); // Brass handle
+
+    // Stone Archway Over Door
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(doorX - 1, doorY - 1, 18, 25);
+
+    // 5. Heavy Slate Charcoal Pitched Roof
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.moveTo(x - 5, y + 22);
+    ctx.lineTo(x + w / 2, y - 2);
+    ctx.lineTo(x + w + 5, y + 22);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Secondary roof trim
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(x - 4, y + 20, w + 8, 3);
+
+    // 6. Massive Stone Chimney with Blazing Fire & Rising Smoke/Embers
+    const chimX = x + w - 18;
+    const chimY = y - 10;
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(chimX, chimY, 10, 18);
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(chimX, chimY, 10, 18);
+    // Fiery orange rim at chimney opening
+    ctx.fillStyle = '#ea580c';
+    ctx.fillRect(chimX + 1, chimY - 2, 8, 3);
+
+    // Animated Smoke & Spark Particles
+    const smokeWave = Math.sin(this.animTimer * 2 + x) * 3;
+    ctx.fillStyle = 'rgba(148, 163, 184, 0.55)';
+    ctx.beginPath();
+    ctx.arc(chimX + 5 + smokeWave, chimY - 6, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.arc(chimX + 7 - smokeWave, chimY - 14, 6.5, 0, Math.PI * 2);
+    ctx.fill();
+    // Glowing orange ember spark
+    const emberY = chimY - 10 - ((this.animTimer * 20) % 16);
+    ctx.fillStyle = '#f97316';
+    ctx.fillRect(chimX + 4 + Math.sin(this.animTimer * 6) * 4, emberY, 2, 2);
+
+    // 7. Hanging Anvil Signpost (⚒️ Plang Besi Tempa)
+    const signX = x + w - 24;
+    const signY = y + 26;
+    // Sign bracket
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(signX, signY - 2, 14, 2);
+    // Mini hanging sign board
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(signX + 2, signY + 2, 12, 10);
+    ctx.strokeStyle = '#ca8a04';
+    ctx.strokeRect(signX + 2, signY + 2, 12, 10);
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 7px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('⚒️', signX + 8, signY + 10);
+
+    // 8. Outdoor Props: Tong Air Pendingin & Tumpukan Batangan Besi
+    // Quenching tub on the right
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(x + w - 8, y + h - 16, 10, 12);
+    ctx.fillStyle = '#0284c7';
+    ctx.fillRect(x + w - 7, y + h - 15, 8, 3);
+    // Iron ingots stack on the left
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(x - 5, y + h - 10, 8, 4);
+    ctx.fillRect(x - 3, y + h - 14, 6, 4);
+
+    // 9. Signpost Plaque: "BENGKEL TEMPA BROKK"
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+    ctx.fillRect(x + 4, y + h - 4, w - 8, 12);
+    ctx.strokeStyle = '#f97316';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(x + 4, y + h - 4, w - 8, 12);
+    ctx.fillStyle = '#fdba74';
+    ctx.font = 'bold 7px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('⚒️ BENGKEL TEMPA BROKK', x + w / 2, y + h + 4);
   }
 
   private drawStreetlamp(ctx: CanvasRenderingContext2D, x: number, y: number): void {

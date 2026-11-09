@@ -5,6 +5,7 @@ export type InteriorId =
   | 'GUILD_HALL'
   | 'BLACKSMITH_SHOP'
   | 'APOTHECARY_INN'
+  | 'ADVENTURER_KITCHEN'
   | 'ELDORIA_SANCTUARY'
   | 'STONEWATCH_FOUNDRY';
 
@@ -35,9 +36,15 @@ export interface NearbyInteriorAction {
     | 'ELAINE'
     | 'QUEST_BOARD'
     | 'COMPANION_HIRE'
+    | 'GALAHAD'
+    | 'KAELEN'
+    | 'IGNIS'
+    | 'MORGRIM'
     | 'BROKK'
     | 'LILY'
     | 'INN_BED'
+    | 'CHEF_GASTON'
+    | 'KITCHEN_CAULDRON'
     | 'SYLAS'
     | 'ARIA'
     | 'BORIN'
@@ -110,6 +117,26 @@ export class BuildingInteriors {
         doorWorldY: 44.5 * ts,
         overworldSpawnX: 57 * ts + 6,
         overworldSpawnY: 46 * ts + 6,
+        roomWidth: 16,
+        roomHeight: 12,
+        insideSpawnX: 8 * ts + 6,
+        insideSpawnY: 9 * ts + 4,
+        insideDoorX: 8 * ts,
+        insideDoorY: 10.5 * ts
+      },
+
+      // 3.5 Dapur & Kedai Kuliner Petualang (Adventurer's Kitchen & Tavern)
+      ADVENTURER_KITCHEN: {
+        id: 'ADVENTURER_KITCHEN',
+        name: 'Dapur & Kedai Kuliner Petualang',
+        tag: '🍳 Dapur Petualang',
+        subtitle: '~ Dapur Kuliner Chef Gaston & Meja Jamuan Petualang ~',
+        icon: '🍳',
+        accentColor: '#f59e0b',
+        doorWorldX: 57 * ts,
+        doorWorldY: 53.5 * ts,
+        overworldSpawnX: 57 * ts + 6,
+        overworldSpawnY: 55 * ts + 6,
         roomWidth: 16,
         roomHeight: 12,
         insideSpawnX: 8 * ts + 6,
@@ -255,6 +282,24 @@ export class BuildingInteriors {
 
       // Kuali Ramuan Kiri Atas
       if (rect.x < 2.5 * ts && rect.y < 4 * ts) return true;
+    } else if (currentRoom === 'ADVENTURER_KITCHEN') {
+      // Meja Dapur / Counter Masak Chef Gaston (x=6..10.5 tile, y=3.2..4.4 tile)
+      const cx = 6 * ts;
+      const cy = 3.2 * ts;
+      if (rect.x < cx + 4.5 * ts && rect.x + rect.width > cx && rect.y < cy + 1.2 * ts && rect.y + rect.height > cy) return true;
+
+      // Tungku Masak & Kuali Raksasa Kiri Atas (x=1.8..4.8 tile, y=2..3.8 tile)
+      const kx = 1.8 * ts;
+      const ky = 2 * ts;
+      if (rect.x < kx + 3 * ts && rect.x + rect.width > kx && rect.y < ky + 1.8 * ts && rect.y + rect.height > ky) return true;
+
+      // Meja Jamuan Makan Petualang Kanan (x=11.5..14.5 tile, y=5.5..7.5 tile)
+      const tx = 11.5 * ts;
+      const ty = 5.5 * ts;
+      if (rect.x < tx + 3 * ts && rect.x + rect.width > tx && rect.y < ty + 2 * ts && rect.y + rect.height > ty) return true;
+
+      // Tong & Karung Bahan Makanan Kiri Bawah (x=1..2.2 tile, y=6..8 tile)
+      if (rect.x < 2.2 * ts && rect.y > 6 * ts && rect.y < 8.2 * ts) return true;
     } else if (currentRoom === 'ELDORIA_SANCTUARY') {
       // Altar Roh Pohon Suci (x=7.5..10.5 tile, y=2.5..4 tile)
       const ax = 7.5 * ts;
@@ -347,6 +392,54 @@ export class BuildingInteriors {
           y: 6.8 * ts
         };
       }
+
+      // Kapten Galahad di pos strategi perapian kiri (x=2*ts, y=4.5*ts)
+      const galahadDist = Math.hypot(2 * ts - playerCenterX, 4.5 * ts - playerCenterY);
+      if (galahadDist < 44) {
+        return {
+          type: 'GALAHAD',
+          prompt: '🛡️ [A] Bicara dengan Kapten Galahad (Misi Slime)',
+          color: '#38bdf8',
+          x: 2 * ts,
+          y: 3.5 * ts
+        };
+      }
+
+      // Morgrim sang Jagal di sudut veteran bawah kiri (x=3.5*ts, y=10.5*ts)
+      const morgrimDist = Math.hypot(3.5 * ts - playerCenterX, 10.5 * ts - playerCenterY);
+      if (morgrimDist < 44) {
+        return {
+          type: 'MORGRIM',
+          prompt: '🪓 [A] Bicara dengan Jagal Morgrim (Misi Raja Goa)',
+          color: '#f87171',
+          x: 3.5 * ts,
+          y: 9.5 * ts
+        };
+      }
+
+      // Cendekiawan Ignis di meja riset misteri abisal kanan atas (x=15.5*ts, y=3.5*ts)
+      const ignisDist = Math.hypot(15.5 * ts - playerCenterX, 3.5 * ts - playerCenterY);
+      if (ignisDist < 44) {
+        return {
+          type: 'IGNIS',
+          prompt: '🔮 [A] Bicara dengan Cendekiawan Ignis (Misi Goa)',
+          color: '#c084fc',
+          x: 15.5 * ts,
+          y: 2.5 * ts
+        };
+      }
+
+      // Ranger Kaelen di rak busur & piala buruan kanan bawah (x=15.5*ts, y=7.5*ts)
+      const kaelenDist = Math.hypot(15.5 * ts - playerCenterX, 7.5 * ts - playerCenterY);
+      if (kaelenDist < 44) {
+        return {
+          type: 'KAELEN',
+          prompt: '🏹 [A] Bicara dengan Ranger Kaelen (Misi Serigala)',
+          color: '#4ade80',
+          x: 15.5 * ts,
+          y: 6.5 * ts
+        };
+      }
     } else if (currentRoom === 'BLACKSMITH_SHOP') {
       // Master Brokk di anvil (x=8*ts, y=5.5*ts)
       const brokkDist = Math.hypot(8 * ts - playerCenterX, 5.5 * ts - playerCenterY);
@@ -381,6 +474,30 @@ export class BuildingInteriors {
           color: '#38bdf8',
           x: 12 * ts,
           y: 3 * ts
+        };
+      }
+    } else if (currentRoom === 'ADVENTURER_KITCHEN') {
+      // Chef Gaston di balik counter masak (x=8*ts, y=4.5*ts)
+      const gastonDist = Math.hypot(8 * ts - playerCenterX, 4.5 * ts - playerCenterY);
+      if (gastonDist < 46) {
+        return {
+          type: 'CHEF_GASTON',
+          prompt: '🍳 [A] Masak Bersama Chef Gaston (Resep Kuliner)',
+          color: '#f59e0b',
+          x: 8 * ts,
+          y: 3.2 * ts
+        };
+      }
+
+      // Kuali Masak Petualang Besar di Kiri Atas (x=3.5*ts, y=4.2*ts)
+      const potDist = Math.hypot(3.5 * ts - playerCenterX, 4.2 * ts - playerCenterY);
+      if (potDist < 46) {
+        return {
+          type: 'KITCHEN_CAULDRON',
+          prompt: '🍲 [A] Gunakan Kuali Masak Petualang',
+          color: '#fb923c',
+          x: 3.5 * ts,
+          y: 3.2 * ts
         };
       }
     } else if (currentRoom === 'ELDORIA_SANCTUARY') {
@@ -572,6 +689,14 @@ export class BuildingInteriors {
             ctx.strokeStyle = 'rgba(120, 53, 15, 0.35)';
             ctx.lineWidth = 0.8;
             ctx.strokeRect(px, py, ts, ts);
+          } else if (currentRoom === 'ADVENTURER_KITCHEN') {
+            // Ubin Terakota Dapur Hangat
+            const isAlt = (tx + ty) % 2 === 0;
+            ctx.fillStyle = isAlt ? '#c2410c' : '#ea580c';
+            ctx.fillRect(px, py, ts, ts);
+            ctx.strokeStyle = 'rgba(124, 45, 18, 0.45)';
+            ctx.lineWidth = 0.8;
+            ctx.strokeRect(px, py, ts, ts);
           } else if (currentRoom === 'ELDORIA_SANCTUARY') {
             // Karpet Rumput Kuno & Lumut Hidup
             const isAlt = (tx * 3 + ty * 5) % 3 === 0;
@@ -597,10 +722,10 @@ export class BuildingInteriors {
     for (let tx = 0; tx < rw; tx++) {
       const px = tx * ts;
       // Dinding atas (ty=0..1)
-      ctx.fillStyle = currentRoom === 'GUILD_HALL' ? '#451a03' : currentRoom === 'ELDORIA_SANCTUARY' ? '#064e3b' : '#090d16';
+      ctx.fillStyle = currentRoom === 'GUILD_HALL' || currentRoom === 'ADVENTURER_KITCHEN' ? '#451a03' : currentRoom === 'ELDORIA_SANCTUARY' ? '#064e3b' : '#090d16';
       ctx.fillRect(px, 0, ts, 2 * ts);
       // Lis balok kayu / granit pembatas dinding ke lantai
-      ctx.fillStyle = currentRoom === 'GUILD_HALL' ? '#b45309' : '#475569';
+      ctx.fillStyle = currentRoom === 'GUILD_HALL' || currentRoom === 'ADVENTURER_KITCHEN' ? '#b45309' : '#475569';
       ctx.fillRect(px, 2 * ts - 4, ts, 4);
     }
 
@@ -739,6 +864,40 @@ export class BuildingInteriors {
 
       // 7. Perapian Kiri Atas
       this.drawFireplace(ctx, 2 * ts, 1.2 * ts);
+
+      // 8. NPC PEMBERI MISI GUILD DI DALAM RUANGAN (Dipindahkan dari luar agar rapi)
+      // 8.1 Kapten Galahad (Komandan Patroli Perbatasan - Misi Slime)
+      this.drawDeskNPC(ctx, 2 * ts, 3.8 * ts, '#e2e8f0', '#1e3a8a', 'Kapten Galahad (Misi Slime)');
+      // Rak Perisai & Tombak Patroli
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(1.2 * ts, 3.8 * ts, 8, 14);
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(1.2 * ts + 2, 3.8 * ts + 2, 4, 10);
+
+      // 8.2 Morgrim sang Jagal (Veteran Pemburu Bos Monster)
+      this.drawDeskNPC(ctx, 3.5 * ts, 9.8 * ts, '#475569', '#7f1d1d', 'Morgrim sang Jagal (Misi Bos)');
+      // Pedang Raksasa Jagal di Lantai
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(3.5 * ts + 12, 9.5 * ts, 4, 18);
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(3.5 * ts + 10, 10.2 * ts, 8, 3);
+
+      // 8.3 Cendekiawan Ignis (Peneliti Misteri Abisal - Misi Goa)
+      this.drawDeskNPC(ctx, 15.5 * ts, 2.8 * ts, '#9333ea', '#4c1d95', 'Ignis (Cendekiawan Goa)');
+      // Meja Riset Naskah & Kristal Magis
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(15 * ts, 3.5 * ts, 22, 12);
+      ctx.fillStyle = '#c084fc';
+      ctx.fillRect(15 * ts + 4, 3.5 * ts + 2, 6, 6);
+
+      // 8.4 Ranger Kaelen (Pemburu Rimba Timur - Misi Serigala)
+      this.drawDeskNPC(ctx, 15.5 * ts, 6.8 * ts, '#78350f', '#166534', 'Ranger Kaelen (Misi Serigala)');
+      // Rak Busur & Kulit Hewan Buruan
+      ctx.strokeStyle = '#b45309';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(15.5 * ts + 14, 6.8 * ts, 8, -Math.PI / 2, Math.PI / 2);
+      ctx.stroke();
     } else if (room === 'BLACKSMITH_SHOP') {
       // 1. Tungku Tempa Raksasa (Blazing Forge) di Tengah Atas
       const fx = 6.5 * ts;
@@ -846,6 +1005,143 @@ export class BuildingInteriors {
       ctx.fillRect(bx - 14, by + 8, 12, 16);
       ctx.fillStyle = '#fbbf24';
       ctx.fillRect(bx - 9, by + 4, 3, 6); // Candle flame
+    } else if (room === 'ADVENTURER_KITCHEN') {
+      // 1. TUNGKU MASAK & KUALI BESAR PETUALANG (Master Cooking Hearth & Cauldron)
+      const hx = 2 * ts;
+      const hy = 1.5 * ts;
+      // Brick Hearth
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(hx, hy, 3.2 * ts, 2.4 * ts);
+      ctx.fillStyle = '#451a03';
+      ctx.strokeRect(hx, hy, 3.2 * ts, 2.4 * ts);
+      // Fire pit & flame
+      ctx.fillStyle = '#ea580c';
+      ctx.fillRect(hx + 12, hy + 24, 3.2 * ts - 24, 18);
+      ctx.fillStyle = '#fef08a';
+      const kFlame = Math.sin(this.animTimer * 7) * 2;
+      ctx.fillRect(hx + 18, hy + 26 + kFlame, 3.2 * ts - 36, 14);
+
+      // Iron Cauldron on Hearth
+      const potX = hx + (3.2 * ts) / 2;
+      const potY = hy + 26;
+      ctx.fillStyle = '#1e293b';
+      ctx.beginPath();
+      ctx.arc(potX, potY, 16, 0, Math.PI);
+      ctx.fill();
+      ctx.fillRect(potX - 18, potY - 4, 36, 5); // Rim
+
+      // Bubbling Broth in Cauldron
+      ctx.fillStyle = '#fbbf24';
+      ctx.beginPath();
+      ctx.arc(potX, potY, 13, 0, Math.PI);
+      ctx.fill();
+
+      // Animated Broth Bubbles & Steam
+      const bBubble1 = Math.sin(this.animTimer * 4) * 3;
+      const bBubble2 = Math.cos(this.animTimer * 5) * 3;
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.arc(potX - 5 + bBubble1, potY + 4, 2.5, 0, Math.PI * 2);
+      ctx.arc(potX + 6 + bBubble2, potY + 6, 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Steam Motes
+      ctx.fillStyle = 'rgba(254, 240, 138, 0.45)';
+      const steamY1 = potY - 10 - ((this.animTimer * 16) % 18);
+      const steamY2 = potY - 14 - (((this.animTimer + 0.5) * 16) % 18);
+      ctx.beginPath();
+      ctx.arc(potX - 4 + Math.sin(this.animTimer * 3) * 4, steamY1, 3, 0, Math.PI * 2);
+      ctx.arc(potX + 5 - Math.sin(this.animTimer * 3) * 4, steamY2, 4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Plaque di atas tungku: "KUALI AJAIB PETUALANG"
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 6px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('🍲 KUALI MASAK PETUALANG', potX, hy + 10);
+
+      // 2. COUNTER PERSIAPAN & CHEF GASTON (Kitchen Prep Counter)
+      const cx = 6.2 * ts;
+      const cy = 3.6 * ts;
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(cx, cy, 4 * ts, 20);
+      ctx.fillStyle = '#92400e';
+      ctx.fillRect(cx - 2, cy - 2, 4 * ts + 4, 6); // Counter lip
+
+      // Cutting board, vegetable slices & knife on counter
+      ctx.fillStyle = '#fed7aa';
+      ctx.fillRect(cx + 10, cy + 5, 14, 10); // Cutting board
+      ctx.fillStyle = '#ea580c';
+      ctx.fillRect(cx + 12, cy + 7, 4, 4); // Sliced carrot
+      ctx.fillStyle = '#22c55e';
+      ctx.fillRect(cx + 18, cy + 8, 4, 4); // Herbs
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(cx + 28, cy + 6, 8, 3); // Cleaver blade
+
+      // Chef Gaston di balik meja masak
+      this.drawDeskNPC(ctx, 8 * ts, 2.8 * ts, '#ffffff', '#ea580c', 'Chef Gaston (Koki Legendaris)');
+
+      // 3. MEJA JAMUAN MAKAN PETUALANG (Grand Dining Table on Right)
+      const dx = 11.5 * ts;
+      const dy = 5.2 * ts;
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(dx, dy, 3.2 * ts, 2.2 * ts);
+      ctx.fillStyle = '#92400e';
+      ctx.fillRect(dx - 2, dy - 2, 3.2 * ts + 4, 6);
+      ctx.fillRect(dx - 2, dy + 2.2 * ts - 4, 3.2 * ts + 4, 6);
+
+      // Banquet food on table
+      // Roasted poultry plate
+      ctx.fillStyle = '#f8fafc';
+      ctx.beginPath();
+      ctx.ellipse(dx + 18, dy + 16, 10, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#b45309';
+      ctx.fillRect(dx + 12, dy + 12, 12, 8); // Roast bird
+      // Bread loaf
+      ctx.fillStyle = '#d97706';
+      ctx.fillRect(dx + 40, dy + 14, 12, 6);
+      // Ale Tankards
+      ctx.fillStyle = '#ca8a04';
+      ctx.fillRect(dx + 60, dy + 12, 6, 8);
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(dx + 60, dy + 10, 6, 3); // Ale foam
+
+      // Kursi kayu di atas & bawah meja
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(dx + 12, dy - 8, 12, 6);
+      ctx.fillRect(dx + 48, dy - 8, 12, 6);
+      ctx.fillRect(dx + 12, dy + 2.2 * ts + 4, 12, 6);
+      ctx.fillRect(dx + 48, dy + 2.2 * ts + 4, 12, 6);
+
+      // 4. PERALATAN & BAHAN DAPUR GANTUNG (Hanging Sausages & Herbs)
+      const hxG = 11 * ts;
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(hxG, 1.2 * ts, 4 * ts, 4); // Beam
+      ctx.fillStyle = '#b91c1c';
+      ctx.fillRect(hxG + 10, 1.2 * ts + 4, 4, 12); // Sausage
+      ctx.fillRect(hxG + 18, 1.2 * ts + 4, 4, 10);
+      ctx.fillStyle = '#22c55e';
+      ctx.fillRect(hxG + 30, 1.2 * ts + 4, 6, 10); // Dried herbs
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(hxG + 44, 1.2 * ts + 4, 6, 8); // Garlic braid
+
+      // 5. TONG ANGGUR & KARUNG GANDUM DI SUDUT KIRI BAWAH
+      const sx = 1.5 * ts;
+      const sy = 6.5 * ts;
+      // Barrel
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(sx, sy, 18, 22);
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(sx + 2, sy + 2, 14, 18);
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(sx, sy + 6, 18, 2);
+      ctx.fillRect(sx, sy + 14, 18, 2);
+      // Flour sacks
+      ctx.fillStyle = '#fed7aa';
+      ctx.fillRect(sx + 22, sy + 4, 14, 16);
+      ctx.fillStyle = '#e2e8f0';
+      ctx.fillRect(sx + 20, sy + 10, 18, 10);
     } else if (room === 'ELDORIA_SANCTUARY') {
       // 1. Altar Roh Hutan Suci (Sylvan Nature Altar)
       const ax = 8 * ts;

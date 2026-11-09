@@ -78,6 +78,7 @@ export class Game {
     | 'INTERIOR_GUILD'
     | 'INTERIOR_BLACKSMITH'
     | 'INTERIOR_APOTHECARY'
+    | 'INTERIOR_KITCHEN'
     | 'INTERIOR_ELDORIA'
     | 'INTERIOR_STONEWATCH' = 'OVERWORLD';
   public buildingInteriors: BuildingInteriors;
@@ -381,8 +382,8 @@ export class Game {
         }
       }
 
-      // 0. Village Dialog Modal
-      if (this.currentMap === 'OVERWORLD' && this.villageManager.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight, this.player, this.floatingText)) {
+      // 0. Village Dialog Modal (Bekerja di Overworld maupun di dalam Interior Ruangan)
+      if (this.villageManager.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight, this.player, this.floatingText)) {
         return true;
       }
 
@@ -1400,6 +1401,7 @@ export class Game {
       case 'INTERIOR_GUILD': return 'GUILD_HALL';
       case 'INTERIOR_BLACKSMITH': return 'BLACKSMITH_SHOP';
       case 'INTERIOR_APOTHECARY': return 'APOTHECARY_INN';
+      case 'INTERIOR_KITCHEN': return 'ADVENTURER_KITCHEN';
       case 'INTERIOR_ELDORIA': return 'ELDORIA_SANCTUARY';
       case 'INTERIOR_STONEWATCH': return 'STONEWATCH_FOUNDRY';
       default: return null;
@@ -1420,6 +1422,7 @@ export class Game {
       case 'GUILD_HALL': this.currentMap = 'INTERIOR_GUILD'; break;
       case 'BLACKSMITH_SHOP': this.currentMap = 'INTERIOR_BLACKSMITH'; break;
       case 'APOTHECARY_INN': this.currentMap = 'INTERIOR_APOTHECARY'; break;
+      case 'ADVENTURER_KITCHEN': this.currentMap = 'INTERIOR_KITCHEN'; break;
       case 'ELDORIA_SANCTUARY': this.currentMap = 'INTERIOR_ELDORIA'; break;
       case 'STONEWATCH_FOUNDRY': this.currentMap = 'INTERIOR_STONEWATCH'; break;
     }
@@ -2150,16 +2153,6 @@ export class Game {
 
     // --- OVERWORLD SPECIFIC UPDATES ---
     if (this.currentMap === 'OVERWORLD') {
-      // Dapur Petualang (Cooking Pot) Interaction at (48, 48)
-      const cookPotX = 48 * CONSTANTS.TILE_SIZE + 16;
-      const cookPotY = 48 * CONSTANTS.TILE_SIZE + 16;
-      if (Math.hypot(cookPotX - playerCenterX, cookPotY - playerCenterY) < 38) {
-        if (this.input.isActionJustPressed || this.input.state.isAction) {
-          this.input.consumeAction();
-          this.cookingSystem.open(this.player, this.floatingText);
-        }
-      }
-
       // Papan Kehormatan Guild (Leaderboard Notice Board) at (53, 48)
       const boardX = 53 * CONSTANTS.TILE_SIZE + 16;
       const boardY = 48 * CONSTANTS.TILE_SIZE + 16;
@@ -3123,6 +3116,19 @@ export class Game {
       this.updateMinions(deltaTime, this.stonewatchMonsters);
     } else if (this.isCurrentMapInterior()) {
       // --- INTERIOR BUILDING SPECIFIC UPDATES ---
+      if (this.villageManager.isDialogOpen) {
+        if (this.input.isActionJustPressed) {
+          this.input.consumeAction();
+          this.villageManager.closeDialog();
+          AudioEngine.playButtonClick();
+          return;
+        }
+        return;
+      }
+      if (this.guildNPC.isAppraisalOpen || this.blacksmithNPC.isWorkshopOpen) {
+        return;
+      }
+
       const interiorId = this.getInteriorIdFromCurrentMap();
       if (interiorId) {
         const action = this.buildingInteriors.getNearbyAction(interiorId, playerCenterX, playerCenterY);
@@ -3145,6 +3151,22 @@ export class Game {
               this.openCompanionHireModal();
               break;
 
+            case 'GALAHAD':
+              this.villageManager.openDialogById('galahad');
+              break;
+
+            case 'KAELEN':
+              this.villageManager.openDialogById('kaelen');
+              break;
+
+            case 'IGNIS':
+              this.villageManager.openDialogById('ignis');
+              break;
+
+            case 'MORGRIM':
+              this.villageManager.openDialogById('morgrim');
+              break;
+
             case 'BROKK':
               this.blacksmithNPC.openWorkshop(this.player.role);
               break;
@@ -3163,6 +3185,11 @@ export class Game {
               this.authUI.saveCurrentGame();
               break;
             }
+
+            case 'CHEF_GASTON':
+            case 'KITCHEN_CAULDRON':
+              this.cookingSystem.open(this.player, this.floatingText);
+              break;
 
             case 'SYLAS':
               this.villageManager.openDialogById('elder_sylas');
@@ -3285,8 +3312,7 @@ export class Game {
       // Render Desa Khusus Oakhaven (Bangunan, Balai Serikat, Air Mancur, Lampu & NPC)
       this.villageManager.renderEnvironment(ctx, playerCenterX, playerCenterY);
 
-      // Render Interactive Cauldron, Notice Board, Pet Pen
-      this.renderCookingCauldron(ctx, 48 * CONSTANTS.TILE_SIZE, 48 * CONSTANTS.TILE_SIZE, playerCenterX, playerCenterY);
+      // Render Interactive Notice Board & Pet Pen
       this.renderNoticeBoard(ctx, 53 * CONSTANTS.TILE_SIZE, 48 * CONSTANTS.TILE_SIZE, playerCenterX, playerCenterY);
       this.renderPetPen(ctx, 54 * CONSTANTS.TILE_SIZE, 52 * CONSTANTS.TILE_SIZE, playerCenterX, playerCenterY);
 
@@ -3875,7 +3901,7 @@ export class Game {
         }
       } else if (this.isCurrentMapInterior()) {
         const interiorId = this.getInteriorIdFromCurrentMap();
-        if (interiorId) {
+        if (interiorId && !this.villageManager.isDialogOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen) {
           const action = this.buildingInteriors.getNearbyAction(interiorId, playerCenterX, playerCenterY);
           if (action) {
             this.renderBottomActionPrompt(ctx, action.prompt, action.color || '#facc15', action.color || '#fef08a');
@@ -3940,60 +3966,6 @@ export class Game {
     ctx.textAlign = 'right';
     ctx.fillText(timerText, x + 80, y + 16);
     ctx.restore();
-  }
-
-  private renderCookingCauldron(ctx: CanvasRenderingContext2D, px: number, py: number, pcx: number, pcy: number): void {
-    const isNear = Math.hypot(px + 16 - pcx, py + 16 - pcy) < 38;
-    // Campfire base stones & logs
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(px + 6, py + 22, 20, 4);
-    // Flickering fire
-    const fireFlicker = Math.sin(Date.now() * 0.01) * 2;
-    ctx.fillStyle = '#ef4444';
-    ctx.fillRect(px + 10 + fireFlicker * 0.5, py + 18, 12, 6);
-    ctx.fillStyle = '#facc15';
-    ctx.fillRect(px + 12, py + 16, 8, 5);
-
-    // Black Iron Cauldron Pot
-    ctx.fillStyle = '#1e293b';
-    ctx.beginPath();
-    ctx.ellipse(px + 16, py + 14, 11, 8, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#475569';
-    ctx.lineWidth = 1.5;
-    ctx.stroke();
-
-    // Boiling broth inside
-    ctx.fillStyle = '#ea580c';
-    ctx.beginPath();
-    ctx.ellipse(px + 16, py + 12, 8, 4, 0, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Rising steam
-    const steamY = (Date.now() * 0.02) % 18;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-    ctx.beginPath();
-    ctx.arc(px + 14, py + 8 - steamY, 3, 0, Math.PI * 2);
-    ctx.arc(px + 18, py + 6 - ((steamY + 6) % 18), 2.5, 0, Math.PI * 2);
-    ctx.fill();
-
-    // Prompt if near
-    if (isNear) {
-      ctx.font = 'bold 8px sans-serif';
-      const prompt = '[A] Dapur Petualang';
-      const pw = ctx.measureText(prompt).width + 12;
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-      ctx.beginPath();
-      ctx.roundRect(px + 16 - pw / 2, py - 18, pw, 14, 3);
-      ctx.fill();
-      ctx.strokeStyle = '#fdba74';
-      ctx.lineWidth = 1;
-      ctx.stroke();
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillStyle = '#fdba74';
-      ctx.fillText(prompt, px + 16, py - 11);
-    }
   }
 
   private renderNoticeBoard(ctx: CanvasRenderingContext2D, bx: number, by: number, pcx: number, pcy: number): void {
