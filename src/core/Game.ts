@@ -34,6 +34,7 @@ import { DungeonFloor2 } from '../world/DungeonFloor2.ts';
 import { DungeonFloor3 } from '../world/DungeonFloor3.ts';
 import { DungeonEldoria } from '../world/DungeonEldoria.ts';
 import { DungeonStonewatch } from '../world/DungeonStonewatch.ts';
+import { BuildingInteriors, InteriorId } from '../world/BuildingInteriors.ts';
 import { Companion, CompanionType } from '../entities/Companion.ts';
 import { CookingSystem } from '../systems/CookingSystem.ts';
 import { Pet } from '../systems/TamingSystem.ts';
@@ -65,8 +66,20 @@ export class Game {
   private hitSparks: { x: number; y: number; vx: number; vy: number; color: string; size: number; life: number; maxLife: number }[] = [];
   private activeSkillBanner: { name: string; color: string; role: string; timer: number; maxTimer: number } | null = null;
 
-  // Map & Dungeon state
-  public currentMap: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | 'DUNGEON_ELDORIA' | 'DUNGEON_STONEWATCH' = 'OVERWORLD';
+  // Map, Dungeon & Building Interiors state
+  public currentMap:
+    | 'OVERWORLD'
+    | 'DUNGEON'
+    | 'DUNGEON_FLOOR_2'
+    | 'DUNGEON_FLOOR_3'
+    | 'DUNGEON_ELDORIA'
+    | 'DUNGEON_STONEWATCH'
+    | 'INTERIOR_GUILD'
+    | 'INTERIOR_BLACKSMITH'
+    | 'INTERIOR_APOTHECARY'
+    | 'INTERIOR_ELDORIA'
+    | 'INTERIOR_STONEWATCH' = 'OVERWORLD';
+  public buildingInteriors: BuildingInteriors;
   private caveEntrance: CaveEntrance;
   private dungeonMap: DungeonMap;
   private dungeonMonsters: Monster[] = [];
@@ -193,6 +206,7 @@ export class Game {
     this.miniMapUI = new MiniMapUI();
     this.quickPotionUI = new QuickPotionUI(this.player, this.floatingText);
     this.atmosphereEngine = new AtmosphereEngine();
+    this.buildingInteriors = new BuildingInteriors();
 
     // Hook Anime Skill Invocation Banner & Camera Screen Shake
     this.skillBarUI.onSkillCast = (skill) => {
@@ -703,8 +717,16 @@ export class Game {
         this.pet = new Pet(data.petType, this.player.x + 20, this.player.y);
       }
 
-      // Pulihkan lokasi map (Overworld, Dungeon Lt.1, Lt.2, Lt.3, Eldoria, atau Stonewatch)
-      if (data.currentMap === 'DUNGEON') {
+      // Pulihkan lokasi map (Overworld, Dungeon, atau Interior Bangunan)
+      if (typeof data.currentMap === 'string' && data.currentMap.startsWith('INTERIOR_')) {
+        this.currentMap = data.currentMap as any;
+        const interiorId = this.getInteriorIdFromCurrentMap();
+        if (interiorId) {
+          const def = this.buildingInteriors.doors[interiorId];
+          this.buildingInteriors.activeInterior = interiorId;
+          this.camera.setWorldBounds(def.roomWidth * CONSTANTS.TILE_SIZE, def.roomHeight * CONSTANTS.TILE_SIZE);
+        }
+      } else if (data.currentMap === 'DUNGEON') {
         this.currentMap = 'DUNGEON';
         this.camera.setWorldBounds(this.dungeonMap.width * CONSTANTS.TILE_SIZE, this.dungeonMap.height * CONSTANTS.TILE_SIZE);
       } else if (data.currentMap === 'DUNGEON_FLOOR_2') {
@@ -1368,6 +1390,110 @@ export class Game {
     this.saveSessionSnapshot();
   }
 
+  public isCurrentMapInterior(): boolean {
+    return this.currentMap.startsWith('INTERIOR_');
+  }
+
+  public getInteriorIdFromCurrentMap(): InteriorId | null {
+    switch (this.currentMap) {
+      case 'INTERIOR_GUILD': return 'GUILD_HALL';
+      case 'INTERIOR_BLACKSMITH': return 'BLACKSMITH_SHOP';
+      case 'INTERIOR_APOTHECARY': return 'APOTHECARY_INN';
+      case 'INTERIOR_ELDORIA': return 'ELDORIA_SANCTUARY';
+      case 'INTERIOR_STONEWATCH': return 'STONEWATCH_FOUNDRY';
+      default: return null;
+    }
+  }
+
+  public enterInterior(buildingId: InteriorId): void {
+    if (this.transitionCooldown > 0) return;
+    this.transitionCooldown = 1.0;
+    this.input.consumeAction();
+
+    const def = this.buildingInteriors.doors[buildingId];
+    if (!def) return;
+
+    this.buildingInteriors.activeInterior = buildingId;
+
+    switch (buildingId) {
+      case 'GUILD_HALL': this.currentMap = 'INTERIOR_GUILD'; break;
+      case 'BLACKSMITH_SHOP': this.currentMap = 'INTERIOR_BLACKSMITH'; break;
+      case 'APOTHECARY_INN': this.currentMap = 'INTERIOR_APOTHECARY'; break;
+      case 'ELDORIA_SANCTUARY': this.currentMap = 'INTERIOR_ELDORIA'; break;
+      case 'STONEWATCH_FOUNDRY': this.currentMap = 'INTERIOR_STONEWATCH'; break;
+    }
+
+    this.player.x = def.insideSpawnX;
+    this.player.y = def.insideSpawnY;
+    this.player.direction = 'up';
+
+    if (this.companion) {
+      this.companion.x = this.player.x - 20;
+      this.companion.y = this.player.y;
+    }
+    if (this.pet) {
+      this.pet.x = this.player.x + 20;
+      this.pet.y = this.player.y;
+    }
+    for (const minion of this.player.minions) {
+      minion.x = this.player.x - 16;
+      minion.y = this.player.y;
+    }
+
+    AudioEngine.playMapTransition(true);
+    AudioEngine.playBgm('OVERWORLD');
+
+    this.camera.setWorldBounds(def.roomWidth * CONSTANTS.TILE_SIZE, def.roomHeight * CONSTANTS.TILE_SIZE);
+    this.camera.update(this.player.x, this.player.y);
+
+    this.triggerMapTransition(`「 ${def.name.toUpperCase()} 」`, def.subtitle);
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 18, `🚪 Masuk ke ${def.name}!`, def.accentColor, 2.5);
+    this.saveSessionSnapshot();
+  }
+
+  public exitInterior(): void {
+    if (this.transitionCooldown > 0) return;
+    this.transitionCooldown = 1.0;
+    this.input.consumeAction();
+
+    const interiorId = this.getInteriorIdFromCurrentMap();
+    const def = interiorId ? this.buildingInteriors.doors[interiorId] : null;
+
+    this.buildingInteriors.activeInterior = null;
+    this.currentMap = 'OVERWORLD';
+
+    if (def) {
+      this.player.x = def.overworldSpawnX;
+      this.player.y = def.overworldSpawnY;
+    } else {
+      this.player.x = 50 * CONSTANTS.TILE_SIZE + 6;
+      this.player.y = 50 * CONSTANTS.TILE_SIZE + 3;
+    }
+    this.player.direction = 'down';
+
+    if (this.companion) {
+      this.companion.x = this.player.x - 20;
+      this.companion.y = this.player.y;
+    }
+    if (this.pet) {
+      this.pet.x = this.player.x + 20;
+      this.pet.y = this.player.y;
+    }
+    for (const minion of this.player.minions) {
+      minion.x = this.player.x - 16;
+      minion.y = this.player.y;
+    }
+
+    AudioEngine.playMapTransition(false);
+    AudioEngine.playBgm('OVERWORLD');
+
+    this.camera.setWorldBounds(this.tileMap.width * CONSTANTS.TILE_SIZE, this.tileMap.height * CONSTANTS.TILE_SIZE);
+    this.camera.update(this.player.x, this.player.y);
+
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🚪 Keluar ke Pedesaan!', '#facc15', 2.0);
+    this.saveSessionSnapshot();
+  }
+
   public openCompanionHireModal(): void {
     if (this.companion) {
       NotificationModal.confirm({
@@ -1861,6 +1987,8 @@ export class Game {
       this.tileMap.update(deltaTime);
       this.caveEntrance.update(deltaTime);
       this.villageManager.update(deltaTime);
+    } else if (this.isCurrentMapInterior()) {
+      this.buildingInteriors.update(deltaTime);
     } else {
       this.dungeonMap.update(deltaTime);
     }
@@ -1872,7 +2000,12 @@ export class Game {
     const playerCenterY = this.player.y + this.player.height / 2;
 
     const obstacleChecker = (box: { x: number; y: number; width: number; height: number }) => {
-      if (this.currentMap === 'OVERWORLD') {
+      if (this.isCurrentMapInterior()) {
+        const iId = this.getInteriorIdFromCurrentMap();
+        if (iId && this.buildingInteriors.checkCollision(iId, box)) {
+          return true;
+        }
+      } else if (this.currentMap === 'OVERWORLD') {
         // Village structures (fountain, cottages, fences)
         if (this.villageManager.checkCollision(box)) {
           return true;
@@ -1945,6 +2078,8 @@ export class Game {
     const activeMap =
       this.currentMap === 'OVERWORLD'
         ? this.tileMap
+        : this.isCurrentMapInterior()
+        ? this.buildingInteriors
         : this.currentMap === 'DUNGEON'
         ? this.dungeonMap
         : this.currentMap === 'DUNGEON_FLOOR_2'
@@ -1963,7 +2098,7 @@ export class Game {
       this.camera.y,
       this.camera.viewportWidth,
       this.camera.viewportHeight,
-      this.currentMap !== 'OVERWORLD'
+      this.currentMap !== 'OVERWORLD' && !this.isCurrentMapInterior()
     );
 
     // Sync Active Title
@@ -2077,6 +2212,13 @@ export class Game {
           this.input.consumeAction();
           this.blacksmithNPC.openWorkshop(this.player.role);
         }
+      }
+
+      // 4.6 Masuk ke Interior Gedung (Guild, Bengkel Besi, Apotek & Inn, Eldoria, Stonewatch)
+      const nearDoor = this.buildingInteriors.getNearbyOverworldDoor(playerCenterX, playerCenterY);
+      if (nearDoor && (this.input.isActionJustPressed || this.input.state.isAction)) {
+        this.enterInterior(nearDoor.id);
+        return;
       }
 
       // 5. Cave Entrance (Masuk Goa / Dungeon Serena)
@@ -3004,6 +3146,63 @@ export class Game {
 
       // Minions vs Stonewatch Monsters
       this.updateMinions(deltaTime, this.stonewatchMonsters);
+    } else if (this.isCurrentMapInterior()) {
+      // --- INTERIOR BUILDING SPECIFIC UPDATES ---
+      const interiorId = this.getInteriorIdFromCurrentMap();
+      if (interiorId) {
+        const action = this.buildingInteriors.getNearbyAction(interiorId, playerCenterX, playerCenterY);
+        if (action && (this.input.isActionJustPressed || this.input.state.isAction)) {
+          this.input.consumeAction();
+          switch (action.type) {
+            case 'DOOR_EXIT':
+              this.exitInterior();
+              return;
+
+            case 'ELAINE':
+              this.guildNPC.openAppraisal();
+              break;
+
+            case 'QUEST_BOARD':
+              this.guildNPC.openAppraisal();
+              break;
+
+            case 'BROKK':
+              this.blacksmithNPC.openWorkshop(this.player.role);
+              break;
+
+            case 'LILY':
+              this.villageManager.openDialogById('lily');
+              break;
+
+            case 'INN_BED': {
+              const healedHp = Math.round(this.player.maxHp - this.player.hp);
+              const healedMp = Math.round(this.player.maxMp - this.player.mp);
+              this.player.hp = this.player.maxHp;
+              this.player.mp = this.player.maxMp;
+              AudioEngine.playLevelUp();
+              this.floatingText.spawn(playerCenterX, playerCenterY - 24, `💤 Istirahat Nyenyak! HP +${healedHp}, MP +${healedMp}`, '#38bdf8', 2.8);
+              this.authUI.saveCurrentGame();
+              break;
+            }
+
+            case 'SYLAS':
+              this.villageManager.openDialogById('elder_sylas');
+              break;
+
+            case 'ARIA':
+              this.villageManager.openDialogById('aria_herbalist');
+              break;
+
+            case 'BORIN':
+              this.villageManager.openDialogById('kapten_borin');
+              break;
+
+            case 'GRIMM':
+              this.villageManager.openDialogById('grimm_miner');
+              break;
+          }
+        }
+      }
     }
 
     // 10. Update Floating Text Notifications
@@ -3021,8 +3220,12 @@ export class Game {
       const tileY = Math.floor(this.player.y / CONSTANTS.TILE_SIZE);
       const roleInfo = ROLE_INFO[this.player.role];
       const villageOrRegion = this.tileMap.getVillageName(tileX, tileY);
+      const interiorId = this.isCurrentMapInterior() ? this.getInteriorIdFromCurrentMap() : null;
+      const interiorDef = interiorId ? this.buildingInteriors.doors[interiorId] : null;
       const locText =
-        this.currentMap === 'DUNGEON'
+        interiorDef
+          ? `<span style="color: ${interiorDef.accentColor}; font-weight: 700;">${interiorDef.icon} ${interiorDef.name}</span>`
+          : this.currentMap === 'DUNGEON'
           ? '<span style="color: #c084fc; font-weight: 700;">🏰 Goa Makam Kuno (Lt.1)</span>'
           : this.currentMap === 'DUNGEON_FLOOR_2'
           ? '<span style="color: #60a5fa; font-weight: 700;">⚡ Labirin Titan Abisal (Lt.2)</span>'
@@ -3107,6 +3310,9 @@ export class Game {
       this.renderCookingCauldron(ctx, 48 * CONSTANTS.TILE_SIZE, 48 * CONSTANTS.TILE_SIZE, playerCenterX, playerCenterY);
       this.renderNoticeBoard(ctx, 53 * CONSTANTS.TILE_SIZE, 48 * CONSTANTS.TILE_SIZE, playerCenterX, playerCenterY);
       this.renderPetPen(ctx, 54 * CONSTANTS.TILE_SIZE, 52 * CONSTANTS.TILE_SIZE, playerCenterX, playerCenterY);
+
+      // Render Pintu Masuk Interior Gedung (Guild, Bengkel, Apotek, Pondok Eldoria, Barak Stonewatch)
+      this.buildingInteriors.renderOverworldDoorMarkers(ctx, playerCenterX, playerCenterY);
 
       // 2. Render Cave / Dungeon Entrance Serena
       this.caveEntrance.render(ctx, this.caveEntrance.isNearPlayer(playerCenterX, playerCenterY));
@@ -3395,6 +3601,37 @@ export class Game {
 
       // 9. Render Floating Texts
       this.floatingText.render(ctx);
+    } else if (this.isCurrentMapInterior()) {
+      // --- INTERIOR ROOM WORLD RENDERING ---
+      const interiorId = this.getInteriorIdFromCurrentMap();
+      if (interiorId) {
+        this.buildingInteriors.renderInterior(ctx, interiorId, this.camera, playerCenterX, playerCenterY);
+      }
+
+      // Render Companion if active
+      if (this.companion) {
+        this.companion.render(ctx);
+      }
+
+      // Render Pet if active
+      if (this.pet) {
+        this.pet.render(ctx);
+      }
+
+      // Render Player
+      this.player.render(ctx);
+
+      // Render Spell Effects
+      this.skillBarUI.renderWorldEffects(ctx);
+
+      // Render Ambient Interior Particles & Dust
+      this.atmosphereEngine.render(ctx);
+
+      // Render Combat Hit Sparks
+      this.renderHitSparks(ctx);
+
+      // Render Floating Texts
+      this.floatingText.render(ctx);
     }
 
     ctx.restore();
@@ -3433,7 +3670,9 @@ export class Game {
 
       // 12.1 Render Mini-Map UI
       const activeMonsters =
-        this.currentMap === 'OVERWORLD'
+        this.isCurrentMapInterior()
+          ? []
+          : this.currentMap === 'OVERWORLD'
           ? this.overworldMonsters
           : this.currentMap === 'DUNGEON'
           ? this.dungeonMonsters
@@ -3446,7 +3685,9 @@ export class Game {
           : this.stonewatchMonsters;
 
       const activeChests =
-        this.currentMap === 'OVERWORLD'
+        this.isCurrentMapInterior()
+          ? []
+          : this.currentMap === 'OVERWORLD'
           ? this.chests
           : this.currentMap === 'DUNGEON'
           ? this.dungeonChests
@@ -3805,6 +4046,55 @@ export class Game {
         ctx.fillStyle = '#fde68a';
         ctx.fillText('Tekan [A] Naik Tangga (Desa Stonewatch) ▲', pX + pW / 2, pY + pH / 2);
         ctx.restore();
+      }
+
+      // Overworld Building Entrance Prompt
+      if (this.currentMap === 'OVERWORLD') {
+        const nearDoor = this.buildingInteriors.getNearbyOverworldDoor(playerCenterX, playerCenterY);
+        if (nearDoor) {
+          ctx.save();
+          const pW = 240;
+          const pH = 26;
+          const pX = (screenWidth - pW) / 2;
+          const pY = screenHeight - 90;
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+          ctx.fillRect(pX, pY, pW, pH);
+          ctx.strokeStyle = nearDoor.accentColor;
+          ctx.lineWidth = 1.5;
+          ctx.strokeRect(pX, pY, pW, pH);
+          ctx.font = 'bold 10px sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillStyle = nearDoor.accentColor;
+          ctx.fillText(`Tekan [A] Masuk ${nearDoor.name} ${nearDoor.icon}`, pX + pW / 2, pY + pH / 2);
+          ctx.restore();
+        }
+      }
+
+      // Interior Actions & Exit Prompt
+      if (this.isCurrentMapInterior()) {
+        const interiorId = this.getInteriorIdFromCurrentMap();
+        if (interiorId) {
+          const action = this.buildingInteriors.getNearbyAction(interiorId, playerCenterX, playerCenterY);
+          if (action) {
+            ctx.save();
+            const pW = 250;
+            const pH = 26;
+            const pX = (screenWidth - pW) / 2;
+            const pY = screenHeight - 90;
+            ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+            ctx.fillRect(pX, pY, pW, pH);
+            ctx.strokeStyle = action.color || '#facc15';
+            ctx.lineWidth = 1.5;
+            ctx.strokeRect(pX, pY, pW, pH);
+            ctx.font = 'bold 10px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillStyle = action.color || '#fef08a';
+            ctx.fillText(action.prompt, pX + pW / 2, pY + pH / 2);
+            ctx.restore();
+          }
+        }
       }
 
       // 16. Anime Location Title Card

@@ -21,6 +21,7 @@ export class MiniMapUI {
   private floor3Canvas: HTMLCanvasElement | null = null;
   private eldoriaCanvas: HTMLCanvasElement | null = null;
   private stonewatchCanvas: HTMLCanvasElement | null = null;
+  private interiorCanvas: HTMLCanvasElement | null = null;
 
   private pulseTimer: number = 0;
 
@@ -209,7 +210,7 @@ export class MiniMapUI {
     ctx: CanvasRenderingContext2D,
     screenWidth: number,
     screenHeight: number,
-    currentMap: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | 'DUNGEON_ELDORIA' | 'DUNGEON_STONEWATCH',
+    currentMap: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | 'DUNGEON_ELDORIA' | 'DUNGEON_STONEWATCH' | 'INTERIOR_GUILD' | 'INTERIOR_BLACKSMITH' | 'INTERIOR_APOTHECARY' | 'INTERIOR_ELDORIA' | 'INTERIOR_STONEWATCH',
     tileMap: TileMap,
     dungeonMap: DungeonMap,
     player: Player,
@@ -277,7 +278,51 @@ export class MiniMapUI {
     let fullMapTitle = '🗺️ Peta Wilayah Lembah Serikat Tiga Desa';
     let titleColor = '#4ade80';
 
-    if (currentMap === 'DUNGEON') {
+    if (currentMap.startsWith('INTERIOR_')) {
+      if (!this.interiorCanvas) {
+        this.interiorCanvas = document.createElement('canvas');
+        this.interiorCanvas.width = 24;
+        this.interiorCanvas.height = 18;
+        const ictx = this.interiorCanvas.getContext('2d')!;
+        ictx.fillStyle = '#0f172a';
+        ictx.fillRect(0, 0, 24, 18);
+        ictx.fillStyle = '#78350f';
+        ictx.fillRect(2, 2, 20, 14);
+      }
+      sourceCanvas = this.interiorCanvas;
+
+      if (currentMap === 'INTERIOR_GUILD') {
+        mapTitle = '🏛️ Balai Serikat';
+        fullMapTitle = '🏛️ Balai Besar Serikat Petualang Oakhaven';
+        titleColor = '#facc15';
+        mapTileWidth = 18;
+        mapTileHeight = 14;
+      } else if (currentMap === 'INTERIOR_BLACKSMITH') {
+        mapTitle = '⚒️ Bengkel Besi';
+        fullMapTitle = '⚒️ Bengkel Pandai Besi Master Brokk';
+        titleColor = '#fb923c';
+        mapTileWidth = 16;
+        mapTileHeight = 12;
+      } else if (currentMap === 'INTERIOR_APOTHECARY') {
+        mapTitle = '🍃 Toko Ramuan & Inn';
+        fullMapTitle = '🍃 Toko Ramuan Mistis & Penginapan Lily';
+        titleColor = '#34d399';
+        mapTileWidth = 16;
+        mapTileHeight = 12;
+      } else if (currentMap === 'INTERIOR_ELDORIA') {
+        mapTitle = '🌿 Pondok Roh';
+        fullMapTitle = '🌿 Pondok Suci Tetua Roh Hutan Eldoria';
+        titleColor = '#4ade80';
+        mapTileWidth = 18;
+        mapTileHeight = 13;
+      } else if (currentMap === 'INTERIOR_STONEWATCH') {
+        mapTitle = '⛏️ Barak Tambang';
+        fullMapTitle = '⛏️ Markas Komando Tambang Stonewatch';
+        titleColor = '#f59e0b';
+        mapTileWidth = 18;
+        mapTileHeight = 13;
+      }
+    } else if (currentMap === 'DUNGEON') {
       sourceCanvas = this.dungeonCanvas!;
       mapTileWidth = dungeonMap.width;
       mapTileHeight = dungeonMap.height;
@@ -469,6 +514,14 @@ export class MiniMapUI {
         ctx.fillStyle = '#f59e0b';
         ctx.beginPath();
         ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (currentMap.startsWith('INTERIOR_')) {
+        // Pintu Keluar Ruangan Interior (Kuning)
+        const dx = toRadarX(mapTileWidth / 2);
+        const dy = toRadarY(mapTileHeight - 1.5);
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.arc(dx, dy, 3.5, 0, Math.PI * 2);
         ctx.fill();
       }
 
@@ -695,6 +748,16 @@ export class MiniMapUI {
         ctx.strokeStyle = '#fde047';
         ctx.lineWidth = 1.2;
         ctx.stroke();
+      } else if (currentMap.startsWith('INTERIOR_')) {
+        const lx = toMapX(mapTileWidth / 2);
+        const ly = toMapY(mapTileHeight - 1.5);
+        ctx.fillStyle = '#facc15';
+        ctx.beginPath();
+        ctx.arc(lx, ly, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
       }
 
       // Peti Harta Karun
@@ -818,6 +881,13 @@ export class MiniMapUI {
           { color: '#8b5cf6', label: 'Obsidian Behemoth Abisal (Bos)' },
           { color: '#fb923c', label: 'Monster Tambang Terkutuk' },
           { color: '#fde047', label: 'Peti Harta Karun' }
+        ];
+      } else if (currentMap.startsWith('INTERIOR_')) {
+        legends = [
+          { color: '#38bdf8', label: 'Posisi Kamu (Hero)' },
+          { color: '#facc15', label: 'Pintu Keluar ke Desa' },
+          { color: '#eab308', label: 'NPC / Kasir / Tempa Utama' },
+          { color: '#34d399', label: 'Tempat Tidur / Perabot Suci' }
         ];
       }
 

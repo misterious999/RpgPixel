@@ -15,7 +15,19 @@ export class AudioEngine {
   public static volume: number = 0.8;
 
   private static bgmInterval: number | null = null;
-  private static currentMapBgm: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | 'DUNGEON_ELDORIA' | 'DUNGEON_STONEWATCH' | null = null;
+  private static currentMapBgm:
+    | 'OVERWORLD'
+    | 'DUNGEON'
+    | 'DUNGEON_FLOOR_2'
+    | 'DUNGEON_FLOOR_3'
+    | 'DUNGEON_ELDORIA'
+    | 'DUNGEON_STONEWATCH'
+    | 'INTERIOR_GUILD'
+    | 'INTERIOR_BLACKSMITH'
+    | 'INTERIOR_APOTHECARY'
+    | 'INTERIOR_ELDORIA'
+    | 'INTERIOR_STONEWATCH'
+    | null = null;
 
   /**
    * Inisialisasi AudioContext saat interaksi pengguna pertama kali
@@ -650,7 +662,20 @@ export class AudioEngine {
   // BACKGROUND AMBIENT THEME (BGM RETRO)
   // ===============================================================
 
-  public static playBgm(map: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | 'DUNGEON_ELDORIA' | 'DUNGEON_STONEWATCH'): void {
+  public static playBgm(
+    map:
+      | 'OVERWORLD'
+      | 'DUNGEON'
+      | 'DUNGEON_FLOOR_2'
+      | 'DUNGEON_FLOOR_3'
+      | 'DUNGEON_ELDORIA'
+      | 'DUNGEON_STONEWATCH'
+      | 'INTERIOR_GUILD'
+      | 'INTERIOR_BLACKSMITH'
+      | 'INTERIOR_APOTHECARY'
+      | 'INTERIOR_ELDORIA'
+      | 'INTERIOR_STONEWATCH'
+  ): void {
     this.currentMapBgm = map;
     if (!this.isMusicEnabled) return;
 
@@ -662,6 +687,8 @@ export class AudioEngine {
     let step = 0;
     // Overworld: Melodi pastoral ceria & menenangkan (Pentatonik C mayor rileks)
     const overworldNotes = [261.63, 293.66, 329.63, 392.0, 440.0, 392.0, 329.63, 293.66];
+    // Interior Tavern / Shop: Melodi ramah, hangat, dan bersahabat
+    const interiorNotes = [261.63, 329.63, 392.0, 523.25, 440.0, 392.0, 329.63, 349.23];
     // Dungeon Lt.1: Arpeggio gelap misterius (D minor / Phrygian)
     const dungeonNotes = [146.83, 155.56, 174.61, 220.0, 196.0, 155.56];
     // Dungeon Lt.2 (Crypt): Resonant subterranean pulse
@@ -677,7 +704,17 @@ export class AudioEngine {
     let speed = 450;
     let oscType: OscillatorType = 'triangle';
 
-    if (map === 'DUNGEON') {
+    if (
+      map === 'INTERIOR_GUILD' ||
+      map === 'INTERIOR_BLACKSMITH' ||
+      map === 'INTERIOR_APOTHECARY' ||
+      map === 'INTERIOR_ELDORIA' ||
+      map === 'INTERIOR_STONEWATCH'
+    ) {
+      notes = interiorNotes;
+      speed = 380;
+      oscType = 'triangle';
+    } else if (map === 'DUNGEON') {
       notes = dungeonNotes;
       speed = 600;
       oscType = 'sine';

@@ -331,6 +331,13 @@ export class VillageManager {
     AudioEngine.playButtonClick();
   }
 
+  public openDialogById(npcId: string): void {
+    const npc = this.npcs.find((n) => n.id === npcId || n.id.startsWith(npcId));
+    if (npc) {
+      this.openDialog(npc);
+    }
+  }
+
   public closeDialog(): void {
     this.activeDialogNPC = null;
     this.isDialogOpen = false;
