@@ -272,6 +272,25 @@ export class Game {
   }
 
   private async setupOnboardingFlow(): Promise<void> {
+    // 0. Pulihkan karakter tertunda jika baru saja kembali dari Google OAuth redirect
+    const pendingChar = localStorage.getItem('rpg2d_pending_character');
+    let hasPending = false;
+    if (pendingChar) {
+      try {
+        const parsed = JSON.parse(pendingChar);
+        if (parsed.username) {
+          this.player.username = parsed.username;
+          this.onboardingUI.username = parsed.username;
+        }
+        if (typeof parsed.costumeIndex === 'number' && CHARACTER_COSTUMES[parsed.costumeIndex]) {
+          this.player.costume = CHARACTER_COSTUMES[parsed.costumeIndex];
+          this.onboardingUI.selectedCostumeIndex = parsed.costumeIndex;
+        }
+        localStorage.removeItem('rpg2d_pending_character');
+        hasPending = true;
+      } catch (e) {}
+    }
+
     // 1. Pulihkan sesi jika pengguna baru saja me-refresh dari auto-update
     const hasSessionSave = this.restoreSessionSnapshot();
     if (hasSessionSave) {
@@ -293,6 +312,18 @@ export class Game {
         this.authUI.isGuest = false;
         // Jika sudah dipulihkan dari sesi auto-update lokal, jangan timpa kecuali belum ada sesi
         if (!hasSessionSave) {
+          if (hasPending) {
+            this.onboardingUI.setState('PLAYING');
+            this.authUI.saveCurrentGame();
+            this.floatingText.spawn(
+              this.player.x + 10,
+              this.player.y - 20,
+              `🌐 Mode Online Aktif! Selamat datang, ${this.player.username}!`,
+              '#38bdf8',
+              3.5
+            );
+            return;
+          }
           const hasSave = await this.authUI.loadCloudSave(user.id);
           if (hasSave) {
             this.onboardingUI.setState('PLAYING');
@@ -321,9 +352,11 @@ export class Game {
       // Initial save to cloud if logged in
       if (!isGuest) {
         this.authUI.saveCurrentGame();
+        this.floatingText.spawn(this.player.x + 10, this.player.y - 18, `🌐 Mode Online Aktif! Selamat datang, ${username}!`, '#38bdf8', 3.5);
+      } else {
+        this.saveSessionSnapshot();
+        this.floatingText.spawn(this.player.x + 10, this.player.y - 18, `📴 Mode Offline Aktif (Tersimpan di HP). Selamat datang, ${username}!`, '#4ade80', 3.5);
       }
-
-      this.floatingText.spawn(this.player.x + 10, this.player.y - 18, `Selamat datang, ${username}! Temui Pihak Guild untuk memilih Role.`, '#facc15', 3.5);
     });
   }
 

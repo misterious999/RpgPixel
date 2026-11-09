@@ -335,7 +335,7 @@ export class AuthUI {
       ctx.font = 'bold 9px sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      ctx.fillText('👤 Akun Tamu', pillX + 8, pillY + 4);
+      ctx.fillText('📴 Mode Offline', pillX + 8, pillY + 4);
       ctx.fillStyle = '#94a3b8';
       ctx.font = '8px sans-serif';
       ctx.fillText('Hubungkan ☁️', pillX + 8, pillY + 16);
@@ -435,7 +435,7 @@ export class AuthUI {
 
       ctx.fillStyle = '#94a3b8';
       ctx.font = '8px sans-serif';
-      ctx.fillText(this.lastSavedTimeText ? `Save ${this.lastSavedTimeText}` : 'Cloud Aktif', pillX + 44, pillY + 19);
+      ctx.fillText(this.lastSavedTimeText ? `Save ${this.lastSavedTimeText}` : '🌐 Online Sync', pillX + 44, pillY + 19);
     }
 
     ctx.restore();

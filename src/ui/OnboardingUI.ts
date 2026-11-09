@@ -3,9 +3,9 @@ import { CharacterCostume, GameState } from '../types/GameTypes.ts';
 import { SupabaseService } from '../services/SupabaseService.ts';
 
 export class OnboardingUI {
-  public state: GameState = 'AUTH';
+  public state: GameState = 'CHARACTER_CREATION';
   public selectedCostumeIndex: number = 0;
-  public username: string = '';
+  public username: string = 'Petualang';
   public isGuest: boolean = false;
 
   private onCompleteCallback?: (username: string, costume: CharacterCostume, isGuest: boolean) => void;
@@ -157,10 +157,25 @@ export class OnboardingUI {
                 </div>
               </div>
 
-              <!-- Submit Button -->
-              <button id="btn-start-game" style="width: 100%; padding: 9px; background: #22c55e; color: #ffffff; border: none; border-radius: 8px; font-size: 13px; font-weight: 800; cursor: pointer; letter-spacing: 0.5px; box-shadow: 0 4px 12px rgba(34, 197, 94, 0.4);">
-                ⚔️ MULAI MENJELAJAH
-              </button>
+              <!-- Pilihan Mode Permainan: Online vs Offline -->
+              <div style="margin-top: 6px;">
+                <div style="font-size: 9.5px; font-weight: 700; color: #94a3b8; margin-bottom: 5px; text-align: center;">
+                  PILIH CARA BERMAIN:
+                </div>
+                <div style="display: flex; gap: 8px;">
+                  <!-- Tombol Mode Online -->
+                  <button id="btn-play-online" style="flex: 1; padding: 10px 4px; background: linear-gradient(135deg, #0284c7, #0369a1); color: #ffffff; border: 1.5px solid #38bdf8; border-radius: 8px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; box-shadow: 0 4px 12px rgba(2, 132, 199, 0.4); transition: transform 0.1s ease;">
+                    <span style="font-size: 12.5px;">🌐 MAIN ONLINE</span>
+                    <span style="font-size: 8.5px; color: #bae6fd; font-weight: 500;">Simpan Cloud (Google)</span>
+                  </button>
+
+                  <!-- Tombol Mode Offline -->
+                  <button id="btn-play-offline" style="flex: 1; padding: 10px 4px; background: linear-gradient(135deg, #1e293b, #0f172a); color: #ffffff; border: 1.5px solid #64748b; border-radius: 8px; font-size: 12px; font-weight: 800; cursor: pointer; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 2px; box-shadow: 0 4px 12px rgba(0, 0, 0, 0.4); transition: transform 0.1s ease;">
+                    <span style="font-size: 12.5px;">📴 MAIN OFFLINE</span>
+                    <span style="font-size: 8.5px; color: #94a3b8; font-weight: 500;">Tanpa Internet (Lokal)</span>
+                  </button>
+                </div>
+              </div>
             </div>
           </div>
         </div>
@@ -186,8 +201,8 @@ export class OnboardingUI {
         });
       });
 
-      // Submit Handler
-      document.getElementById('btn-start-game')?.addEventListener('click', () => {
+      // 1. Submit Handler: MAIN OFFLINE
+      document.getElementById('btn-play-offline')?.addEventListener('click', () => {
         const input = document.getElementById('input-username') as HTMLInputElement;
         const name = input ? input.value.trim() : '';
         const errorEl = document.getElementById('username-error');
@@ -198,13 +213,114 @@ export class OnboardingUI {
         }
 
         this.username = name.slice(0, 15);
+        this.isGuest = true;
         this.setState('PLAYING');
 
         if (this.onCompleteCallback) {
-          this.onCompleteCallback(this.username, CHARACTER_COSTUMES[this.selectedCostumeIndex], this.isGuest);
+          this.onCompleteCallback(this.username, CHARACTER_COSTUMES[this.selectedCostumeIndex], true);
+        }
+      });
+
+      // 2. Submit Handler: MAIN ONLINE
+      document.getElementById('btn-play-online')?.addEventListener('click', () => {
+        const input = document.getElementById('input-username') as HTMLInputElement;
+        const name = input ? input.value.trim() : '';
+        const errorEl = document.getElementById('username-error');
+
+        if (!name) {
+          if (errorEl) errorEl.style.display = 'block';
+          return;
+        }
+
+        this.username = name.slice(0, 15);
+        const user = SupabaseService.currentUser;
+
+        if (user) {
+          // Pengguna sudah login dengan Google
+          this.isGuest = false;
+          this.setState('PLAYING');
+          if (this.onCompleteCallback) {
+            this.onCompleteCallback(this.username, CHARACTER_COSTUMES[this.selectedCostumeIndex], false);
+          }
+        } else {
+          // Pengguna belum login Google, tampilkan modal konfirmasi login online
+          this.showOnlineLoginModal();
         }
       });
     }
+  }
+
+  private showOnlineLoginModal(): void {
+    const overlay = document.getElementById('onboarding-overlay');
+    if (!overlay) return;
+
+    let modal = document.getElementById('online-login-modal');
+    if (modal) modal.remove();
+
+    modal = document.createElement('div');
+    modal.id = 'online-login-modal';
+    modal.style.position = 'absolute';
+    modal.style.top = '0';
+    modal.style.left = '0';
+    modal.style.width = '100%';
+    modal.style.height = '100%';
+    modal.style.background = 'rgba(0, 0, 0, 0.85)';
+    modal.style.display = 'flex';
+    modal.style.alignItems = 'center';
+    modal.style.justifyContent = 'center';
+    modal.style.zIndex = '110';
+
+    modal.innerHTML = `
+      <div style="max-width: 380px; width: 90%; background: #0f172a; border: 2px solid #38bdf8; border-radius: 14px; padding: 22px; text-align: center; box-shadow: 0 10px 30px rgba(0,0,0,0.95);">
+        <div style="font-size: 28px; margin-bottom: 6px;">🌐</div>
+        <div style="font-size: 16px; font-weight: 800; color: #38bdf8; margin-bottom: 6px; letter-spacing: 0.5px;">AKTIFKAN MODE ONLINE</div>
+        <div style="font-size: 11.5px; color: #cbd5e1; line-height: 1.5; margin-bottom: 18px;">
+          Karakter <b style="color: #facc15;">${this.username}</b> akan disinkronkan ke server Cloud. Silakan hubungkan dengan Akun Google agar data tersimpan abadi dan bisa dimainkan di perangkat lain.
+        </div>
+
+        <!-- Tombol Masuk Google -->
+        <button id="btn-modal-google" style="width: 100%; padding: 12px; background: #ffffff; color: #0f172a; border: none; border-radius: 8px; font-size: 13px; font-weight: 800; cursor: pointer; display: flex; align-items: center; justify-content: center; gap: 8px; margin-bottom: 10px; box-shadow: 0 4px 14px rgba(255,255,255,0.25);">
+          <span style="font-size: 17px; color: #ea4335;">G</span>
+          <span>Masuk dengan Google (Cloud Save)</span>
+        </button>
+
+        <!-- Tombol Beralih ke Offline -->
+        <button id="btn-modal-fallback-offline" style="width: 100%; padding: 10px; background: #1e293b; color: #cbd5e1; border: 1px solid #475569; border-radius: 8px; font-size: 11.5px; font-weight: 600; cursor: pointer; margin-bottom: 10px;">
+          📴 Main Mode Offline Saja (Tanpa Login)
+        </button>
+
+        <!-- Tombol Batal -->
+        <button id="btn-modal-cancel" style="background: transparent; color: #94a3b8; border: none; font-size: 11px; cursor: pointer; padding: 4px;">
+          ✕ Batal & Kembali Kustomisasi
+        </button>
+      </div>
+    `;
+
+    overlay.appendChild(modal);
+
+    document.getElementById('btn-modal-google')?.addEventListener('click', () => {
+      try {
+        localStorage.setItem('rpg2d_pending_character', JSON.stringify({
+          username: this.username,
+          costumeIndex: this.selectedCostumeIndex,
+          mode: 'ONLINE'
+        }));
+      } catch (e) {}
+      SupabaseService.loginWithGoogle();
+    });
+
+    document.getElementById('btn-modal-fallback-offline')?.addEventListener('click', () => {
+      modal?.remove();
+      this.isGuest = true;
+      this.setState('PLAYING');
+      if (this.onCompleteCallback) {
+        this.onCompleteCallback(this.username, CHARACTER_COSTUMES[this.selectedCostumeIndex], true);
+      }
+    });
+
+    document.getElementById('btn-modal-cancel')?.addEventListener('click', () => {
+      modal?.remove();
+    });
   }
 
   private renderAvatarPreview(): void {
