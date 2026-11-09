@@ -9,8 +9,9 @@ export interface VillageNPCData {
   id: string;
   name: string;
   title: string;
-  roleType: 'QUEST' | 'AMBIENT';
+  roleType: 'QUEST' | 'AMBIENT' | 'RIDDLE';
   questId?: string;
+  riddleId?: 'ELDORIA' | 'STONEWATCH';
   x: number;
   y: number;
   width: number;
@@ -33,6 +34,11 @@ export class VillageManager {
   public activeDialogNPC: VillageNPCData | null = null;
   public isDialogOpen: boolean = false;
   private dialogOpenTime: number = 0;
+
+  // Riddle Unlock State
+  public isEldoriaUnlocked: boolean = false;
+  public isStonewatchUnlocked: boolean = false;
+  public onSolveRiddle?: (riddleId: 'ELDORIA' | 'STONEWATCH') => void;
 
   // Village NPCs
   public npcs: VillageNPCData[] = [];
@@ -206,6 +212,99 @@ export class VillageManager {
         loreText: '(Mimi mendengkur manja berputar-putar di kakimu, lalu mengusapkan pipi lembutnya dengan hangat)',
         actionPrompt: '🐱 [A] Belai Kucing',
         isCat: true
+      },
+
+      // --- NPC DESA ELDORIA (DESA PERI HUTAN KUNO) ---
+      {
+        id: 'elder_sylas',
+        name: 'Elder Sylas',
+        title: 'Tetua Roh Hutan Eldoria',
+        roleType: 'RIDDLE',
+        riddleId: 'ELDORIA',
+        x: 21 * ts,
+        y: 17 * ts,
+        width: 32,
+        height: 32,
+        hairColor: '#f8fafc',
+        outfitColor: '#047857',
+        accentColor: '#34d399',
+        avatarIcon: '🧝‍♂️',
+        greetingText: 'Salam damai dalam keheningan pohon purba, Petualang muda.',
+        loreText: 'Kuil Roh Hutan di tebing utara kami terkunci oleh mantra segel leluhur. Jawablah teka-teki kuno untuk membuktikan kebijaksanaanmu dan membuka pintu kuil!',
+        actionPrompt: '🧝‍♂️ [A] Teka-Teki Kuil'
+      },
+      {
+        id: 'aria_herbalist',
+        name: 'Aria sang Herbalis',
+        title: 'Ahli Ramuan Peri Rimba',
+        roleType: 'AMBIENT',
+        x: 25 * ts,
+        y: 20 * ts,
+        width: 32,
+        height: 32,
+        hairColor: '#a7f3d0',
+        outfitColor: '#065f46',
+        accentColor: '#4ade80',
+        avatarIcon: '🍃',
+        greetingText: 'Aroma bunga mistis hutan Eldoria sangat menyegarkan pikiran, bukan?',
+        loreText: 'Tanah Eldoria diberkati oleh roh alam semesta. Bunga mistis yang tumbuh di sini adalah bahan terbaik untuk ramuan penyembuh luka.',
+        actionPrompt: '🍃 [A] Sapa Aria'
+      },
+
+      // --- NPC DESA STONEWATCH (DESA BENTENG TAMBANG KURCACI) ---
+      {
+        id: 'kapten_borin',
+        name: 'Kapten Borin',
+        title: 'Kepala Tambang Stonewatch',
+        roleType: 'RIDDLE',
+        riddleId: 'STONEWATCH',
+        x: 84 * ts,
+        y: 64 * ts,
+        width: 32,
+        height: 32,
+        hairColor: '#b45309',
+        outfitColor: '#78350f',
+        accentColor: '#f59e0b',
+        avatarIcon: '⛏️',
+        greetingText: 'Klang! Kling! Selamat datang di Benteng Tambang Stonewatch!',
+        loreText: 'Tambang Terkutuk di tebing utara terkunci oleh mekanisme sandi batu aksara kurcaci. Pecahkan teka-teki nenek moyang tambang jika kau berani memasukinya!',
+        actionPrompt: '⛏️ [A] Teka-Teki Tambang'
+      },
+      {
+        id: 'grimm_miner',
+        name: 'Grimm si Pelebur Besi',
+        title: 'Master Pandai Besi Tambang',
+        roleType: 'AMBIENT',
+        x: 80 * ts,
+        y: 63 * ts,
+        width: 32,
+        height: 32,
+        hairColor: '#64748b',
+        outfitColor: '#334155',
+        accentColor: '#94a3b8',
+        avatarIcon: '⚒️',
+        greetingText: 'Panasnya tungku peleburan ini membakar bijih mentah menjadi baja perkasa!',
+        loreText: 'Di kedalaman tambang terkutuk terdapat bijih besi gelap langka dan kristal obsidian abisal. Hanya senjata bertempa baja yang sanggup bertahan!',
+        actionPrompt: '⚒️ [A] Sapa Grimm'
+      },
+
+      // --- NPC LAPANGAN LATIHAN DESA SERENA ---
+      {
+        id: 'leon_trainer',
+        name: 'Master Leon',
+        title: 'Instruktur Arena Latihan',
+        roleType: 'AMBIENT',
+        x: 41 * ts,
+        y: 54 * ts,
+        width: 32,
+        height: 32,
+        hairColor: '#dc2626',
+        outfitColor: '#991b1b',
+        accentColor: '#f87171',
+        avatarIcon: '🥊',
+        greetingText: 'Ayunkan senjatamu tanpa ragu! Latihan keras adalah kunci kemenangan!',
+        loreText: 'Silakan gunakan boneka latihan kayu di lapangan pasir ini untuk menguji kombo serangan dan skill peranmu sebelum terjun ke dungeon!',
+        actionPrompt: '🥊 [A] Latihan'
       }
     ];
   }
@@ -279,10 +378,32 @@ export class VillageManager {
       return true;
     }
 
-    // 5. Pagar Kayu Pembatas Desa
+    // 5. Pagar Kayu Pembatas Desa Serena
     const f1x = 45 * ts;
     const f1y = 42 * ts;
     if (box.x < f1x + 32 && box.x + box.width > f1x && box.y < f1y + 8 && box.y + box.height > f1y) return true;
+
+    // --- DESA ELDORIA ---
+    // 6. Paviliun Suci Pohon Peri Eldoria (x: 19*ts, y: 15*ts, w: 72, h: 52)
+    const epX = 19 * ts;
+    const epY = 15 * ts;
+    if (box.x < epX + 72 && box.x + box.width > epX && box.y < epY + 52 && box.y + box.height > epY + 18) return true;
+
+    // 7. Meja Herbalis Aria (x: 25*ts, y: 19*ts, w: 32, h: 28)
+    const ehX = 25 * ts;
+    const ehY = 19 * ts;
+    if (box.x < ehX + 32 && box.x + box.width > ehX && box.y < ehY + 28 && box.y + box.height > ehY + 8) return true;
+
+    // --- DESA STONEWATCH ---
+    // 8. Benteng Granit Kurcaci Stonewatch (x: 82.5*ts, y: 61*ts, w: 80, h: 56)
+    const sbX = 82.5 * ts;
+    const sbY = 61 * ts;
+    if (box.x < sbX + 80 && box.x + box.width > sbX && box.y < sbY + 56 && box.y + box.height > sbY + 20) return true;
+
+    // 9. Tungku Peleburan Raksasa (x: 79*ts, y: 60*ts, w: 38, h: 36)
+    const sfX = 79 * ts;
+    const sfY = 60 * ts;
+    if (box.x < sfX + 38 && box.x + box.width > sfX && box.y < sfY + 36 && box.y + box.height > sfY + 12) return true;
 
     return false;
   }
@@ -341,6 +462,55 @@ export class VillageManager {
           } else if (q.status === 'ACTIVE' || q.status === 'TURNED_IN') {
             this.closeDialog();
             return true;
+          }
+        }
+      }
+    } else if (this.activeDialogNPC.roleType === 'RIDDLE' && this.activeDialogNPC.riddleId) {
+      const isAlreadyUnlocked =
+        (this.activeDialogNPC.riddleId === 'ELDORIA' && this.isEldoriaUnlocked) ||
+        (this.activeDialogNPC.riddleId === 'STONEWATCH' && this.isStonewatchUnlocked);
+
+      if (isAlreadyUnlocked) {
+        // Tombol jika sudah terbuka
+        const btnW = 200;
+        const btnH = 32;
+        const btnX = modalX + (modalWidth - btnW) / 2;
+        const btnY = modalY + modalHeight - 42;
+        if (touchX >= btnX && touchX <= btnX + btnW && touchY >= btnY && touchY <= btnY + btnH) {
+          this.closeDialog();
+          AudioEngine.playButtonClick();
+          return true;
+        }
+      } else {
+        // 3 Pilihan Jawaban Teka-Teki
+        const optW = modalWidth - 36;
+        const optH = 26;
+        const optX = modalX + 18;
+
+        for (let i = 0; i < 3; i++) {
+          const optY = modalY + 144 + i * 32;
+          if (touchX >= optX && touchX <= optX + optW && touchY >= optY && touchY <= optY + optH) {
+            if (i === 0) {
+              // Jawaban Benar (Pilihan A)
+              AudioEngine.playLevelUp();
+              if (this.activeDialogNPC.riddleId === 'ELDORIA') {
+                this.isEldoriaUnlocked = true;
+                floatingText.spawn(player.x + 10, player.y - 24, '🌿 TEKA-TEKI BENAR! Pintu Kuil Hutan Terbuka!', '#34d399', 3.5);
+              } else {
+                this.isStonewatchUnlocked = true;
+                floatingText.spawn(player.x + 10, player.y - 24, '⛏️ TEKA-TEKI BENAR! Gerbang Tambang Terbuka!', '#f59e0b', 3.5);
+              }
+              if (this.onSolveRiddle) {
+                this.onSolveRiddle(this.activeDialogNPC.riddleId);
+              }
+              this.closeDialog();
+              return true;
+            } else {
+              // Jawaban Salah
+              AudioEngine.playHit(false);
+              floatingText.spawn(player.x + 10, player.y - 20, '❌ Kurang tepat! Renungkan kembali petunjuknya.', '#f87171', 2.0);
+              return true;
+            }
           }
         }
       }
@@ -522,12 +692,141 @@ export class VillageManager {
       this.drawStreetlamp(ctx, l.x, l.y);
     }
 
-    // 8. RENDER SELURUH NPC DESA (Quest & Pajangan)
+    // 8. ARENA LATIHAN PRAJURIT SERENA (Training Grounds: 41*ts, 55*ts)
+    const tAx = 41 * ts;
+    const tAy = 55 * ts;
+    // Sand pit arena border
+    ctx.strokeStyle = '#ca8a04';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(tAx - 18, tAy - 12, 70, 48);
+    // Training Dummy 1 & 2
+    this.drawTrainingDummy(ctx, tAx - 6, tAy + 4);
+    this.drawTrainingDummy(ctx, tAx + 32, tAy + 4);
+
+    // 9. RAMBU PENUNJUK ARAH JALAN RAYA (Crossroad Signposts)
+    this.drawSignpost(ctx, 45 * ts + 16, 50 * ts - 8, '⬅️ Desa Eldoria (Rimba Peri)');
+    this.drawSignpost(ctx, 54 * ts + 16, 50 * ts - 8, 'Desa Stonewatch (Tambang) ➡️');
+    this.drawSignpost(ctx, 50 * ts + 16, 44 * ts, '⬆️ Goa Kripta Kuno (Dungeon)');
+
+    // 10. ARSITEKTUR DESA ELDORIA (DESA PERI HUTAN KUNO - BARAT LAUT)
+    // Paviliun Suci Pohon Eldoria
+    const epX = 19 * ts;
+    const epY = 15 * ts;
+    this.drawCottage(ctx, epX, epY, 74, 56, '#047857', '#065f46', 'Paviliun Roh Eldoria');
+    // Meja Ramuan Herbalis Aria
+    const ehX = 25 * ts;
+    const ehY = 19 * ts;
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(ehX, ehY, 26, 16);
+    ctx.fillStyle = '#34d399';
+    ctx.fillRect(ehX + 4, ehY - 4, 5, 5); // Ramuan Hijau
+    ctx.fillStyle = '#f43f5e';
+    ctx.fillRect(ehX + 12, ehY - 5, 5, 6); // Ramuan Merah
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(ehX + 19, ehY - 4, 4, 5); // Ramuan Biru
+    // Lentera Peri Eldoria
+    this.drawSylvanLantern(ctx, 17 * ts, 18 * ts);
+    this.drawSylvanLantern(ctx, 23 * ts, 24 * ts);
+
+    // 11. ARSITEKTUR DESA STONEWATCH (DESA BENTENG TAMBANG KURCACI - TENGGARA)
+    // Benteng Granit Stonewatch
+    const sbX = 82.5 * ts;
+    const sbY = 61 * ts;
+    this.drawCottage(ctx, sbX, sbY, 80, 58, '#1e1b4b', '#334155', 'Benteng Tambang Stonewatch');
+    // Tungku Peleburan Raksasa (Great Foundry)
+    const sfX = 79 * ts;
+    const sfY = 60 * ts;
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(sfX, sfY, 36, 32);
+    ctx.fillStyle = '#ea580c';
+    ctx.fillRect(sfX + 10, sfY + 14, 16, 14); // Api peleburan
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(sfX + 14, sfY + 18, 8, 8);
+    // Gerobak Tambang di atas rel
+    const mcX = 85 * ts;
+    const mcY = 64 * ts;
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(mcX, mcY + 4, 22, 14);
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(mcX + 2, mcY + 2, 18, 6); // Ore contents
+    ctx.fillStyle = '#000000';
+    ctx.beginPath();
+    ctx.arc(mcX + 5, mcY + 18, 3, 0, Math.PI * 2);
+    ctx.arc(mcX + 17, mcY + 18, 3, 0, Math.PI * 2);
+    ctx.fill();
+    // Lentera Tambang
+    this.drawStreetlamp(ctx, 81 * ts, 65 * ts);
+    this.drawStreetlamp(ctx, 88 * ts, 65 * ts);
+
+    // 12. RENDER SELURUH NPC DESA (Quest, Ambient, & Riddle)
     for (const npc of this.npcs) {
       this.renderNPC(ctx, npc, playerCenterX, playerCenterY);
     }
 
     ctx.restore();
+  }
+
+  private drawTrainingDummy(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    // Wooden post base
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(x + 5, y + 14, 4, 12);
+    // Straw target torso
+    ctx.fillStyle = '#ca8a04';
+    ctx.beginPath();
+    ctx.roundRect(x, y + 4, 14, 14, 4);
+    ctx.fill();
+    // Target bullseye
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(x + 7, y + 11, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+    // Straw Head
+    ctx.fillStyle = '#eab308';
+    ctx.beginPath();
+    ctx.arc(x + 7, y + 2, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  private drawSignpost(ctx: CanvasRenderingContext2D, x: number, y: number, text: string): void {
+    // Post
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(x - 2, y, 4, 18);
+    // Board
+    ctx.fillStyle = '#451a03';
+    ctx.beginPath();
+    ctx.roundRect(x - 38, y - 8, 76, 12, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#fde047';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    // Text
+    ctx.fillStyle = '#fef08a';
+    ctx.font = 'bold 5.5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(text, x, y - 2);
+  }
+
+  private drawSylvanLantern(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    // Wooden curved pole
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + 8, y + 20);
+    ctx.lineTo(x + 8, y + 4);
+    ctx.lineTo(x + 14, y + 6);
+    ctx.stroke();
+
+    // Fairy orb glow
+    const pulse = Math.sin(this.animTimer * 4 + x) * 1.5;
+    ctx.fillStyle = '#34d399';
+    ctx.beginPath();
+    ctx.arc(x + 14, y + 10, 3 + pulse * 0.3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(52, 211, 153, 0.25)';
+    ctx.beginPath();
+    ctx.arc(x + 14, y + 10, 8, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   private drawCottage(
@@ -922,6 +1221,77 @@ export class VillageManager {
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(btnLabel, btnX + btnW / 2, btnY + btnH / 2);
+      }
+    } else if (npc.roleType === 'RIDDLE' && npc.riddleId) {
+      const isAlreadyUnlocked =
+        (npc.riddleId === 'ELDORIA' && this.isEldoriaUnlocked) ||
+        (npc.riddleId === 'STONEWATCH' && this.isStonewatchUnlocked);
+
+      if (isAlreadyUnlocked) {
+        // Status Terbuka
+        const boxX = modalX + 16;
+        const boxY = modalY + 138;
+        const boxW = modalWidth - 32;
+        ctx.fillStyle = '#064e3b';
+        ctx.fillRect(boxX, boxY, boxW, 52);
+        ctx.strokeStyle = '#34d399';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(boxX, boxY, boxW, 52);
+
+        ctx.fillStyle = '#fef08a';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillText('✨ PINTU GERBANG DUNGEON TELAH TERBUKA!', boxX + boxW / 2, boxY + 20);
+        ctx.fillStyle = '#a7f3d0';
+        ctx.font = '9.5px sans-serif';
+        ctx.fillText('Segel telah terpecahkan! Dekati tebing pintu gerbang untuk menjelajah.', boxX + boxW / 2, boxY + 36);
+
+        // Tombol Tutup
+        const btnW = 180;
+        const btnH = 30;
+        const btnX = modalX + (modalWidth - btnW) / 2;
+        const btnY = modalY + modalHeight - 42;
+        ctx.fillStyle = '#065f46';
+        ctx.fillRect(btnX, btnY, btnW, btnH);
+        ctx.strokeStyle = '#34d399';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(btnX, btnY, btnW, btnH);
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px sans-serif';
+        ctx.fillText('✓ MENGERTI / JELAJAHI', btnX + btnW / 2, btnY + btnH / 2);
+      } else {
+        // Tampilkan 3 Pilihan Jawaban Teka-Teki
+        const optW = modalWidth - 36;
+        const optH = 25;
+        const optX = modalX + 18;
+
+        const isEldoria = npc.riddleId === 'ELDORIA';
+        const options = isEldoria
+          ? [
+              'A) 🌿 Pohon Purba (Akar Kehidupan Rimba)',
+              'B) 💎 Kristal Ajaib Gua Bawah Tanah',
+              'C) ⚔️ Pedang Baja Milik Ksatria'
+            ]
+          : [
+              'A) 🕳️ Sebuah Lubang Galian Tambang',
+              'B) 💰 Tumpukan Koin Emas Tambang',
+              'C) 🔥 Kobaran Api Tungku Peleburan'
+            ];
+
+        for (let i = 0; i < 3; i++) {
+          const optY = modalY + 144 + i * 32;
+          ctx.fillStyle = '#1e293b';
+          ctx.fillRect(optX, optY, optW, optH);
+          ctx.strokeStyle = i === 0 ? '#38bdf8' : '#475569';
+          ctx.lineWidth = 1.2;
+          ctx.strokeRect(optX, optY, optW, optH);
+
+          ctx.fillStyle = '#f8fafc';
+          ctx.font = 'bold 9.5px sans-serif';
+          ctx.textAlign = 'left';
+          ctx.textBaseline = 'middle';
+          ctx.fillText(options[i], optX + 10, optY + optH / 2);
+        }
       }
     } else {
       // Ambient NPC: Button Tutup / Mengerti

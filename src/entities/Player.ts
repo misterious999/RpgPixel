@@ -4,6 +4,8 @@ import { TileMap } from '../world/TileMap.ts';
 import { DungeonMap } from '../world/DungeonMap.ts';
 import { DungeonFloor2 } from '../world/DungeonFloor2.ts';
 import { DungeonFloor3 } from '../world/DungeonFloor3.ts';
+import { DungeonEldoria } from '../world/DungeonEldoria.ts';
+import { DungeonStonewatch } from '../world/DungeonStonewatch.ts';
 import { Inventory } from '../items/Inventory.ts';
 import { CharacterCostume, RoleType, Skill, MagicianAffinities } from '../types/GameTypes.ts';
 import { CHARACTER_COSTUMES, ROLE_INFO, getMagicianSkills, ELEMENT_INFO } from '../data/RolesData.ts';
@@ -423,7 +425,7 @@ export class Player {
     };
   }
 
-  public update(deltaTime: number, input: InputState, tileMap: TileMap | DungeonMap | DungeonFloor2 | DungeonFloor3, obstacleChecker?: (box: { x: number; y: number; width: number; height: number }) => boolean): void {
+  public update(deltaTime: number, input: InputState, tileMap: TileMap | DungeonMap | DungeonFloor2 | DungeonFloor3 | DungeonEldoria | DungeonStonewatch, obstacleChecker?: (box: { x: number; y: number; width: number; height: number }) => boolean): void {
     const { axisX, axisY, isSprint, isAction } = input;
 
     this.breathTimer += deltaTime * 3;

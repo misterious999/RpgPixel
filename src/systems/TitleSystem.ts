@@ -53,6 +53,20 @@ export const TITLE_DEFINITIONS: Record<string, TitleDefinition> = {
     description: 'Telah menaklukkan Raja Naga Api Ignis di Lantai 3!',
     color: '#f97316'
   },
+  SYLVAN_WARDEN: {
+    id: 'SYLVAN_WARDEN',
+    name: '« Penjaga Rimba Suci »',
+    badge: '🌿',
+    description: 'Telah menaklukkan Raksasa Roh Pohon Purba di Kuil Eldoria!',
+    color: '#10b981'
+  },
+  MINE_CONQUEROR: {
+    id: 'MINE_CONQUEROR',
+    name: '« Penghancur Batu Abisal »',
+    badge: '⛏️',
+    description: 'Telah menundukkan Behemoth Obsidian di Tambang Terkutuk Stonewatch!',
+    color: '#8b5cf6'
+  },
   GOURMET_CHEF: {
     id: 'GOURMET_CHEF',
     name: '« Koki Bintang Lima »',

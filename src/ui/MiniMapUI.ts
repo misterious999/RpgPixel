@@ -6,6 +6,8 @@ import { TileMap, TileType } from '../world/TileMap.ts';
 import { DungeonMap } from '../world/DungeonMap.ts';
 import { DungeonFloor2 } from '../world/DungeonFloor2.ts';
 import { DungeonFloor3 } from '../world/DungeonFloor3.ts';
+import { DungeonEldoria } from '../world/DungeonEldoria.ts';
+import { DungeonStonewatch } from '../world/DungeonStonewatch.ts';
 
 export type MiniMapMode = 'NORMAL' | 'EXPANDED' | 'MINIMIZED';
 
@@ -17,6 +19,8 @@ export class MiniMapUI {
   private dungeonCanvas: HTMLCanvasElement | null = null;
   private floor2Canvas: HTMLCanvasElement | null = null;
   private floor3Canvas: HTMLCanvasElement | null = null;
+  private eldoriaCanvas: HTMLCanvasElement | null = null;
+  private stonewatchCanvas: HTMLCanvasElement | null = null;
 
   private pulseTimer: number = 0;
 
@@ -111,6 +115,44 @@ export class MiniMapUI {
     return c;
   }
 
+  /**
+   * Menghasilkan peta statis Kuil Roh Hutan Eldoria
+   */
+  private generateEldoriaCache(dungeonEldoria: DungeonEldoria): HTMLCanvasElement {
+    const c = document.createElement('canvas');
+    c.width = dungeonEldoria.width;
+    c.height = dungeonEldoria.height;
+    const ctx = c.getContext('2d')!;
+
+    for (let y = 0; y < dungeonEldoria.height; y++) {
+      for (let x = 0; x < dungeonEldoria.width; x++) {
+        const isSolid = dungeonEldoria.isTileSolid(x, y);
+        ctx.fillStyle = isSolid ? '#022c22' : '#065f46';
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+    return c;
+  }
+
+  /**
+   * Menghasilkan peta statis Tambang Terkutuk Stonewatch
+   */
+  private generateStonewatchCache(dungeonStonewatch: DungeonStonewatch): HTMLCanvasElement {
+    const c = document.createElement('canvas');
+    c.width = dungeonStonewatch.width;
+    c.height = dungeonStonewatch.height;
+    const ctx = c.getContext('2d')!;
+
+    for (let y = 0; y < dungeonStonewatch.height; y++) {
+      for (let x = 0; x < dungeonStonewatch.width; x++) {
+        const isSolid = dungeonStonewatch.isTileSolid(x, y);
+        ctx.fillStyle = isSolid ? '#0f172a' : '#334155';
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+    return c;
+  }
+
   public handleTouch(touchX: number, touchY: number, screenWidth: number, screenHeight: number): boolean {
     if (this.mode === 'MINIMIZED') {
       const btn = { x: screenWidth - 110, y: 52, w: 60, h: 26 };
@@ -167,7 +209,7 @@ export class MiniMapUI {
     ctx: CanvasRenderingContext2D,
     screenWidth: number,
     screenHeight: number,
-    currentMap: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3',
+    currentMap: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | 'DUNGEON_ELDORIA' | 'DUNGEON_STONEWATCH',
     tileMap: TileMap,
     dungeonMap: DungeonMap,
     player: Player,
@@ -180,7 +222,9 @@ export class MiniMapUI {
     blacksmithX: number,
     blacksmithY: number,
     dungeonFloor2?: DungeonFloor2,
-    dungeonFloor3?: DungeonFloor3
+    dungeonFloor3?: DungeonFloor3,
+    dungeonEldoria?: DungeonEldoria,
+    dungeonStonewatch?: DungeonStonewatch
   ): void {
     ctx.save();
 
@@ -218,13 +262,19 @@ export class MiniMapUI {
     if (dungeonFloor3 && !this.floor3Canvas) {
       this.floor3Canvas = this.generateFloor3Cache(dungeonFloor3);
     }
+    if (dungeonEldoria && !this.eldoriaCanvas) {
+      this.eldoriaCanvas = this.generateEldoriaCache(dungeonEldoria);
+    }
+    if (dungeonStonewatch && !this.stonewatchCanvas) {
+      this.stonewatchCanvas = this.generateStonewatchCache(dungeonStonewatch);
+    }
 
     const isOverworld = currentMap === 'OVERWORLD';
     let sourceCanvas = this.overworldCanvas;
     let mapTileWidth = CONSTANTS.MAP_WIDTH;
     let mapTileHeight = CONSTANTS.MAP_HEIGHT;
     let mapTitle = '🌍 Lembah';
-    let fullMapTitle = '🗺️ Peta Wilayah Lembah Serikat';
+    let fullMapTitle = '🗺️ Peta Wilayah Lembah Serikat Tiga Desa';
     let titleColor = '#4ade80';
 
     if (currentMap === 'DUNGEON') {
@@ -248,6 +298,20 @@ export class MiniMapUI {
       mapTitle = '🔥 Neraka Lt.3';
       fullMapTitle = '🔥 Peta Sanctuarium Neraka Abisal (Lantai 3)';
       titleColor = '#f97316';
+    } else if (currentMap === 'DUNGEON_ELDORIA') {
+      sourceCanvas = this.eldoriaCanvas || this.dungeonCanvas!;
+      mapTileWidth = dungeonEldoria ? dungeonEldoria.width : 36;
+      mapTileHeight = dungeonEldoria ? dungeonEldoria.height : 36;
+      mapTitle = '🌿 Kuil Eldoria';
+      fullMapTitle = '🌿 Peta Kuil Roh Hutan Purba Eldoria';
+      titleColor = '#34d399';
+    } else if (currentMap === 'DUNGEON_STONEWATCH') {
+      sourceCanvas = this.stonewatchCanvas || this.dungeonCanvas!;
+      mapTileWidth = dungeonStonewatch ? dungeonStonewatch.width : 36;
+      mapTileHeight = dungeonStonewatch ? dungeonStonewatch.height : 36;
+      mapTitle = '⛏️ Tambang';
+      fullMapTitle = '⛏️ Peta Tambang Terkutuk Besi Abisal Stonewatch';
+      titleColor = '#f59e0b';
     }
 
     const pTileX = player.x / CONSTANTS.TILE_SIZE;
@@ -327,6 +391,22 @@ export class MiniMapUI {
         ctx.beginPath();
         ctx.arc(cx, cy, 3, 0, Math.PI * 2);
         ctx.fill();
+
+        // Pintu Kuil Eldoria (Hijau)
+        const ex = toRadarX(21);
+        const ey = toRadarY(13);
+        ctx.fillStyle = '#34d399';
+        ctx.beginPath();
+        ctx.arc(ex, ey, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Pintu Tambang Stonewatch (Oranye)
+        const mx = toRadarX(85);
+        const my = toRadarY(58);
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.arc(mx, my, 3, 0, Math.PI * 2);
+        ctx.fill();
       } else if (currentMap === 'DUNGEON') {
         // Tangga Keluar Dungeon ke Permukaan (Ungu Bercahaya)
         const lx = toRadarX(dungeonMap.ladderX / CONSTANTS.TILE_SIZE);
@@ -373,6 +453,22 @@ export class MiniMapUI {
         ctx.fillStyle = '#38bdf8';
         ctx.beginPath();
         ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (currentMap === 'DUNGEON_ELDORIA' && dungeonEldoria) {
+        // Tangga kembali ke Desa Eldoria
+        const lx = toRadarX(dungeonEldoria.ladderX / CONSTANTS.TILE_SIZE);
+        const ly = toRadarY(dungeonEldoria.ladderY / CONSTANTS.TILE_SIZE);
+        ctx.fillStyle = '#4ade80';
+        ctx.beginPath();
+        ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (currentMap === 'DUNGEON_STONEWATCH' && dungeonStonewatch) {
+        // Tangga kembali ke Desa Stonewatch
+        const lx = toRadarX(dungeonStonewatch.ladderX / CONSTANTS.TILE_SIZE);
+        const ly = toRadarY(dungeonStonewatch.ladderY / CONSTANTS.TILE_SIZE);
+        ctx.fillStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
         ctx.fill();
       }
 

@@ -32,6 +32,8 @@ import { AtmosphereEngine } from '../world/AtmosphereEngine.ts';
 import { TimeWeatherEngine } from '../world/TimeWeatherEngine.ts';
 import { DungeonFloor2 } from '../world/DungeonFloor2.ts';
 import { DungeonFloor3 } from '../world/DungeonFloor3.ts';
+import { DungeonEldoria } from '../world/DungeonEldoria.ts';
+import { DungeonStonewatch } from '../world/DungeonStonewatch.ts';
 import { Companion, CompanionType } from '../entities/Companion.ts';
 import { CookingSystem } from '../systems/CookingSystem.ts';
 import { Pet } from '../systems/TamingSystem.ts';
@@ -64,7 +66,7 @@ export class Game {
   private activeSkillBanner: { name: string; color: string; role: string; timer: number; maxTimer: number } | null = null;
 
   // Map & Dungeon state
-  public currentMap: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' = 'OVERWORLD';
+  public currentMap: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | 'DUNGEON_ELDORIA' | 'DUNGEON_STONEWATCH' = 'OVERWORLD';
   private caveEntrance: CaveEntrance;
   private dungeonMap: DungeonMap;
   private dungeonMonsters: Monster[] = [];
@@ -81,6 +83,20 @@ export class Game {
   private floor3Monsters: Monster[] = [];
   private floor3Chests: Chest[] = [];
   private floor3WorldItems: WorldItem[] = [];
+
+  // Dungeon Eldoria (Sylvan Temple - Desa Eldoria)
+  private dungeonEldoria: DungeonEldoria = new DungeonEldoria();
+  private eldoriaMonsters: Monster[] = [];
+  private eldoriaChests: Chest[] = [];
+  private eldoriaWorldItems: WorldItem[] = [];
+  public isEldoriaDungeonUnlocked: boolean = false;
+
+  // Dungeon Stonewatch (Cursed Abyssal Iron Mine - Desa Stonewatch)
+  private dungeonStonewatch: DungeonStonewatch = new DungeonStonewatch();
+  private stonewatchMonsters: Monster[] = [];
+  private stonewatchChests: Chest[] = [];
+  private stonewatchWorldItems: WorldItem[] = [];
+  public isStonewatchDungeonUnlocked: boolean = false;
 
   // Day/Night & Weather Engine
   public timeWeatherEngine: TimeWeatherEngine = new TimeWeatherEngine();
@@ -209,6 +225,8 @@ export class Game {
     this.spawnInitialDungeonObjects();
     this.initFloor2Monsters();
     this.initFloor3Monsters();
+    this.initEldoriaDungeon();
+    this.initStonewatchDungeon();
 
     // Pulihkan status akses tangga/portal lantai jika pemain sudah memiliki gelar bos
     if (this.titleSystem.unlockedTitles.has('CRYPT_CONQUEROR')) {
@@ -217,6 +235,29 @@ export class Game {
     if (this.titleSystem.unlockedTitles.has('TITAN_BREAKER')) {
       this.dungeonFloor2.isFloor3Unlocked = true;
     }
+    if (this.titleSystem.unlockedTitles.has('SYLVAN_WARDEN')) {
+      this.isEldoriaDungeonUnlocked = true;
+    }
+    if (this.titleSystem.unlockedTitles.has('MINE_CONQUEROR')) {
+      this.isStonewatchDungeonUnlocked = true;
+    }
+
+    // Hubungkan teka-teki NPC Desa dengan pembukaan dungeon tersembunyi
+    this.villageManager.onSolveRiddle = (riddleId: 'ELDORIA' | 'STONEWATCH') => {
+      if (riddleId === 'ELDORIA') {
+        this.isEldoriaDungeonUnlocked = true;
+        AudioEngine.playLevelUp();
+        this.camera.shake(4.0, 0.25);
+        this.floatingText.spawn(this.player.x + 10, this.player.y - 28, '🌿 Segel Kuil Roh Hutan Terbuka!', '#4ade80', 4.0);
+        this.saveSessionSnapshot();
+      } else if (riddleId === 'STONEWATCH') {
+        this.isStonewatchDungeonUnlocked = true;
+        AudioEngine.playLevelUp();
+        this.camera.shake(4.0, 0.25);
+        this.floatingText.spawn(this.player.x + 10, this.player.y - 28, '⚒️ Gerbang Tambang Besi Abisal Terbuka!', '#f59e0b', 4.0);
+        this.saveSessionSnapshot();
+      }
+    };
 
     this.cookingSystem.onCookSuccess = () => {
       this.titleSystem.unlockTitle('GOURMET_CHEF', this.player, this.floatingText);
@@ -474,6 +515,16 @@ export class Game {
       if (chest.isOpen) openedFloor3ChestsIndices.push(idx);
     });
 
+    const openedEldoriaChestsIndices: number[] = [];
+    this.eldoriaChests.forEach((chest, idx) => {
+      if (chest.isOpen) openedEldoriaChestsIndices.push(idx);
+    });
+
+    const openedStonewatchChestsIndices: number[] = [];
+    this.stonewatchChests.forEach((chest, idx) => {
+      if (chest.isOpen) openedStonewatchChestsIndices.push(idx);
+    });
+
     const snapshot = {
       username: this.player.username,
       costumeId: this.player.costume.id,
@@ -494,8 +545,12 @@ export class Game {
       openedChests: openedChestsIndices,
       openedDungeonChests: openedDungeonChestsIndices,
       openedFloor3Chests: openedFloor3ChestsIndices,
+      openedEldoriaChests: openedEldoriaChestsIndices,
+      openedStonewatchChests: openedStonewatchChestsIndices,
       isFloor2Unlocked: this.dungeonMap.isFloor2Unlocked || this.titleSystem.unlockedTitles.has('CRYPT_CONQUEROR'),
       isFloor3Unlocked: this.dungeonFloor2.isFloor3Unlocked || this.titleSystem.unlockedTitles.has('TITAN_BREAKER'),
+      isEldoriaDungeonUnlocked: this.isEldoriaDungeonUnlocked || this.titleSystem.unlockedTitles.has('SYLVAN_WARDEN'),
+      isStonewatchDungeonUnlocked: this.isStonewatchDungeonUnlocked || this.titleSystem.unlockedTitles.has('MINE_CONQUEROR'),
       companionType: this.companion ? this.companion.type : null,
       petType: this.pet ? this.pet.type : null,
       isGuest: this.authUI.isGuest,
@@ -608,12 +663,36 @@ export class Game {
         }
       }
 
-      // Pulihkan status tangga & portal antar lantai
+      // Pulihkan peti yang sudah terbuka di Kuil Eldoria
+      if (Array.isArray(data.openedEldoriaChests)) {
+        for (const idx of data.openedEldoriaChests) {
+          if (this.eldoriaChests[idx]) {
+            this.eldoriaChests[idx].isOpen = true;
+          }
+        }
+      }
+
+      // Pulihkan peti yang sudah terbuka di Tambang Stonewatch
+      if (Array.isArray(data.openedStonewatchChests)) {
+        for (const idx of data.openedStonewatchChests) {
+          if (this.stonewatchChests[idx]) {
+            this.stonewatchChests[idx].isOpen = true;
+          }
+        }
+      }
+
+      // Pulihkan status tangga & portal antar lantai & dungeon tersembunyi
       if (data.isFloor2Unlocked || this.titleSystem.unlockedTitles.has('CRYPT_CONQUEROR')) {
         this.dungeonMap.isFloor2Unlocked = true;
       }
       if (data.isFloor3Unlocked || this.titleSystem.unlockedTitles.has('TITAN_BREAKER')) {
         this.dungeonFloor2.isFloor3Unlocked = true;
+      }
+      if (data.isEldoriaDungeonUnlocked || this.titleSystem.unlockedTitles.has('SYLVAN_WARDEN')) {
+        this.isEldoriaDungeonUnlocked = true;
+      }
+      if (data.isStonewatchDungeonUnlocked || this.titleSystem.unlockedTitles.has('MINE_CONQUEROR')) {
+        this.isStonewatchDungeonUnlocked = true;
       }
 
       // Pulihkan Rekan Party Companion & Pet Auto-Loot
@@ -624,7 +703,7 @@ export class Game {
         this.pet = new Pet(data.petType, this.player.x + 20, this.player.y);
       }
 
-      // Pulihkan lokasi map (Overworld, Dungeon Lt.1, Lt.2, atau Lt.3)
+      // Pulihkan lokasi map (Overworld, Dungeon Lt.1, Lt.2, Lt.3, Eldoria, atau Stonewatch)
       if (data.currentMap === 'DUNGEON') {
         this.currentMap = 'DUNGEON';
         this.camera.setWorldBounds(this.dungeonMap.width * CONSTANTS.TILE_SIZE, this.dungeonMap.height * CONSTANTS.TILE_SIZE);
@@ -634,6 +713,12 @@ export class Game {
       } else if (data.currentMap === 'DUNGEON_FLOOR_3') {
         this.currentMap = 'DUNGEON_FLOOR_3';
         this.camera.setWorldBounds(this.dungeonFloor3.width * CONSTANTS.TILE_SIZE, this.dungeonFloor3.height * CONSTANTS.TILE_SIZE);
+      } else if (data.currentMap === 'DUNGEON_ELDORIA') {
+        this.currentMap = 'DUNGEON_ELDORIA';
+        this.camera.setWorldBounds(this.dungeonEldoria.width * CONSTANTS.TILE_SIZE, this.dungeonEldoria.height * CONSTANTS.TILE_SIZE);
+      } else if (data.currentMap === 'DUNGEON_STONEWATCH') {
+        this.currentMap = 'DUNGEON_STONEWATCH';
+        this.camera.setWorldBounds(this.dungeonStonewatch.width * CONSTANTS.TILE_SIZE, this.dungeonStonewatch.height * CONSTANTS.TILE_SIZE);
       } else {
         this.currentMap = 'OVERWORLD';
         this.camera.setWorldBounds(CONSTANTS.MAP_WIDTH * CONSTANTS.TILE_SIZE, CONSTANTS.MAP_HEIGHT * CONSTANTS.TILE_SIZE);
@@ -1053,6 +1138,236 @@ export class Game {
     this.saveSessionSnapshot();
   }
 
+  private initEldoriaDungeon(): void {
+    const ts = CONSTANTS.TILE_SIZE;
+    this.eldoriaMonsters = [
+      // West Sylvan Grove (Desa Eldoria Barat)
+      new Monster('eld_sprite_1', 'SYLVAN_SPRITE', 8 * ts, 16 * ts),
+      new Monster('eld_creeper_1', 'VINE_CREEPER', 10 * ts, 20 * ts),
+      new Monster('eld_sprite_2', 'SYLVAN_SPRITE', 6 * ts, 18 * ts),
+      // East Sylvan Arboretum (Desa Eldoria Timur)
+      new Monster('eld_sprite_3', 'SYLVAN_SPRITE', 27 * ts, 16 * ts),
+      new Monster('eld_treant_1', 'TREANT_WARRIOR', 25 * ts, 20 * ts),
+      new Monster('eld_creeper_2', 'VINE_CREEPER', 29 * ts, 18 * ts),
+      // Central Sacred Spring (Mata Air Suci Tengah)
+      new Monster('eld_treant_2', 'TREANT_WARRIOR', 15 * ts, 18 * ts),
+      new Monster('eld_creeper_3', 'VINE_CREEPER', 21 * ts, 18 * ts),
+      new Monster('eld_sprite_4', 'SYLVAN_SPRITE', 18 * ts, 22 * ts),
+      // North Sacred Grove: Boss Ancient Ent & Penjaga
+      new Monster('eld_treant_3', 'TREANT_WARRIOR', 15 * ts, 10 * ts),
+      new Monster('eld_treant_4', 'TREANT_WARRIOR', 21 * ts, 10 * ts),
+      new Monster('eld_boss_ent', 'BOSS_ANCIENT_ENT', 18 * ts - 12, 6 * ts)
+    ];
+
+    this.eldoriaChests = [
+      new Chest(6 * ts + 5, 15 * ts + 6, [
+        { itemId: 'GOLD_COIN', count: 450 },
+        { itemId: 'MAGIC_FLOWER', count: 12 },
+        { itemId: 'HEALTH_POTION', count: 4 }
+      ]),
+      new Chest(29 * ts + 5, 15 * ts + 6, [
+        { itemId: 'GOLD_COIN', count: 550 },
+        { itemId: 'MANA_POTION', count: 5 },
+        { itemId: 'DUNGEON_GEM', count: 4 }
+      ]),
+      new Chest(18 * ts + 5, 4 * ts + 6, [
+        { itemId: 'GOLD_COIN', count: 1500 },
+        { itemId: 'DUNGEON_GEM', count: 8 },
+        { itemId: 'MAGIC_FLOWER', count: 20 },
+        { itemId: 'HEALTH_POTION', count: 8 },
+        { itemId: 'MANA_POTION', count: 8 }
+      ])
+    ];
+  }
+
+  private initStonewatchDungeon(): void {
+    const ts = CONSTANTS.TILE_SIZE;
+    this.stonewatchMonsters = [
+      // West Crystal Shaft (Lorong Tambang Kristal Barat)
+      new Monster('stone_spider_1', 'CRYSTAL_SPIDER', 8 * ts, 16 * ts),
+      new Monster('stone_spider_2', 'CRYSTAL_SPIDER', 6 * ts, 20 * ts),
+      new Monster('stone_skel_1', 'IRONCLAD_SKELETON', 10 * ts, 18 * ts),
+      // East Smelting Cavern (Gua Peleburan Besi Timur)
+      new Monster('stone_skel_2', 'IRONCLAD_SKELETON', 26 * ts, 16 * ts),
+      new Monster('stone_golem_1', 'ARMORED_GOLEM', 28 * ts, 20 * ts),
+      new Monster('stone_spider_3', 'CRYSTAL_SPIDER', 29 * ts, 17 * ts),
+      // Central Quarry Depot (Depo Tambang Tengah)
+      new Monster('stone_golem_2', 'ARMORED_GOLEM', 15 * ts, 18 * ts),
+      new Monster('stone_skel_3', 'IRONCLAD_SKELETON', 21 * ts, 18 * ts),
+      new Monster('stone_spider_4', 'CRYSTAL_SPIDER', 18 * ts, 22 * ts),
+      // North Boss Foundry: Boss Obsidian Behemoth & Penjaga
+      new Monster('stone_golem_3', 'ARMORED_GOLEM', 15 * ts, 10 * ts),
+      new Monster('stone_golem_4', 'ARMORED_GOLEM', 21 * ts, 10 * ts),
+      new Monster('stone_boss_behemoth', 'BOSS_OBSIDIAN_BEHEMOTH', 18 * ts - 12, 6 * ts)
+    ];
+
+    this.stonewatchChests = [
+      new Chest(6 * ts + 5, 15 * ts + 6, [
+        { itemId: 'GOLD_COIN', count: 600 },
+        { itemId: 'DARK_IRON_ORE', count: 15 },
+        { itemId: 'HEALTH_POTION', count: 5 }
+      ]),
+      new Chest(29 * ts + 5, 15 * ts + 6, [
+        { itemId: 'GOLD_COIN', count: 700 },
+        { itemId: 'DARK_IRON_ORE', count: 20 },
+        { itemId: 'DUNGEON_GEM', count: 5 }
+      ]),
+      new Chest(18 * ts + 5, 4 * ts + 6, [
+        { itemId: 'GOLD_COIN', count: 2000 },
+        { itemId: 'DUNGEON_GEM', count: 12 },
+        { itemId: 'DARK_IRON_ORE', count: 35 },
+        { itemId: 'HEALTH_POTION', count: 8 },
+        { itemId: 'MANA_POTION', count: 8 }
+      ])
+    ];
+  }
+
+  public enterDungeonEldoria(): void {
+    if (this.transitionCooldown > 0) return;
+    this.transitionCooldown = 1.0;
+    this.input.consumeAction();
+
+    this.currentMap = 'DUNGEON_ELDORIA';
+    this.player.x = this.dungeonEldoria.entranceSpawnX;
+    this.player.y = this.dungeonEldoria.entranceSpawnY;
+    this.player.direction = 'up';
+
+    if (this.companion) {
+      this.companion.x = this.player.x - 20;
+      this.companion.y = this.player.y + 10;
+    }
+    if (this.pet) {
+      this.pet.x = this.player.x + 20;
+      this.pet.y = this.player.y + 10;
+    }
+    for (const minion of this.player.minions) {
+      minion.x = this.player.x - 16;
+      minion.y = this.player.y;
+    }
+
+    AudioEngine.playMapTransition(true);
+    AudioEngine.playBgm('DUNGEON_ELDORIA');
+
+    this.camera.setWorldBounds(this.dungeonEldoria.width * CONSTANTS.TILE_SIZE, this.dungeonEldoria.height * CONSTANTS.TILE_SIZE);
+    this.camera.update(this.player.x, this.player.y);
+
+    this.triggerMapTransition('「 KUIL ROH HUTAN ELDORIA 」', '~ Tempat Bersemayam Ent Kuno Pelindung Alam ~');
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🌿 Memasuki Kuil Roh Hutan!', '#4ade80', 3.0);
+    this.saveSessionSnapshot();
+  }
+
+  public exitDungeonEldoria(isDeath: boolean = false): void {
+    if (this.transitionCooldown > 0 && !isDeath) return;
+    this.transitionCooldown = 1.0;
+    this.input.consumeAction();
+
+    this.currentMap = 'OVERWORLD';
+    if (isDeath) {
+      this.player.x = 21 * CONSTANTS.TILE_SIZE + 6;
+      this.player.y = 20 * CONSTANTS.TILE_SIZE + 3;
+    } else {
+      this.player.x = 21 * CONSTANTS.TILE_SIZE + 6;
+      this.player.y = 15 * CONSTANTS.TILE_SIZE + 3;
+    }
+    this.player.direction = 'down';
+
+    if (this.companion) {
+      this.companion.x = this.player.x - 20;
+      this.companion.y = this.player.y;
+    }
+    if (this.pet) {
+      this.pet.x = this.player.x + 20;
+      this.pet.y = this.player.y;
+    }
+    for (const minion of this.player.minions) {
+      minion.x = this.player.x - 16;
+      minion.y = this.player.y;
+    }
+
+    AudioEngine.playMapTransition(false);
+    AudioEngine.playBgm('OVERWORLD');
+
+    this.camera.setWorldBounds(CONSTANTS.MAP_WIDTH * CONSTANTS.TILE_SIZE, CONSTANTS.MAP_HEIGHT * CONSTANTS.TILE_SIZE);
+    this.camera.update(this.player.x, this.player.y);
+
+    this.triggerMapTransition('「 DESA PERI ELDORIA 」', '~ Hutan Kuno Perlindungan Roh Alam ~');
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🌤️ Kembali ke Desa Eldoria', '#4ade80', 3.0);
+    this.saveSessionSnapshot();
+  }
+
+  public enterDungeonStonewatch(): void {
+    if (this.transitionCooldown > 0) return;
+    this.transitionCooldown = 1.0;
+    this.input.consumeAction();
+
+    this.currentMap = 'DUNGEON_STONEWATCH';
+    this.player.x = this.dungeonStonewatch.entranceSpawnX;
+    this.player.y = this.dungeonStonewatch.entranceSpawnY;
+    this.player.direction = 'up';
+
+    if (this.companion) {
+      this.companion.x = this.player.x - 20;
+      this.companion.y = this.player.y + 10;
+    }
+    if (this.pet) {
+      this.pet.x = this.player.x + 20;
+      this.pet.y = this.player.y + 10;
+    }
+    for (const minion of this.player.minions) {
+      minion.x = this.player.x - 16;
+      minion.y = this.player.y;
+    }
+
+    AudioEngine.playMapTransition(true);
+    AudioEngine.playBgm('DUNGEON_STONEWATCH');
+
+    this.camera.setWorldBounds(this.dungeonStonewatch.width * CONSTANTS.TILE_SIZE, this.dungeonStonewatch.height * CONSTANTS.TILE_SIZE);
+    this.camera.update(this.player.x, this.player.y);
+
+    this.triggerMapTransition('「 TAMBANG BESI ABISAL STONEWATCH 」', '~ Kedalaman Gelap & Altar Behemoth Obsidian ~');
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '⚒️ Memasuki Tambang Besi Abisal!', '#f59e0b', 3.0);
+    this.saveSessionSnapshot();
+  }
+
+  public exitDungeonStonewatch(isDeath: boolean = false): void {
+    if (this.transitionCooldown > 0 && !isDeath) return;
+    this.transitionCooldown = 1.0;
+    this.input.consumeAction();
+
+    this.currentMap = 'OVERWORLD';
+    if (isDeath) {
+      this.player.x = 84 * CONSTANTS.TILE_SIZE + 6;
+      this.player.y = 65 * CONSTANTS.TILE_SIZE + 3;
+    } else {
+      this.player.x = 85 * CONSTANTS.TILE_SIZE + 6;
+      this.player.y = 60 * CONSTANTS.TILE_SIZE + 3;
+    }
+    this.player.direction = 'down';
+
+    if (this.companion) {
+      this.companion.x = this.player.x - 20;
+      this.companion.y = this.player.y;
+    }
+    if (this.pet) {
+      this.pet.x = this.player.x + 20;
+      this.pet.y = this.player.y;
+    }
+    for (const minion of this.player.minions) {
+      minion.x = this.player.x - 16;
+      minion.y = this.player.y;
+    }
+
+    AudioEngine.playMapTransition(false);
+    AudioEngine.playBgm('OVERWORLD');
+
+    this.camera.setWorldBounds(CONSTANTS.MAP_WIDTH * CONSTANTS.TILE_SIZE, CONSTANTS.MAP_HEIGHT * CONSTANTS.TILE_SIZE);
+    this.camera.update(this.player.x, this.player.y);
+
+    this.triggerMapTransition('「 DESA BENTENG STONEWATCH 」', '~ Tambang Kurcaci & Benteng Pertahanan ~');
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🌤️ Kembali ke Desa Stonewatch', '#f59e0b', 3.0);
+    this.saveSessionSnapshot();
+  }
+
   public openCompanionHireModal(): void {
     if (this.companion) {
       NotificationModal.confirm({
@@ -1256,7 +1571,13 @@ export class Game {
     );
 
     // Audio Monster Defeated
-    AudioEngine.playMonsterDefeated(monster.type === 'BOSS_SLIME' || monster.type === 'BOSS_TITAN_GOLEM' || monster.type === 'BOSS_INFERNAL_DRAGON');
+    AudioEngine.playMonsterDefeated(
+      monster.type === 'BOSS_SLIME' ||
+      monster.type === 'BOSS_TITAN_GOLEM' ||
+      monster.type === 'BOSS_INFERNAL_DRAGON' ||
+      monster.type === 'BOSS_ANCIENT_ENT' ||
+      monster.type === 'BOSS_OBSIDIAN_BEHEMOTH'
+    );
 
     // Update Progres Misi Petualang (Quest Manager)
     this.questManager.onMonsterDefeated(monster.type, this.floatingText, this.player.x, this.player.y);
@@ -1268,7 +1589,11 @@ export class Game {
         ? this.dungeonWorldItems
         : this.currentMap === 'DUNGEON_FLOOR_2'
         ? this.floor2WorldItems
-        : this.floor3WorldItems;
+        : this.currentMap === 'DUNGEON_FLOOR_3'
+        ? this.floor3WorldItems
+        : this.currentMap === 'DUNGEON_ELDORIA'
+        ? this.eldoriaWorldItems
+        : this.stonewatchWorldItems;
 
     // Drop Koin Emas
     targetItems.push(new WorldItem(monster.x + 4, monster.y + 4, 'GOLD_COIN', goldReward));
@@ -1352,6 +1677,50 @@ export class Game {
       this.titleSystem.unlockTitle('DRAGON_SLAYER', this.player, this.floatingText);
       this.floatingText.spawn(monster.x + 20, monster.y - 32, '👑 RAJA NAGA IGNIS DIKALAHKAN!!', '#facc15', 5.0);
       this.floatingText.spawn(monster.x + 20, monster.y - 50, '🏆 SELURUH LANTAI DUNGEON TELAH DITAKLUKKAN!', '#f97316', 5.5);
+    }
+    // --- DUNGEON ELDORIA (KUIL ROH HUTAN) MONSTER DROPS ---
+    else if (monster.type === 'SYLVAN_SPRITE') {
+      if (Math.random() < 0.70) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'MAGIC_FLOWER', 2));
+      if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MANA_POTION', 1));
+    } else if (monster.type === 'VINE_CREEPER') {
+      if (Math.random() < 0.70) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'WOOD_LOG', 2));
+      if (Math.random() < 0.40) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 2));
+    } else if (monster.type === 'TREANT_WARRIOR') {
+      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'WOOD_LOG', 3));
+      if (Math.random() < 0.50) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DARK_IRON_ORE', 2));
+      if (Math.random() < 0.40) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'HEALTH_POTION', 1));
+    } else if (monster.type === 'BOSS_ANCIENT_ENT') {
+      targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 6));
+      targetItems.push(new WorldItem(monster.x + 28, monster.y + 12, 'MAGIC_FLOWER', 10));
+      targetItems.push(new WorldItem(monster.x + 10, monster.y + 16, 'WOOD_LOG', 15));
+      targetItems.push(new WorldItem(monster.x + 36, monster.y + 16, 'HEALTH_POTION', 5));
+      targetItems.push(new WorldItem(monster.x + 20, monster.y + 24, 'GOLD_COIN', 800));
+
+      this.titleSystem.unlockTitle('SYLVAN_WARDEN', this.player, this.floatingText);
+      this.floatingText.spawn(monster.x + 16, monster.y - 32, '🌿 ENT PURBA RIMBA DITUMBANGKAN!!', '#4ade80', 5.0);
+      this.floatingText.spawn(monster.x + 16, monster.y - 50, '🏆 GELAR « PENJAGA RIMBA SUCI » DIRAIH!', '#a7f3d0', 5.5);
+    }
+    // --- DUNGEON STONEWATCH (TAMBANG BESI ABISAL) MONSTER DROPS ---
+    else if (monster.type === 'CRYSTAL_SPIDER') {
+      if (Math.random() < 0.55) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DUNGEON_GEM', 1));
+      if (Math.random() < 0.50) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DARK_IRON_ORE', 2));
+    } else if (monster.type === 'IRONCLAD_SKELETON') {
+      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DARK_IRON_ORE', 3));
+      if (Math.random() < 0.60) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'ANCIENT_BONE', 2));
+    } else if (monster.type === 'ARMORED_GOLEM') {
+      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DARK_IRON_ORE', 4));
+      if (Math.random() < 0.40) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DUNGEON_GEM', 2));
+      if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'HEALTH_POTION', 2));
+    } else if (monster.type === 'BOSS_OBSIDIAN_BEHEMOTH') {
+      targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 8));
+      targetItems.push(new WorldItem(monster.x + 28, monster.y + 12, 'DARK_IRON_ORE', 16));
+      targetItems.push(new WorldItem(monster.x + 10, monster.y + 16, 'HEALTH_POTION', 6));
+      targetItems.push(new WorldItem(monster.x + 36, monster.y + 16, 'MANA_POTION', 6));
+      targetItems.push(new WorldItem(monster.x + 20, monster.y + 24, 'GOLD_COIN', 1000));
+
+      this.titleSystem.unlockTitle('MINE_CONQUEROR', this.player, this.floatingText);
+      this.floatingText.spawn(monster.x + 16, monster.y - 32, '⚒️ BEHEMOTH OBSIDIAN DIHANCURKAN!!', '#f59e0b', 5.0);
+      this.floatingText.spawn(monster.x + 16, monster.y - 50, '🏆 GELAR « PENGHANCUR BATU ABISAL » DIRAIH!', '#fde68a', 5.5);
     }
 
     // Title Progress Tracking
@@ -1548,6 +1917,22 @@ export class Game {
             return true;
           }
         }
+      } else if (this.currentMap === 'DUNGEON_ELDORIA') {
+        // Dungeon Eldoria Chests
+        for (const chest of this.eldoriaChests) {
+          const cb = chest.getCollisionBox();
+          if (box.x < cb.x + cb.width && box.x + box.width > cb.x && box.y < cb.y + cb.height && box.y + box.height > cb.y) {
+            return true;
+          }
+        }
+      } else if (this.currentMap === 'DUNGEON_STONEWATCH') {
+        // Dungeon Stonewatch Chests
+        for (const chest of this.stonewatchChests) {
+          const cb = chest.getCollisionBox();
+          if (box.x < cb.x + cb.width && box.x + box.width > cb.x && box.y < cb.y + cb.height && box.y + box.height > cb.y) {
+            return true;
+          }
+        }
       }
       return false;
     };
@@ -1564,7 +1949,11 @@ export class Game {
         ? this.dungeonMap
         : this.currentMap === 'DUNGEON_FLOOR_2'
         ? this.dungeonFloor2
-        : this.dungeonFloor3;
+        : this.currentMap === 'DUNGEON_FLOOR_3'
+        ? this.dungeonFloor3
+        : this.currentMap === 'DUNGEON_ELDORIA'
+        ? this.dungeonEldoria
+        : this.dungeonStonewatch;
     this.player.update(deltaTime, activeInput, activeMap, obstacleChecker);
 
     // Update Day/Night & Weather Engine
@@ -1591,7 +1980,11 @@ export class Game {
           ? this.dungeonMonsters
           : this.currentMap === 'DUNGEON_FLOOR_2'
           ? this.floor2Monsters
-          : this.floor3Monsters;
+          : this.currentMap === 'DUNGEON_FLOOR_3'
+          ? this.floor3Monsters
+          : this.currentMap === 'DUNGEON_ELDORIA'
+          ? this.eldoriaMonsters
+          : this.stonewatchMonsters;
 
       this.companion.update(deltaTime, this.player, activeMonsters, this.floatingText, (targetM) => {
         if (targetM.isDead) this.handleMonsterDefeated(targetM);
@@ -1607,7 +2000,11 @@ export class Game {
           ? this.dungeonWorldItems
           : this.currentMap === 'DUNGEON_FLOOR_2'
           ? this.floor2WorldItems
-          : this.floor3WorldItems;
+          : this.currentMap === 'DUNGEON_FLOOR_3'
+          ? this.floor3WorldItems
+          : this.currentMap === 'DUNGEON_ELDORIA'
+          ? this.eldoriaWorldItems
+          : this.stonewatchWorldItems;
 
       this.pet.update(deltaTime, this.player, activeItems, this.floatingText);
     }
@@ -1682,11 +2079,43 @@ export class Game {
         }
       }
 
-      // 5. Cave Entrance (Masuk Goa / Dungeon)
+      // 5. Cave Entrance (Masuk Goa / Dungeon Serena)
       if (this.caveEntrance.isNearPlayer(playerCenterX, playerCenterY)) {
         if (this.input.isActionJustPressed || this.input.state.isAction) {
           this.enterDungeon();
           return;
+        }
+      }
+
+      // 5.1 Eldoria Sylvan Temple Entrance (Desa Eldoria)
+      const eldEntX = 21 * CONSTANTS.TILE_SIZE + 16;
+      const eldEntY = 13 * CONSTANTS.TILE_SIZE + 16;
+      if (Math.hypot(eldEntX - playerCenterX, eldEntY - playerCenterY) < 38) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.input.consumeAction();
+          if (this.isEldoriaDungeonUnlocked) {
+            this.enterDungeonEldoria();
+            return;
+          } else {
+            AudioEngine.playPlayerHurt();
+            this.floatingText.spawn(playerCenterX, playerCenterY - 24, '🔒 Pintu Tersegel! Bicaralah pada Elder Sylas di Eldoria.', '#4ade80', 3.0);
+          }
+        }
+      }
+
+      // 5.2 Stonewatch Cursed Iron Mine Entrance (Desa Stonewatch)
+      const stoneEntX = 85 * CONSTANTS.TILE_SIZE + 16;
+      const stoneEntY = 58 * CONSTANTS.TILE_SIZE + 16;
+      if (Math.hypot(stoneEntX - playerCenterX, stoneEntY - playerCenterY) < 38) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.input.consumeAction();
+          if (this.isStonewatchDungeonUnlocked) {
+            this.enterDungeonStonewatch();
+            return;
+          } else {
+            AudioEngine.playPlayerHurt();
+            this.floatingText.spawn(playerCenterX, playerCenterY - 24, '🔒 Gerbang Terkunci! Pecahkan teka-teki Kapten Borin di Stonewatch.', '#f59e0b', 3.0);
+          }
         }
       }
 
@@ -2259,6 +2688,322 @@ export class Game {
 
       // Minions vs Floor 3 Monsters
       this.updateMinions(deltaTime, this.floor3Monsters);
+    } else if (this.currentMap === 'DUNGEON_ELDORIA') {
+      // --- DUNGEON ELDORIA SPECIFIC UPDATES (Kuil Roh Hutan) ---
+      // Ladder up to Desa Eldoria
+      if (this.dungeonEldoria.isNearLadderUp(playerCenterX, playerCenterY)) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.exitDungeonEldoria();
+          return;
+        }
+      }
+
+      // Update Eldoria Engine & Floating Spores & Telegraphs
+      this.dungeonEldoria.update(deltaTime);
+
+      // Check Boss AOE Telegraph Ground Damage (Ancient Roots / Sylvan Burst)
+      for (const tel of this.dungeonEldoria.telegraphs) {
+        if (tel.timer <= deltaTime * 1.5) {
+          const dist = Math.hypot(playerCenterX - tel.x, playerCenterY - tel.y);
+          if (dist < tel.radius) {
+            const died = this.player.takeDamage(tel.damage);
+            this.camera.shake(5.5, 0.22);
+            AudioEngine.playHit(true);
+            this.floatingText.spawn(this.player.x + 12, this.player.y - 14, `🌿 HANTAMAN AKAR PURBA -${tel.damage}!`, '#4ade80', 2.2);
+            if (died) {
+              AudioEngine.playPlayerDeath();
+              this.exitDungeonEldoria(true);
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur di Kuil Roh Hutan dan dipulangkan ke Desa Eldoria!', '#ef4444', 3.5);
+              return;
+            }
+          }
+        }
+      }
+
+      // Eldoria World Items
+      for (let i = this.eldoriaWorldItems.length - 1; i >= 0; i--) {
+        const item = this.eldoriaWorldItems[i];
+        const pickedUp = item.update(deltaTime, playerCenterX, playerCenterY);
+        if (pickedUp) {
+          const added = this.player.inventory.addItem(item.itemId, item.count);
+          if (added > 0) {
+            AudioEngine.playItemPickup(item.itemId === 'GOLD_COIN');
+            const def = ITEM_DEFINITIONS[item.itemId];
+            const name = def ? def.name : item.itemId;
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `+${added} ${name}`, '#38bdf8');
+            this.eldoriaWorldItems.splice(i, 1);
+          }
+        }
+      }
+
+      // Eldoria Chests
+      for (const chest of this.eldoriaChests) {
+        chest.update(deltaTime);
+        if (!chest.isOpen && chest.isNearPlayer(playerCenterX, playerCenterY)) {
+          if (this.input.isActionJustPressed || this.input.state.isAction) {
+            this.input.consumeAction();
+            AudioEngine.playChestOpen();
+            const rewards = chest.open();
+            for (const reward of rewards) {
+              this.player.inventory.addItem(reward.itemId, reward.count);
+              const def = ITEM_DEFINITIONS[reward.itemId];
+              const name = def ? def.name : reward.itemId;
+              this.floatingText.spawn(chest.x + 11, chest.y - 12, `+${reward.count} ${name}`, '#facc15', 2.0);
+            }
+            const leveledUp = this.player.addExp(75);
+            if (leveledUp) {
+              AudioEngine.playLevelUp();
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 30, `🎉 LEVEL UP! Sekarang Lv. ${this.player.level}`, '#fde047', 3.0);
+            }
+            this.authUI.saveCurrentGame();
+          }
+        }
+      }
+
+      // Eldoria Monsters AI & Boss Telegraph Hook
+      for (const monster of this.eldoriaMonsters) {
+        monster.update(
+          deltaTime,
+          playerCenterX,
+          playerCenterY,
+          (tx, ty) => this.dungeonEldoria.isTileSolid(tx, ty),
+          (atk) => {
+            const died = this.player.takeDamage(atk);
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `-${atk} HP`, '#ef4444');
+            AudioEngine.playPlayerHurt();
+            this.camera.shake(4.5, 0.18);
+            if (died) {
+              AudioEngine.playPlayerDeath();
+              this.exitDungeonEldoria(true);
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur di Kuil Roh Hutan dan dipulangkan ke Desa Eldoria!', '#ef4444', 3.5);
+            }
+          },
+          this.player.minions,
+          (minion, atk) => {
+            this.handleMonsterAttackMinion(monster, minion, atk);
+          },
+          this.companion,
+          (tx, ty, r, dur, dmg) => {
+            this.dungeonEldoria.spawnTelegraph(tx, ty, r, dur, dmg);
+          }
+        );
+      }
+
+      // Player Melee Attack vs Eldoria Monsters
+      const attackHitbox = this.player.getAttackHitbox();
+      if (attackHitbox) {
+        for (const monster of this.eldoriaMonsters) {
+          if (monster.isDead) continue;
+          if (this.hitMonstersInSwing.has(monster.id)) continue;
+          if (
+            attackHitbox.x < monster.x + monster.width &&
+            attackHitbox.x + attackHitbox.width > monster.x &&
+            attackHitbox.y < monster.y + monster.height &&
+            attackHitbox.y + attackHitbox.height > monster.y
+          ) {
+            this.hitMonstersInSwing.add(monster.id);
+            const { damage, isCrit } = this.player.getAttackDamage();
+            const res = monster.takeDamage(damage, playerCenterX, playerCenterY);
+            AudioEngine.playHit(isCrit);
+            this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, isCrit);
+            this.camera.shake(isCrit ? 5.0 : 2.6, isCrit ? 0.18 : 0.11);
+            const hitText = isCrit ? `💥 CRIT -${res.damage}!` : `-${res.damage}`;
+            this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 10, hitText, isCrit ? '#facc15' : '#ffffff');
+            if (res.isDead) {
+              this.handleMonsterDefeated(monster);
+            }
+          }
+        }
+      }
+
+      // Skills vs Eldoria Monsters
+      for (const effect of this.skillBarUI.visualEffects) {
+        if (['slash', 'fire', 'ice', 'lightning', 'wind', 'earth', 'abnormal', 'shockwave', 'grasp', 'devour'].includes(effect.type)) {
+          for (const monster of this.eldoriaMonsters) {
+            if (monster.isDead) continue;
+            const dist = Math.hypot(effect.x - (monster.x + monster.width / 2), effect.y - (monster.y + monster.height / 2));
+            if (dist < effect.radius + monster.width / 2) {
+              if (monster.hurtTimer <= 0) {
+                let spellDmg = 32 + this.player.level * 4.0;
+                if (effect.type === 'abnormal' || effect.type === 'devour') {
+                  spellDmg = 78 + this.player.level * 7.0;
+                } else if (effect.type === 'grasp' || effect.type === 'shockwave') {
+                  spellDmg = 40 + this.player.level * 4.6;
+                }
+                const res = monster.takeDamage(spellDmg, effect.x, effect.y);
+                AudioEngine.playHit(false);
+                this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, true);
+                this.camera.shake(3.5, 0.14);
+                this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 8, `✨ -${res.damage}`, effect.color);
+                if (res.isDead) {
+                  this.handleMonsterDefeated(monster);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Minions vs Eldoria Monsters
+      this.updateMinions(deltaTime, this.eldoriaMonsters);
+    } else if (this.currentMap === 'DUNGEON_STONEWATCH') {
+      // --- DUNGEON STONEWATCH SPECIFIC UPDATES (Tambang Besi Abisal) ---
+      // Ladder up to Desa Stonewatch
+      if (this.dungeonStonewatch.isNearLadderUp(playerCenterX, playerCenterY)) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.exitDungeonStonewatch();
+          return;
+        }
+      }
+
+      // Update Stonewatch Engine & Floating Sparks & Telegraphs
+      this.dungeonStonewatch.update(deltaTime);
+
+      // Check Boss AOE Telegraph Ground Damage (Obsidian Slam / Quake)
+      for (const tel of this.dungeonStonewatch.telegraphs) {
+        if (tel.timer <= deltaTime * 1.5) {
+          const dist = Math.hypot(playerCenterX - tel.x, playerCenterY - tel.y);
+          if (dist < tel.radius) {
+            const died = this.player.takeDamage(tel.damage);
+            this.camera.shake(6.5, 0.26);
+            AudioEngine.playHit(true);
+            this.floatingText.spawn(this.player.x + 12, this.player.y - 14, `⚒️ GEMPA HANTAMAN OBSIDIAN -${tel.damage}!`, '#f59e0b', 2.2);
+            if (died) {
+              AudioEngine.playPlayerDeath();
+              this.exitDungeonStonewatch(true);
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur di Tambang Abisal dan dipulangkan ke Desa Stonewatch!', '#ef4444', 3.5);
+              return;
+            }
+          }
+        }
+      }
+
+      // Stonewatch World Items
+      for (let i = this.stonewatchWorldItems.length - 1; i >= 0; i--) {
+        const item = this.stonewatchWorldItems[i];
+        const pickedUp = item.update(deltaTime, playerCenterX, playerCenterY);
+        if (pickedUp) {
+          const added = this.player.inventory.addItem(item.itemId, item.count);
+          if (added > 0) {
+            AudioEngine.playItemPickup(item.itemId === 'GOLD_COIN');
+            const def = ITEM_DEFINITIONS[item.itemId];
+            const name = def ? def.name : item.itemId;
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `+${added} ${name}`, '#38bdf8');
+            this.stonewatchWorldItems.splice(i, 1);
+          }
+        }
+      }
+
+      // Stonewatch Chests
+      for (const chest of this.stonewatchChests) {
+        chest.update(deltaTime);
+        if (!chest.isOpen && chest.isNearPlayer(playerCenterX, playerCenterY)) {
+          if (this.input.isActionJustPressed || this.input.state.isAction) {
+            this.input.consumeAction();
+            AudioEngine.playChestOpen();
+            const rewards = chest.open();
+            for (const reward of rewards) {
+              this.player.inventory.addItem(reward.itemId, reward.count);
+              const def = ITEM_DEFINITIONS[reward.itemId];
+              const name = def ? def.name : reward.itemId;
+              this.floatingText.spawn(chest.x + 11, chest.y - 12, `+${reward.count} ${name}`, '#facc15', 2.0);
+            }
+            const leveledUp = this.player.addExp(90);
+            if (leveledUp) {
+              AudioEngine.playLevelUp();
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 30, `🎉 LEVEL UP! Sekarang Lv. ${this.player.level}`, '#fde047', 3.0);
+            }
+            this.authUI.saveCurrentGame();
+          }
+        }
+      }
+
+      // Stonewatch Monsters AI & Boss Telegraph Hook
+      for (const monster of this.stonewatchMonsters) {
+        monster.update(
+          deltaTime,
+          playerCenterX,
+          playerCenterY,
+          (tx, ty) => this.dungeonStonewatch.isTileSolid(tx, ty),
+          (atk) => {
+            const died = this.player.takeDamage(atk);
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `-${atk} HP`, '#ef4444');
+            AudioEngine.playPlayerHurt();
+            this.camera.shake(4.8, 0.20);
+            if (died) {
+              AudioEngine.playPlayerDeath();
+              this.exitDungeonStonewatch(true);
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur di Tambang Abisal dan dipulangkan ke Desa Stonewatch!', '#ef4444', 3.5);
+            }
+          },
+          this.player.minions,
+          (minion, atk) => {
+            this.handleMonsterAttackMinion(monster, minion, atk);
+          },
+          this.companion,
+          (tx, ty, r, dur, dmg) => {
+            this.dungeonStonewatch.spawnTelegraph(tx, ty, r, dur, dmg);
+          }
+        );
+      }
+
+      // Player Melee Attack vs Stonewatch Monsters
+      const attackHitbox = this.player.getAttackHitbox();
+      if (attackHitbox) {
+        for (const monster of this.stonewatchMonsters) {
+          if (monster.isDead) continue;
+          if (this.hitMonstersInSwing.has(monster.id)) continue;
+          if (
+            attackHitbox.x < monster.x + monster.width &&
+            attackHitbox.x + attackHitbox.width > monster.x &&
+            attackHitbox.y < monster.y + monster.height &&
+            attackHitbox.y + attackHitbox.height > monster.y
+          ) {
+            this.hitMonstersInSwing.add(monster.id);
+            const { damage, isCrit } = this.player.getAttackDamage();
+            const res = monster.takeDamage(damage, playerCenterX, playerCenterY);
+            AudioEngine.playHit(isCrit);
+            this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, isCrit);
+            this.camera.shake(isCrit ? 5.2 : 2.8, isCrit ? 0.18 : 0.11);
+            const hitText = isCrit ? `💥 CRIT -${res.damage}!` : `-${res.damage}`;
+            this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 10, hitText, isCrit ? '#facc15' : '#ffffff');
+            if (res.isDead) {
+              this.handleMonsterDefeated(monster);
+            }
+          }
+        }
+      }
+
+      // Skills vs Stonewatch Monsters
+      for (const effect of this.skillBarUI.visualEffects) {
+        if (['slash', 'fire', 'ice', 'lightning', 'wind', 'earth', 'abnormal', 'shockwave', 'grasp', 'devour'].includes(effect.type)) {
+          for (const monster of this.stonewatchMonsters) {
+            if (monster.isDead) continue;
+            const dist = Math.hypot(effect.x - (monster.x + monster.width / 2), effect.y - (monster.y + monster.height / 2));
+            if (dist < effect.radius + monster.width / 2) {
+              if (monster.hurtTimer <= 0) {
+                let spellDmg = 36 + this.player.level * 4.4;
+                if (effect.type === 'abnormal' || effect.type === 'devour') {
+                  spellDmg = 84 + this.player.level * 7.4;
+                } else if (effect.type === 'grasp' || effect.type === 'shockwave') {
+                  spellDmg = 44 + this.player.level * 5.0;
+                }
+                const res = monster.takeDamage(spellDmg, effect.x, effect.y);
+                AudioEngine.playHit(false);
+                this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, true);
+                this.camera.shake(3.8, 0.15);
+                this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 8, `✨ -${res.damage}`, effect.color);
+                if (res.isDead) {
+                  this.handleMonsterDefeated(monster);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Minions vs Stonewatch Monsters
+      this.updateMinions(deltaTime, this.stonewatchMonsters);
     }
 
     // 10. Update Floating Text Notifications
@@ -2275,6 +3020,7 @@ export class Game {
       const tileX = Math.floor(this.player.x / CONSTANTS.TILE_SIZE);
       const tileY = Math.floor(this.player.y / CONSTANTS.TILE_SIZE);
       const roleInfo = ROLE_INFO[this.player.role];
+      const villageOrRegion = this.tileMap.getVillageName(tileX, tileY);
       const locText =
         this.currentMap === 'DUNGEON'
           ? '<span style="color: #c084fc; font-weight: 700;">🏰 Goa Makam Kuno (Lt.1)</span>'
@@ -2282,7 +3028,11 @@ export class Game {
           ? '<span style="color: #60a5fa; font-weight: 700;">⚡ Labirin Titan Abisal (Lt.2)</span>'
           : this.currentMap === 'DUNGEON_FLOOR_3'
           ? '<span style="color: #f97316; font-weight: 700;">🔥 Neraka Abisal Ignis (Lt.3)</span>'
-          : '<span style="color: #4ade80; font-weight: 700;">🌍 Lembah Serikat (Overworld)</span>';
+          : this.currentMap === 'DUNGEON_ELDORIA'
+          ? '<span style="color: #4ade80; font-weight: 700;">🌿 Kuil Roh Hutan Eldoria</span>'
+          : this.currentMap === 'DUNGEON_STONEWATCH'
+          ? '<span style="color: #f59e0b; font-weight: 700;">⚒️ Tambang Besi Abisal Stonewatch</span>'
+          : `<span style="color: #4ade80; font-weight: 700;">🌍 ${villageOrRegion}</span>`;
 
       const weapon = this.player.equippedWeapon;
       const weaponHtml = weapon
@@ -2358,8 +3108,14 @@ export class Game {
       this.renderNoticeBoard(ctx, 53 * CONSTANTS.TILE_SIZE, 48 * CONSTANTS.TILE_SIZE, playerCenterX, playerCenterY);
       this.renderPetPen(ctx, 54 * CONSTANTS.TILE_SIZE, 52 * CONSTANTS.TILE_SIZE, playerCenterX, playerCenterY);
 
-      // 2. Render Cave / Dungeon Entrance
+      // 2. Render Cave / Dungeon Entrance Serena
       this.caveEntrance.render(ctx, this.caveEntrance.isNearPlayer(playerCenterX, playerCenterY));
+
+      // 2.1 Render Eldoria Sylvan Temple Entrance (Desa Eldoria)
+      this.renderEldoriaEntrance(ctx, playerCenterX, playerCenterY);
+
+      // 2.2 Render Stonewatch Cursed Iron Mine Entrance (Desa Stonewatch)
+      this.renderStonewatchEntrance(ctx, playerCenterX, playerCenterY);
 
       // 3. Render Guild NPC
       this.guildNPC.render(ctx, this.guildNPC.isNearPlayer(playerCenterX, playerCenterY), this.player);
@@ -2496,7 +3252,7 @@ export class Game {
       // 8. Render Combat Hit Sparks
       this.renderHitSparks(ctx);
 
-      // 9. Render Floating Texts
+      // 8.5 Render Floating Texts
       this.floatingText.render(ctx);
     } else if (this.currentMap === 'DUNGEON_FLOOR_3') {
       // --- DUNGEON FLOOR 3 WORLD RENDERING (Sanctuarium Neraka Abisal) ---
@@ -2536,6 +3292,100 @@ export class Game {
 
       // 6. Render Floor 3 Atmospheric Darkness & Hellfire Braziers Light
       this.dungeonFloor3.renderAtmosphericLighting(ctx, this.camera, playerCenterX, playerCenterY);
+
+      // 7. Render Abyssal Mana Motes
+      this.atmosphereEngine.render(ctx);
+
+      // 8. Render Combat Hit Sparks
+      this.renderHitSparks(ctx);
+
+      // 9. Render Floating Texts
+      this.floatingText.render(ctx);
+    } else if (this.currentMap === 'DUNGEON_ELDORIA') {
+      // --- DUNGEON ELDORIA WORLD RENDERING (Kuil Roh Hutan) ---
+      // 1. Render Eldoria Map Tiles & Danger Telegraphs & Floating Spores
+      this.dungeonEldoria.render(ctx, this.camera);
+
+      // 2. Render Eldoria Items
+      for (const item of this.eldoriaWorldItems) {
+        item.render(ctx);
+      }
+
+      // 2.5 Render Eldoria Chests
+      for (const chest of this.eldoriaChests) {
+        chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY));
+      }
+
+      // 3. Render Eldoria Monsters
+      for (const monster of this.eldoriaMonsters) {
+        monster.render(ctx);
+      }
+
+      // Render Companion if active
+      if (this.companion) {
+        this.companion.render(ctx);
+      }
+
+      // Render Pet if active
+      if (this.pet) {
+        this.pet.render(ctx);
+      }
+
+      // 4. Render Player
+      this.player.render(ctx);
+
+      // 5. Render Spell Effects
+      this.skillBarUI.renderWorldEffects(ctx);
+
+      // 6. Render Sylvan Atmospheric Lighting (Emerald canopy & Spring luminescence)
+      this.dungeonEldoria.renderAtmosphericLighting(ctx, this.camera, playerCenterX, playerCenterY);
+
+      // 7. Render Sylvan Mana Motes
+      this.atmosphereEngine.render(ctx);
+
+      // 8. Render Combat Hit Sparks
+      this.renderHitSparks(ctx);
+
+      // 9. Render Floating Texts
+      this.floatingText.render(ctx);
+    } else if (this.currentMap === 'DUNGEON_STONEWATCH') {
+      // --- DUNGEON STONEWATCH WORLD RENDERING (Tambang Besi Abisal) ---
+      // 1. Render Stonewatch Map Tiles & Danger Telegraphs & Floating Sparks
+      this.dungeonStonewatch.render(ctx, this.camera);
+
+      // 2. Render Stonewatch Items
+      for (const item of this.stonewatchWorldItems) {
+        item.render(ctx);
+      }
+
+      // 2.5 Render Stonewatch Chests
+      for (const chest of this.stonewatchChests) {
+        chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY));
+      }
+
+      // 3. Render Stonewatch Monsters
+      for (const monster of this.stonewatchMonsters) {
+        monster.render(ctx);
+      }
+
+      // Render Companion if active
+      if (this.companion) {
+        this.companion.render(ctx);
+      }
+
+      // Render Pet if active
+      if (this.pet) {
+        this.pet.render(ctx);
+      }
+
+      // 4. Render Player
+      this.player.render(ctx);
+
+      // 5. Render Spell Effects
+      this.skillBarUI.renderWorldEffects(ctx);
+
+      // 6. Render Mining Cavern Atmospheric Lighting (Deep shadow & Smelting braziers)
+      this.dungeonStonewatch.renderAtmosphericLighting(ctx, this.camera, playerCenterX, playerCenterY);
 
       // 7. Render Abyssal Mana Motes
       this.atmosphereEngine.render(ctx);
@@ -2589,14 +3439,24 @@ export class Game {
           ? this.dungeonMonsters
           : this.currentMap === 'DUNGEON_FLOOR_2'
           ? this.floor2Monsters
-          : this.floor3Monsters;
+          : this.currentMap === 'DUNGEON_FLOOR_3'
+          ? this.floor3Monsters
+          : this.currentMap === 'DUNGEON_ELDORIA'
+          ? this.eldoriaMonsters
+          : this.stonewatchMonsters;
 
       const activeChests =
         this.currentMap === 'OVERWORLD'
           ? this.chests
           : this.currentMap === 'DUNGEON'
           ? this.dungeonChests
-          : this.floor3Chests;
+          : this.currentMap === 'DUNGEON_FLOOR_2'
+          ? []
+          : this.currentMap === 'DUNGEON_FLOOR_3'
+          ? this.floor3Chests
+          : this.currentMap === 'DUNGEON_ELDORIA'
+          ? this.eldoriaChests
+          : this.stonewatchChests;
 
       this.miniMapUI.render(
         ctx,
@@ -2615,7 +3475,9 @@ export class Game {
         this.blacksmithNPC.x,
         this.blacksmithNPC.y,
         this.dungeonFloor2,
-        this.dungeonFloor3
+        this.dungeonFloor3,
+        this.dungeonEldoria,
+        this.dungeonStonewatch
       );
 
       // 12.2 Render Active Quest HUD Tracker (Top-Left)
@@ -2836,6 +3698,92 @@ export class Game {
         ctx.restore();
       }
 
+      // Eldoria Entrance Prompt (Overworld)
+      const eldEntDist = Math.hypot(21 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 13 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
+      if (this.currentMap === 'OVERWORLD' && eldEntDist < 38) {
+        ctx.save();
+        const pW = 230;
+        const pH = 26;
+        const pX = (screenWidth - pW) / 2;
+        const pY = screenHeight - 90;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillRect(pX, pY, pW, pH);
+        ctx.strokeStyle = this.isEldoriaDungeonUnlocked ? '#4ade80' : '#ef4444';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(pX, pY, pW, pH);
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = this.isEldoriaDungeonUnlocked ? '#86efac' : '#fca5a5';
+        ctx.fillText(
+          this.isEldoriaDungeonUnlocked ? 'Tekan [A] Masuk Kuil Roh Hutan 🌿' : 'Pecahkan Teka-Teki Elder Sylas 🔒',
+          pX + pW / 2,
+          pY + 17
+        );
+        ctx.restore();
+      }
+
+      // Stonewatch Entrance Prompt (Overworld)
+      const stoneEntDist = Math.hypot(85 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 58 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
+      if (this.currentMap === 'OVERWORLD' && stoneEntDist < 38) {
+        ctx.save();
+        const pW = 240;
+        const pH = 26;
+        const pX = (screenWidth - pW) / 2;
+        const pY = screenHeight - 90;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillRect(pX, pY, pW, pH);
+        ctx.strokeStyle = this.isStonewatchDungeonUnlocked ? '#f59e0b' : '#ef4444';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(pX, pY, pW, pH);
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = this.isStonewatchDungeonUnlocked ? '#fde68a' : '#fca5a5';
+        ctx.fillText(
+          this.isStonewatchDungeonUnlocked ? 'Tekan [A] Masuk Tambang Abisal ⚒️' : 'Pecahkan Teka-Teki Kapten Borin 🔒',
+          pX + pW / 2,
+          pY + 17
+        );
+        ctx.restore();
+      }
+
+      // Eldoria Ladder Exit Prompt
+      if (this.currentMap === 'DUNGEON_ELDORIA' && this.dungeonEldoria.isNearLadderUp(playerCenterX, playerCenterY)) {
+        ctx.save();
+        const pW = 210;
+        const pH = 26;
+        const pX = (screenWidth - pW) / 2;
+        const pY = screenHeight - 90;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillRect(pX, pY, pW, pH);
+        ctx.strokeStyle = '#4ade80';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(pX, pY, pW, pH);
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#86efac';
+        ctx.fillText('Tekan [A] Naik Tangga (Desa Eldoria) ▲', pX + pW / 2, pY + 17);
+        ctx.restore();
+      }
+
+      // Stonewatch Ladder Exit Prompt
+      if (this.currentMap === 'DUNGEON_STONEWATCH' && this.dungeonStonewatch.isNearLadderUp(playerCenterX, playerCenterY)) {
+        ctx.save();
+        const pW = 220;
+        const pH = 26;
+        const pX = (screenWidth - pW) / 2;
+        const pY = screenHeight - 90;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillRect(pX, pY, pW, pH);
+        ctx.strokeStyle = '#f59e0b';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(pX, pY, pW, pH);
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fde68a';
+        ctx.fillText('Tekan [A] Naik Tangga (Desa Stonewatch) ▲', pX + pW / 2, pY + 17);
+        ctx.restore();
+      }
+
       // 16. Anime Location Title Card
       this.renderAnimeLocationTitleCard(ctx, screenWidth, screenHeight);
 
@@ -2973,6 +3921,221 @@ export class Game {
       ctx.strokeText('[A] Adopsi Pet Auto-Loot', px + 16, py - 3);
       ctx.fillText('[A] Adopsi Pet Auto-Loot', px + 16, py - 3);
     }
+  }
+
+  private renderEldoriaEntrance(ctx: CanvasRenderingContext2D, playerCenterX: number, playerCenterY: number): void {
+    const ts = CONSTANTS.TILE_SIZE;
+    const ex = 21 * ts;
+    const ey = 13 * ts;
+    const isNear = Math.hypot(ex + 16 - playerCenterX, ey + 16 - playerCenterY) < 38;
+
+    ctx.save();
+    // Ancient stone archway
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(ex - 4, ey - 6, 40, 38);
+
+    // Cavern Opening
+    ctx.fillStyle = '#051b11';
+    ctx.beginPath();
+    ctx.ellipse(ex + 16, ey + 18, 14, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Mossy stone pillars
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(ex - 2, ey - 4, 6, 36);
+    ctx.fillRect(ex + 28, ey - 4, 6, 36);
+
+    // Keystone & ivy roots
+    ctx.fillStyle = '#15803d';
+    ctx.fillRect(ex + 12, ey - 8, 8, 8);
+    ctx.fillRect(ex - 4, ey + 4, 4, 12);
+    ctx.fillRect(ex + 32, ey + 8, 4, 14);
+
+    if (!this.isEldoriaDungeonUnlocked) {
+      // Locked: Thick thorny vine curtain with glowing magical lock
+      ctx.strokeStyle = '#14532d';
+      ctx.lineWidth = 3;
+      ctx.beginPath();
+      ctx.moveTo(ex + 4, ey + 2);
+      ctx.lineTo(ex + 28, ey + 30);
+      ctx.moveTo(ex + 28, ey + 2);
+      ctx.lineTo(ex + 4, ey + 30);
+      ctx.moveTo(ex + 2, ey + 16);
+      ctx.lineTo(ex + 30, ey + 16);
+      ctx.stroke();
+
+      // Pulsing Emerald Runic Lock Sigil
+      const pulse = (Math.sin(Date.now() * 0.005) + 1) * 0.5;
+      ctx.fillStyle = `rgba(74, 222, 128, ${0.4 + pulse * 0.4})`;
+      ctx.beginPath();
+      ctx.arc(ex + 16, ey + 16, 8, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 9px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🔒', ex + 16, ey + 16);
+
+      // Warning plaque
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(ex + 2, ey + 33, 28, 9);
+      ctx.strokeStyle = '#4ade80';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(ex + 2, ey + 33, 28, 9);
+      ctx.fillStyle = '#4ade80';
+      ctx.font = 'bold 6.5px sans-serif';
+      ctx.fillText('Kuil Roh Hutan', ex + 16, ey + 38);
+    } else {
+      // Unlocked: Swirling emerald light aura pouring from the entrance
+      const glow = (Math.sin(Date.now() * 0.004) + 1) * 0.5;
+      const grad = ctx.createRadialGradient(ex + 16, ey + 18, 2, ex + 16, ey + 18, 20);
+      grad.addColorStop(0, `rgba(74, 222, 128, ${0.7 + glow * 0.3})`);
+      grad.addColorStop(0.6, `rgba(34, 197, 94, ${0.35 + glow * 0.2})`);
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(ex + 16, ey + 18, 20, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Light particles
+      for (let i = 0; i < 3; i++) {
+        const pPhase = (Date.now() * 0.002 + i * 2.1) % (Math.PI * 2);
+        const px = ex + 16 + Math.cos(pPhase) * 10;
+        const py = ey + 18 + Math.sin(pPhase) * 6;
+        ctx.fillStyle = '#bbf7d0';
+        ctx.fillRect(px, py, 2, 2);
+      }
+
+      // Open entrance badge
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(ex + 2, ey + 33, 28, 9);
+      ctx.strokeStyle = '#22c55e';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(ex + 2, ey + 33, 28, 9);
+      ctx.fillStyle = '#86efac';
+      ctx.font = 'bold 6.5px sans-serif';
+      ctx.fillText('Kuil Terbuka 🌿', ex + 16, ey + 38);
+    }
+
+    if (isNear) {
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = this.isEldoriaDungeonUnlocked ? '#86efac' : '#fca5a5';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      const text = this.isEldoriaDungeonUnlocked ? '[A] Masuk Kuil Roh Hutan' : '[A] Segel Roh Kuno (Terkunci)';
+      ctx.strokeText(text, ex + 16, ey - 10);
+      ctx.fillText(text, ex + 16, ey - 10);
+    }
+    ctx.restore();
+  }
+
+  private renderStonewatchEntrance(ctx: CanvasRenderingContext2D, playerCenterX: number, playerCenterY: number): void {
+    const ts = CONSTANTS.TILE_SIZE;
+    const ex = 85 * ts;
+    const ey = 58 * ts;
+    const isNear = Math.hypot(ex + 16 - playerCenterX, ey + 16 - playerCenterY) < 38;
+
+    ctx.save();
+    // Mine entrance framing: Heavy timber lintels
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(ex - 4, ey - 6, 40, 38);
+
+    // Deep mine tunnel opening
+    ctx.fillStyle = '#09090b';
+    ctx.beginPath();
+    ctx.ellipse(ex + 16, ey + 18, 14, 18, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Timber posts & iron bolts
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(ex - 3, ey - 4, 6, 36);
+    ctx.fillRect(ex + 29, ey - 4, 6, 36);
+    ctx.fillRect(ex - 5, ey - 6, 42, 6);
+
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(ex - 1, ey + 2, 2, 2);
+    ctx.fillRect(ex + 31, ey + 2, 2, 2);
+
+    // Wooden railway ties & iron rails
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(ex + 6, ey + 28, 20, 2);
+    ctx.fillRect(ex + 6, ey + 33, 20, 2);
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(ex + 10, ey + 26, 2, 12);
+    ctx.fillRect(ex + 20, ey + 26, 2, 12);
+
+    if (!this.isStonewatchDungeonUnlocked) {
+      // Locked: Heavy iron portcullis gate with padlock
+      ctx.fillStyle = '#334155';
+      for (let gx = ex + 4; gx <= ex + 28; gx += 5) {
+        ctx.fillRect(gx, ey + 2, 2, 26);
+      }
+      ctx.fillRect(ex + 3, ey + 10, 26, 2.5);
+      ctx.fillRect(ex + 3, ey + 20, 26, 2.5);
+
+      // Massive iron padlock
+      ctx.fillStyle = '#f59e0b';
+      ctx.fillRect(ex + 13, ey + 14, 7, 7);
+      ctx.strokeStyle = '#b45309';
+      ctx.lineWidth = 1.2;
+      ctx.beginPath();
+      ctx.arc(ex + 16.5, ey + 14, 3, Math.PI, 0);
+      ctx.stroke();
+
+      // Plaque
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(ex + 1, ey + 34, 30, 9);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(ex + 1, ey + 34, 30, 9);
+      ctx.fillStyle = '#f59e0b';
+      ctx.font = 'bold 6px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Tambang Abisal', ex + 16, ey + 39);
+    } else {
+      // Unlocked: Gate hoisted up! Warm amber forge lanterns glowing
+      const glow = (Math.sin(Date.now() * 0.005) + 1) * 0.5;
+      const grad = ctx.createRadialGradient(ex + 16, ey + 18, 2, ex + 16, ey + 18, 20);
+      grad.addColorStop(0, `rgba(245, 158, 11, ${0.75 + glow * 0.25})`);
+      grad.addColorStop(0.6, `rgba(217, 119, 6, ${0.35 + glow * 0.15})`);
+      grad.addColorStop(1, 'transparent');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(ex + 16, ey + 18, 20, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Hanging lanterns on timber posts
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(ex - 2, ey + 6, 4, 5);
+      ctx.fillRect(ex + 30, ey + 6, 4, 5);
+
+      // Open badge
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(ex + 1, ey + 34, 30, 9);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(ex + 1, ey + 34, 30, 9);
+      ctx.fillStyle = '#fde68a';
+      ctx.font = 'bold 6px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('Tambang Terbuka ⚒️', ex + 16, ey + 39);
+    }
+
+    if (isNear) {
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = this.isStonewatchDungeonUnlocked ? '#fde68a' : '#fca5a5';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2;
+      const text = this.isStonewatchDungeonUnlocked ? '[A] Masuk Tambang Abisal' : '[A] Gerbang Besi (Terkunci)';
+      ctx.strokeText(text, ex + 16, ey - 10);
+      ctx.fillText(text, ex + 16, ey - 10);
+    }
+    ctx.restore();
   }
 
   private renderQuestTrackerHUD(ctx: CanvasRenderingContext2D): void {
@@ -3125,6 +4288,12 @@ export class Game {
     } else if (this.currentMap === 'DUNGEON_FLOOR_3') {
       mainTheme = '#f97316';
       subTheme = '#fdba74';
+    } else if (this.currentMap === 'DUNGEON_ELDORIA') {
+      mainTheme = '#4ade80';
+      subTheme = '#86efac';
+    } else if (this.currentMap === 'DUNGEON_STONEWATCH') {
+      mainTheme = '#f59e0b';
+      subTheme = '#fde68a';
     }
 
     // Dark anime backdrop with gold/purple trim

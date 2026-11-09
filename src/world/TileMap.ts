@@ -83,28 +83,27 @@ export class TileMap {
       }
     }
 
-    // --- WILAYAH PEDESAAN KHUSUS (DESA SERIKAT OAKHAVEN) ---
-    // Bersihkan seluruh area pedesaan (x=39..61, y=41..58) dari pohon liar penghalang jalan & bangunan
-    for (let vy = 41; vy <= 58; vy++) {
-      for (let vx = 39; vx <= 61; vx++) {
+    // --- 1. WILAYAH PEDESAAN SERENA (IBUKOTA SERIKAT & LEMBAH PEMULA) ---
+    // Diperluas (x=36..64, y=40..60) dengan Alun-alun Grand Plaza, Lapangan Latihan, & Pasar
+    for (let vy = 40; vy <= 60; vy++) {
+      for (let vx = 36; vx <= 64; vx++) {
         if (this.tiles[vy] && this.tiles[vy][vx] !== undefined) {
           this.tiles[vy][vx] = TileType.GRASS;
         }
       }
     }
 
-    // Alun-alun & Jalan Utama Paving Batu (Cobblestone Plaza)
-    // Tepat di tengah-tengahnya berdiri Balai Serikat Guild & Air Mancur Desa
-    for (let py = 46; py <= 54; py++) {
-      for (let px = 47; px <= 53; px++) {
+    // Alun-alun Megah (Cobblestone Grand Plaza)
+    for (let py = 45; py <= 55; py++) {
+      for (let px = 46; px <= 54; px++) {
         if (this.tiles[py] && this.tiles[py][px] !== undefined) {
           this.tiles[py][px] = TileType.COBBLESTONE;
         }
       }
     }
 
-    // Jalan Raya Utama Desa (Utara-Selatan & Barat-Timur)
-    for (let vy = 41; vy <= 58; vy++) {
+    // Jalan Raya Utama Desa Serena (Utara-Selatan & Barat-Timur)
+    for (let vy = 40; vy <= 60; vy++) {
       for (let vx = 49; vx <= 51; vx++) {
         if (this.tiles[vy] && this.tiles[vy][vx] !== undefined) {
           this.tiles[vy][vx] = TileType.COBBLESTONE;
@@ -112,23 +111,155 @@ export class TileMap {
       }
     }
     for (let vy = 49; vy <= 51; vy++) {
-      for (let vx = 43; vx <= 57; vx++) {
+      for (let vx = 38; vx <= 62; vx++) {
         if (this.tiles[vy] && this.tiles[vy][vx] !== undefined) {
           this.tiles[vy][vx] = TileType.COBBLESTONE;
         }
       }
     }
 
+    // Area Lapangan Latihan Prajurit (Training Grounds) di Barat Daya Serena (x=38..44, y=53..58)
+    for (let ty = 53; ty <= 58; ty++) {
+      for (let tx = 38; tx <= 44; tx++) {
+        if (this.tiles[ty] && this.tiles[ty][tx] !== undefined) {
+          this.tiles[ty][tx] = (tx + ty) % 2 === 0 ? TileType.SAND : TileType.DIRT_PATH;
+        }
+      }
+    }
+
     // Kebun Bunga Desa di sekitar Toko Bunga Lily
     for (let fy = 44; fy <= 46; fy++) {
-      for (let fx = 55; fx <= 58; fx++) {
+      for (let fx = 55; fx <= 60; fx++) {
         if (this.tiles[fy] && this.tiles[fy][fx] !== undefined) {
           this.tiles[fy][fx] = TileType.GRASS_FLOWERS;
         }
       }
     }
 
-    // Tebing pegunungan megah melingkari Pintu Masuk Dungeon Gua (Utara Plaza)
+    // --- 2. WILAYAH DESA ELDORIA (DESA PERI HUTAN KUNO - BARAT LAUT) ---
+    // Area rimba suci (x=12..32, y=12..28) bebas dari pohon liar pengganggu
+    for (let ey = 12; ey <= 28; ey++) {
+      for (let ex = 12; ex <= 32; ex++) {
+        if (this.tiles[ey] && this.tiles[ey][ex] !== undefined) {
+          if (this.tiles[ey][ex] !== TileType.WATER && this.tiles[ey][ex] !== TileType.SAND) {
+            this.tiles[ey][ex] = (ex * 3 + ey * 5) % 3 === 0 ? TileType.GRASS_FLOWERS : TileType.GRASS;
+          }
+        }
+      }
+    }
+
+    // Jalan Setapak Kayu / Cobblestone Desa Eldoria (x=16..26, y=17..25)
+    for (let ey = 17; ey <= 25; ey++) {
+      for (let ex = 16; ex <= 26; ex++) {
+        if (this.tiles[ey] && this.tiles[ey][ex] !== undefined) {
+          if (this.tiles[ey][ex] !== TileType.WATER) {
+            if (ex >= 19 && ex <= 21 || ey >= 20 && ey <= 22) {
+              this.tiles[ey][ex] = TileType.COBBLESTONE;
+            }
+          }
+        }
+      }
+    }
+
+    // Tebing Kuno Pembatas Pintu Kuil Roh Hutan Eldoria (y=11..12, x=16..26)
+    for (let cy = 11; cy <= 12; cy++) {
+      for (let cx = 16; cx <= 26; cx++) {
+        if (this.tiles[cy] && this.tiles[cy][cx] !== undefined) {
+          this.tiles[cy][cx] = TileType.CLIFF;
+        }
+      }
+    }
+    // Pintu masuk kuil terbuka di x=20..22, y=12..13
+    if (this.tiles[12]) {
+      this.tiles[12][20] = TileType.DIRT_PATH;
+      this.tiles[12][21] = TileType.DIRT_PATH;
+      this.tiles[12][22] = TileType.DIRT_PATH;
+    }
+    if (this.tiles[13]) {
+      this.tiles[13][20] = TileType.DIRT_PATH;
+      this.tiles[13][21] = TileType.DIRT_PATH;
+      this.tiles[13][22] = TileType.DIRT_PATH;
+    }
+
+    // --- 3. WILAYAH DESA STONEWATCH (DESA BENTENG TAMBANG KURCACI - TENGGARA) ---
+    // Area benteng tambang (x=74..94, y=56..74) dibersihkan dari rintangan
+    for (let sy = 56; sy <= 74; sy++) {
+      for (let sx = 74; sx <= 94; sx++) {
+        if (this.tiles[sy] && this.tiles[sy][sx] !== undefined) {
+          if (this.tiles[sy][sx] !== TileType.WATER && this.tiles[sy][sx] !== TileType.SAND) {
+            this.tiles[sy][sx] = TileType.GRASS;
+          }
+        }
+      }
+    }
+
+    // Pelataran Benteng Batu Granit Stonewatch (x=78..90, y=60..72)
+    for (let sy = 60; sy <= 72; sy++) {
+      for (let sx = 78; sx <= 90; sx++) {
+        if (this.tiles[sy] && this.tiles[sy][sx] !== undefined) {
+          if (this.tiles[sy][sx] !== TileType.WATER) {
+            this.tiles[sy][sx] = TileType.COBBLESTONE;
+          }
+        }
+      }
+    }
+
+    // Tebing Tambang di Utara Stonewatch (y=56..58, x=80..90)
+    for (let cy = 56; cy <= 58; cy++) {
+      for (let cx = 80; cx <= 90; cx++) {
+        if (this.tiles[cy] && this.tiles[cy][cx] !== undefined) {
+          this.tiles[cy][cx] = TileType.CLIFF;
+        }
+      }
+    }
+    // Gerbang Tambang Terkutuk di x=84..86, y=57..58
+    if (this.tiles[57]) {
+      this.tiles[57][84] = TileType.DIRT_PATH;
+      this.tiles[57][85] = TileType.DIRT_PATH;
+      this.tiles[57][86] = TileType.DIRT_PATH;
+    }
+    if (this.tiles[58]) {
+      this.tiles[58][84] = TileType.DIRT_PATH;
+      this.tiles[58][85] = TileType.DIRT_PATH;
+      this.tiles[58][86] = TileType.DIRT_PATH;
+    }
+
+    // --- 4. JALAN RAYA PENGHUBUNG ANTAR DESA (INTERCONNECTING HIGHWAYS) ---
+    // Jalan Raya Barat: Menghubungkan Desa Serena ke Desa Eldoria
+    // Dari Serena (x=38, y=49..51) ke barat sampai (x=24), lalu belok ke utara sampai Eldoria (y=25)
+    for (let rx = 24; rx <= 38; rx++) {
+      for (let ry = 49; ry <= 51; ry++) {
+        if (this.tiles[ry] && this.tiles[ry][rx] !== undefined && this.tiles[ry][rx] !== TileType.WATER) {
+          this.tiles[ry][rx] = TileType.COBBLESTONE;
+        }
+      }
+    }
+    for (let ry = 25; ry <= 50; ry++) {
+      for (let rx = 23; rx <= 25; rx++) {
+        if (this.tiles[ry] && this.tiles[ry][rx] !== undefined && this.tiles[ry][rx] !== TileType.WATER) {
+          this.tiles[ry][rx] = TileType.COBBLESTONE;
+        }
+      }
+    }
+
+    // Jalan Raya Timur: Menghubungkan Desa Serena ke Desa Stonewatch
+    // Dari Serena (x=62, y=49..51) ke timur sampai (x=80), lalu belok ke selatan sampai Stonewatch (y=60)
+    for (let rx = 62; rx <= 80; rx++) {
+      for (let ry = 49; ry <= 51; ry++) {
+        if (this.tiles[ry] && this.tiles[ry][rx] !== undefined && this.tiles[ry][rx] !== TileType.WATER) {
+          this.tiles[ry][rx] = TileType.COBBLESTONE;
+        }
+      }
+    }
+    for (let ry = 51; ry <= 60; ry++) {
+      for (let rx = 79; rx <= 81; rx++) {
+        if (this.tiles[ry] && this.tiles[ry][rx] !== undefined && this.tiles[ry][rx] !== TileType.WATER) {
+          this.tiles[ry][rx] = TileType.COBBLESTONE;
+        }
+      }
+    }
+
+    // Tebing pegunungan megah melingkari Pintu Masuk Dungeon Gua Kripta Kuno (Utara Plaza Serena)
     // Tembok tebing belakang (y=30..31) tanpa menembus danau atau pantai berpasir di barat
     for (let cy = 30; cy <= 31; cy++) {
       for (let cx = 48; cx <= 54; cx++) {
@@ -216,10 +347,33 @@ export class TileMap {
   }
 
   /**
-   * Menentukan apakah koordinat tile berada di dalam wilayah aman pedesaan
+   * Menentukan apakah koordinat tile berada di dalam wilayah aman salah satu pedesaan
    */
   public isVillageArea(tileX: number, tileY: number): boolean {
-    return tileX >= 39 && tileX <= 61 && tileY >= 41 && tileY <= 59;
+    // 1. Desa Serena (Ibukota & Serikat)
+    const inSerena = tileX >= 36 && tileX <= 64 && tileY >= 40 && tileY <= 60;
+    // 2. Desa Eldoria (Rimba Peri Barat)
+    const inEldoria = tileX >= 12 && tileX <= 32 && tileY >= 12 && tileY <= 28;
+    // 3. Desa Stonewatch (Benteng Tambang Kurcaci)
+    const inStonewatch = tileX >= 74 && tileX <= 94 && tileY >= 56 && tileY <= 74;
+
+    return inSerena || inEldoria || inStonewatch;
+  }
+
+  /**
+   * Mendapatkan nama desa berdasarkan koordinat ubin (jika berada di pedesaan)
+   */
+  public getVillageName(tileX: number, tileY: number): string | null {
+    if (tileX >= 36 && tileX <= 64 && tileY >= 40 && tileY <= 60) {
+      return 'Desa Serena (Ibukota Serikat)';
+    }
+    if (tileX >= 12 && tileX <= 32 && tileY >= 12 && tileY <= 28) {
+      return 'Desa Eldoria (Rimba Peri Kuno)';
+    }
+    if (tileX >= 74 && tileX <= 94 && tileY >= 56 && tileY <= 74) {
+      return 'Desa Stonewatch (Benteng Tambang)';
+    }
+    return null;
   }
 
   public getTileAt(tileX: number, tileY: number): TileType {

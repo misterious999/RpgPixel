@@ -15,7 +15,7 @@ export class AudioEngine {
   public static volume: number = 0.8;
 
   private static bgmInterval: number | null = null;
-  private static currentMapBgm: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | null = null;
+  private static currentMapBgm: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | 'DUNGEON_ELDORIA' | 'DUNGEON_STONEWATCH' | null = null;
 
   /**
    * Inisialisasi AudioContext saat interaksi pengguna pertama kali
@@ -650,7 +650,7 @@ export class AudioEngine {
   // BACKGROUND AMBIENT THEME (BGM RETRO)
   // ===============================================================
 
-  public static playBgm(map: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3'): void {
+  public static playBgm(map: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | 'DUNGEON_ELDORIA' | 'DUNGEON_STONEWATCH'): void {
     this.currentMapBgm = map;
     if (!this.isMusicEnabled) return;
 
@@ -668,6 +668,10 @@ export class AudioEngine {
     const floor2Notes = [110.0, 130.81, 146.83, 164.81, 130.81, 123.47];
     // Dungeon Lt.3 (Infernal Sanctum): Tritone dark infernal theme
     const floor3Notes = [98.0, 103.83, 123.47, 138.59, 116.54, 98.0];
+    // Dungeon Eldoria (Sylvan Temple): Mystical fairy forest chime
+    const eldoriaNotes = [329.63, 392.0, 493.88, 587.33, 523.25, 440.0];
+    // Dungeon Stonewatch (Cursed Mine): Deep dwarven rhythmic bass
+    const stonewatchNotes = [123.47, 130.81, 146.83, 110.0, 98.0, 123.47];
 
     let notes = overworldNotes;
     let speed = 450;
@@ -685,6 +689,14 @@ export class AudioEngine {
       notes = floor3Notes;
       speed = 520;
       oscType = 'sawtooth';
+    } else if (map === 'DUNGEON_ELDORIA') {
+      notes = eldoriaNotes;
+      speed = 420;
+      oscType = 'triangle';
+    } else if (map === 'DUNGEON_STONEWATCH') {
+      notes = stonewatchNotes;
+      speed = 500;
+      oscType = 'triangle';
     }
 
     this.bgmInterval = window.setInterval(() => {

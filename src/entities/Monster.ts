@@ -15,7 +15,15 @@ export type MonsterType =
   | 'INFERNO_HELLHOUND'
   | 'ABYSSAL_REAPER'
   | 'INFERNAL_KNIGHT'
-  | 'BOSS_INFERNAL_DRAGON';
+  | 'BOSS_INFERNAL_DRAGON'
+  | 'SYLVAN_SPRITE'
+  | 'VINE_CREEPER'
+  | 'TREANT_WARRIOR'
+  | 'BOSS_ANCIENT_ENT'
+  | 'CRYSTAL_SPIDER'
+  | 'IRONCLAD_SKELETON'
+  | 'ARMORED_GOLEM'
+  | 'BOSS_OBSIDIAN_BEHEMOTH';
 export type MonsterTier = 'LOW' | 'MID' | 'HIGH' | 'BOSS';
 
 export interface MonsterDrop {
@@ -268,6 +276,120 @@ export class Monster {
         this.tier = 'BOSS';
         this.tierLabel = 'Penguasa Neraka Abisal';
         break;
+      // --- MONSTER KUIL ROH HUTAN ELDORIA ---
+      case 'SYLVAN_SPRITE':
+        this.name = 'Peri Daun Mistis';
+        this.width = 20;
+        this.height = 20;
+        this.maxHp = 90;
+        this.level = 7;
+        this.attackPower = 15;
+        this.expReward = 75;
+        this.goldReward = 45;
+        this.speed = 52;
+        this.aggroRange = 115;
+        this.tier = 'LOW';
+        this.tierLabel = 'Kuil Rimba';
+        break;
+      case 'VINE_CREEPER':
+        this.name = 'Monster Sulur Berduri';
+        this.width = 24;
+        this.height = 22;
+        this.maxHp = 150;
+        this.level = 10;
+        this.attackPower = 23;
+        this.expReward = 125;
+        this.goldReward = 75;
+        this.speed = 42;
+        this.aggroRange = 125;
+        this.tier = 'MID';
+        this.tierLabel = 'Kuil Rimba';
+        break;
+      case 'TREANT_WARRIOR':
+        this.name = 'Prajurit Pohon Purba';
+        this.width = 28;
+        this.height = 32;
+        this.maxHp = 250;
+        this.level = 14;
+        this.attackPower = 34;
+        this.expReward = 220;
+        this.goldReward = 130;
+        this.speed = 34;
+        this.aggroRange = 120;
+        this.tier = 'HIGH';
+        this.tierLabel = 'Kuil Elit';
+        break;
+      case 'BOSS_ANCIENT_ENT':
+        this.name = 'Raksasa Roh Pohon Purba';
+        this.width = 52;
+        this.height = 52;
+        this.maxHp = 1100;
+        this.level = 17;
+        this.attackPower = 48;
+        this.expReward = 1100;
+        this.goldReward = 750;
+        this.speed = 28;
+        this.aggroRange = 170;
+        this.tier = 'BOSS';
+        this.tierLabel = 'Penguasa Rimba Suci';
+        break;
+      // --- MONSTER TAMBANG TERKUTUK STONEWATCH ---
+      case 'CRYSTAL_SPIDER':
+        this.name = 'Laba-laba Kristal Tambang';
+        this.width = 22;
+        this.height = 18;
+        this.maxHp = 120;
+        this.level = 9;
+        this.attackPower = 19;
+        this.expReward = 95;
+        this.goldReward = 55;
+        this.speed = 56;
+        this.aggroRange = 125;
+        this.tier = 'LOW';
+        this.tierLabel = 'Tambang Abisal';
+        break;
+      case 'IRONCLAD_SKELETON':
+        this.name = 'Tengkorak Zirah Besi';
+        this.width = 24;
+        this.height = 28;
+        this.maxHp = 210;
+        this.level = 13;
+        this.attackPower = 30;
+        this.expReward = 175;
+        this.goldReward = 100;
+        this.speed = 38;
+        this.aggroRange = 125;
+        this.tier = 'MID';
+        this.tierLabel = 'Tambang Abisal';
+        break;
+      case 'ARMORED_GOLEM':
+        this.name = 'Golem Tambang Besi Baja';
+        this.width = 30;
+        this.height = 30;
+        this.maxHp = 340;
+        this.level = 16;
+        this.attackPower = 40;
+        this.expReward = 280;
+        this.goldReward = 165;
+        this.speed = 32;
+        this.aggroRange = 130;
+        this.tier = 'HIGH';
+        this.tierLabel = 'Tambang Elit';
+        break;
+      case 'BOSS_OBSIDIAN_BEHEMOTH':
+        this.name = 'Behemoth Obsidian Abisal';
+        this.width = 54;
+        this.height = 50;
+        this.maxHp = 1400;
+        this.level = 21;
+        this.attackPower = 58;
+        this.expReward = 1500;
+        this.goldReward = 1000;
+        this.speed = 30;
+        this.aggroRange = 180;
+        this.tier = 'BOSS';
+        this.tierLabel = 'Penguasa Tambang Terkutuk';
+        break;
     }
 
     this.hp = this.maxHp;
@@ -282,13 +404,14 @@ export class Monster {
 
     // Knockback away from hit source
     const angle = Math.atan2((this.y + this.height / 2) - fromY, (this.x + this.width / 2) - fromX);
-    const knockForce = this.type === 'BOSS_INFERNAL_DRAGON' ? 15 : (this.type === 'BOSS_TITAN_GOLEM' ? 25 : (this.type === 'BOSS_SLIME' ? 60 : 140));
+    const isHeavyBoss = this.type === 'BOSS_INFERNAL_DRAGON' || this.type === 'BOSS_OBSIDIAN_BEHEMOTH' || this.type === 'BOSS_ANCIENT_ENT';
+    const knockForce = isHeavyBoss ? 15 : (this.type === 'BOSS_TITAN_GOLEM' ? 25 : (this.type === 'BOSS_SLIME' ? 60 : 140));
     this.knockbackX = Math.cos(angle) * knockForce;
     this.knockbackY = Math.sin(angle) * knockForce;
 
     if (this.hp <= 0) {
       this.isDead = true;
-      this.respawnTimer = this.type === 'BOSS_INFERNAL_DRAGON' ? 75 : (this.type === 'BOSS_TITAN_GOLEM' ? 60 : (this.type === 'BOSS_SLIME' ? 45 : 22));
+      this.respawnTimer = this.tier === 'BOSS' ? 70 : 22;
       return { isDead: true, damage };
     }
 
@@ -399,7 +522,11 @@ export class Monster {
           distToCompanion = Math.hypot(myCenterX - companionCenterX, myCenterY - companionCenterY);
         }
 
-        const attackReach = this.type === 'BOSS_INFERNAL_DRAGON' ? 44 : (this.type === 'BOSS_TITAN_GOLEM' ? 36 : (this.type === 'BOSS_SLIME' ? 32 : 22));
+        const attackReach = (this.type === 'BOSS_INFERNAL_DRAGON' || this.type === 'BOSS_OBSIDIAN_BEHEMOTH')
+          ? 44
+          : (this.type === 'BOSS_TITAN_GOLEM' || this.type === 'BOSS_ANCIENT_ENT')
+          ? 38
+          : (this.type === 'BOSS_SLIME' ? 32 : 22);
 
         // PRIORITAS 1: Serang Minion/Pet
         if (targetMinion) {
@@ -580,6 +707,30 @@ export class Monster {
         break;
       case 'BOSS_INFERNAL_DRAGON':
         this.renderBossDragon(ctx, x, y, isFlashing);
+        break;
+      case 'SYLVAN_SPRITE':
+        this.renderSylvanSprite(ctx, x, y, isFlashing);
+        break;
+      case 'VINE_CREEPER':
+        this.renderVineCreeper(ctx, x, y, isFlashing);
+        break;
+      case 'TREANT_WARRIOR':
+        this.renderTreantWarrior(ctx, x, y, isFlashing);
+        break;
+      case 'BOSS_ANCIENT_ENT':
+        this.renderBossAncientEnt(ctx, x, y, isFlashing);
+        break;
+      case 'CRYSTAL_SPIDER':
+        this.renderCrystalSpider(ctx, x, y, isFlashing);
+        break;
+      case 'IRONCLAD_SKELETON':
+        this.renderIroncladSkeleton(ctx, x, y, isFlashing);
+        break;
+      case 'ARMORED_GOLEM':
+        this.renderArmoredGolem(ctx, x, y, isFlashing);
+        break;
+      case 'BOSS_OBSIDIAN_BEHEMOTH':
+        this.renderBossObsidianBehemoth(ctx, x, y, isFlashing);
         break;
     }
 
@@ -1248,9 +1399,279 @@ export class Monster {
     ctx.restore();
   }
 
+  // --- RENDERING MONSTER KUIL ELDORIA & TAMBANG STONEWATCH ---
+
+  private renderSylvanSprite(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const floatBob = Math.sin(this.animTimer * 6) * 3;
+    const cx = x + 10;
+    const cy = y + 10 + floatBob;
+
+    // Glowing aura
+    ctx.fillStyle = flash ? '#ffffff' : 'rgba(52, 211, 153, 0.35)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 9, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Fairy wings
+    const wingFlap = Math.sin(this.animTimer * 16) * 4;
+    ctx.fillStyle = flash ? '#ffffff' : 'rgba(167, 243, 208, 0.7)';
+    ctx.beginPath();
+    ctx.ellipse(cx - 6, cy - 2, 6, 3 + wingFlap * 0.2, -0.4, 0, Math.PI * 2);
+    ctx.ellipse(cx + 6, cy - 2, 6, 3 + wingFlap * 0.2, 0.4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Leaf body
+    ctx.fillStyle = flash ? '#ffffff' : '#059669';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Sparkly eyes
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(cx - 2, cy - 1, 1.5, 1.5);
+    ctx.fillRect(cx + 1, cy - 1, 1.5, 1.5);
+  }
+
+  private renderVineCreeper(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const wriggle = Math.sin(this.animTimer * 7) * 2;
+    ctx.fillStyle = flash ? '#ffffff' : '#14532d';
+    // Bramble coiled base
+    ctx.beginPath();
+    ctx.ellipse(x + 12, y + 16, 10, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Whipping thorny tendrils
+    ctx.strokeStyle = flash ? '#ffffff' : '#15803d';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(x + 12, y + 16);
+    ctx.quadraticCurveTo(x + 6 + wriggle, y + 6, x + 4 - wriggle, y + 2);
+    ctx.moveTo(x + 12, y + 16);
+    ctx.quadraticCurveTo(x + 18 - wriggle, y + 7, x + 20 + wriggle, y + 3);
+    ctx.stroke();
+
+    // Crimson Thorns
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(x + 8, y + 8, 2, 2);
+    ctx.fillRect(x + 16, y + 9, 2, 2);
+  }
+
+  private renderTreantWarrior(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const isLeft = this.direction === 'left';
+    const bob = Math.sin(this.animTimer * 4) * 1.5;
+
+    // Solid Wood Trunk Body
+    ctx.fillStyle = flash ? '#ffffff' : '#78350f';
+    ctx.fillRect(x + 6, y + 8 + bob, 16, 20);
+
+    // Moss & Vines
+    ctx.fillStyle = flash ? '#ffffff' : '#16a34a';
+    ctx.fillRect(x + 4, y + 6 + bob, 8, 4);
+    ctx.fillRect(x + 16, y + 7 + bob, 8, 4);
+
+    // Horned Branch Canopy
+    ctx.strokeStyle = flash ? '#ffffff' : '#451a03';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + 8, y + 8 + bob);
+    ctx.lineTo(x + 4, y + 2 + bob);
+    ctx.moveTo(x + 20, y + 8 + bob);
+    ctx.lineTo(x + 24, y + 2 + bob);
+    ctx.stroke();
+
+    // Glowing Ancient Eyes
+    ctx.fillStyle = '#4ade80';
+    const eyeX = isLeft ? x + 9 : x + 15;
+    ctx.fillRect(eyeX, y + 12 + bob, 2.5, 2.5);
+    ctx.fillRect(eyeX + 3.5, y + 12 + bob, 2.5, 2.5);
+  }
+
+  private renderBossAncientEnt(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const pulse = Math.sin(this.animTimer * 3) * 2;
+    const isLeft = this.direction === 'left';
+
+    // Sacred Sylvan Aura
+    ctx.fillStyle = 'rgba(34, 197, 94, 0.18)';
+    ctx.beginPath();
+    ctx.arc(x + 26, y + 26, 32 + pulse, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Enormous Ancient Oak Trunk
+    ctx.fillStyle = flash ? '#ffffff' : '#451a03';
+    ctx.beginPath();
+    ctx.roundRect(x + 10, y + 12, 32, 36, 6);
+    ctx.fill();
+
+    // Bark details
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(x + 14, y + 16, 8, 26);
+    ctx.fillRect(x + 26, y + 18, 10, 24);
+
+    // Giant Leaf Canopy
+    ctx.fillStyle = flash ? '#ffffff' : '#15803d';
+    ctx.beginPath();
+    ctx.arc(x + 26, y + 10, 18, 0, Math.PI * 2);
+    ctx.arc(x + 12, y + 14, 12, 0, Math.PI * 2);
+    ctx.arc(x + 40, y + 14, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Blooming golden blossoms
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.arc(x + 18, y + 6, 3, 0, Math.PI * 2);
+    ctx.arc(x + 34, y + 8, 3, 0, Math.PI * 2);
+    ctx.arc(x + 26, y + 2, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Glowing Elder Sylvan Eyes
+    ctx.fillStyle = '#86efac';
+    const ex = isLeft ? x + 16 : x + 28;
+    ctx.fillRect(ex, y + 22, 4, 4);
+    ctx.fillRect(ex + 6, y + 22, 4, 4);
+
+    // Giant Wooden Root Fists
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(x + 4, y + 30 + pulse, 8, 14);
+    ctx.fillRect(x + 40, y + 30 - pulse, 8, 14);
+  }
+
+  private renderCrystalSpider(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const scuttle = Math.sin(this.animTimer * 12) * 2;
+    // Chitin Body
+    ctx.fillStyle = flash ? '#ffffff' : '#1e293b';
+    ctx.beginPath();
+    ctx.ellipse(x + 11, y + 9, 7, 5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Glowing Cyan Gem Carapace
+    ctx.fillStyle = flash ? '#ffffff' : '#38bdf8';
+    ctx.beginPath();
+    ctx.moveTo(x + 11, y + 5);
+    ctx.lineTo(x + 15, y + 9);
+    ctx.lineTo(x + 11, y + 13);
+    ctx.lineTo(x + 7, y + 9);
+    ctx.closePath();
+    ctx.fill();
+
+    // Spidery Legs
+    ctx.strokeStyle = flash ? '#ffffff' : '#64748b';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.moveTo(x + 7, y + 7); ctx.lineTo(x + 2, y + 3 + scuttle);
+    ctx.moveTo(x + 7, y + 11); ctx.lineTo(x + 1, y + 13 - scuttle);
+    ctx.moveTo(x + 15, y + 7); ctx.lineTo(x + 20, y + 3 - scuttle);
+    ctx.moveTo(x + 15, y + 11); ctx.lineTo(x + 21, y + 13 + scuttle);
+    ctx.stroke();
+
+    // Eyes
+    ctx.fillStyle = '#f43f5e';
+    ctx.fillRect(x + 9, y + 6, 1.5, 1.5);
+    ctx.fillRect(x + 12, y + 6, 1.5, 1.5);
+  }
+
+  private renderIroncladSkeleton(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const isLeft = this.direction === 'left';
+    // Steel Plate Armor
+    ctx.fillStyle = flash ? '#ffffff' : '#475569';
+    ctx.fillRect(x + 6, y + 8, 12, 14);
+
+    // Skull Head
+    ctx.fillStyle = flash ? '#ffffff' : '#e2e8f0';
+    ctx.fillRect(x + 8, y + 2, 8, 7);
+
+    // Iron Helmet
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(x + 7, y + 1, 10, 3);
+
+    // Hollow eye sockets
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(x + 9, y + 4, 2, 2);
+    ctx.fillRect(x + 13, y + 4, 2, 2);
+
+    // Tower Shield
+    ctx.fillStyle = '#1e293b';
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1.5;
+    const shieldX = isLeft ? x + 2 : x + 16;
+    ctx.fillRect(shieldX, y + 8, 6, 16);
+    ctx.strokeRect(shieldX, y + 8, 6, 16);
+  }
+
+  private renderArmoredGolem(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const bob = Math.sin(this.animTimer * 5) * 1.5;
+    // Heavy Iron Plated Torso
+    ctx.fillStyle = flash ? '#ffffff' : '#334155';
+    ctx.fillRect(x + 5, y + 8 + bob, 20, 16);
+
+    // Bronze Rivet Trim
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(x + 6, y + 9 + bob, 3, 3);
+    ctx.fillRect(x + 21, y + 9 + bob, 3, 3);
+
+    // Glowing Ore Furnace Core in chest
+    ctx.fillStyle = '#f97316';
+    ctx.beginPath();
+    ctx.arc(x + 15, y + 16 + bob, 4, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Heavy Stone Fists
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(x + 1, y + 12 + bob, 5, 10);
+    ctx.fillRect(x + 24, y + 12 + bob, 5, 10);
+  }
+
+  private renderBossObsidianBehemoth(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const pulse = Math.sin(this.animTimer * 3.5) * 2;
+    const isLeft = this.direction === 'left';
+
+    // Abyssal Mine Dark Aura
+    ctx.fillStyle = 'rgba(126, 34, 206, 0.22)';
+    ctx.beginPath();
+    ctx.arc(x + 27, y + 25, 34 + pulse, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Colossal Obsidian Body
+    ctx.fillStyle = flash ? '#ffffff' : '#0f172a';
+    ctx.beginPath();
+    ctx.roundRect(x + 8, y + 10, 38, 34, 6);
+    ctx.fill();
+
+    // Purple Obsidian Crystals protruding
+    ctx.fillStyle = '#a855f7';
+    ctx.beginPath();
+    ctx.moveTo(x + 12, y + 10); ctx.lineTo(x + 8, y + 2); ctx.lineTo(x + 16, y + 8);
+    ctx.moveTo(x + 42, y + 10); ctx.lineTo(x + 46, y + 2); ctx.lineTo(x + 38, y + 8);
+    ctx.fill();
+
+    // Glowing Magma Fissures
+    ctx.strokeStyle = '#c084fc';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x + 14, y + 20); ctx.lineTo(x + 22, y + 26); ctx.lineTo(x + 18, y + 36);
+    ctx.moveTo(x + 40, y + 20); ctx.lineTo(x + 32, y + 28); ctx.lineTo(x + 36, y + 38);
+    ctx.stroke();
+
+    // Blazing Core
+    ctx.fillStyle = '#f43f5e';
+    ctx.beginPath();
+    ctx.arc(x + 27, y + 26, 6 + pulse * 0.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Golem Eyes
+    ctx.fillStyle = '#38bdf8';
+    const ex = isLeft ? x + 18 : x + 30;
+    ctx.fillRect(ex, y + 16, 4, 3);
+    ctx.fillRect(ex + 6, y + 16, 4, 3);
+
+    // Massive Crag Fists
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(x + 2, y + 24 + pulse, 9, 16);
+    ctx.fillRect(x + 43, y + 24 - pulse, 9, 16);
+  }
+
   private renderHealthBar(ctx: CanvasRenderingContext2D, x: number, y: number): void {
-    const isBoss = this.type === 'BOSS_SLIME' || this.type === 'BOSS_TITAN_GOLEM' || this.type === 'BOSS_INFERNAL_DRAGON';
-    const barW = this.type === 'BOSS_INFERNAL_DRAGON' ? 68 : (this.type === 'BOSS_TITAN_GOLEM' ? 56 : (this.type === 'BOSS_SLIME' ? 44 : 24));
+    const isBoss = this.tier === 'BOSS' || this.type.startsWith('BOSS_');
+    const barW = isBoss ? 64 : 24;
     const barH = isBoss ? 5 : 3;
     const barX = x + (this.width - barW) / 2;
     const barY = isBoss ? y - 16 : y - 8;
@@ -1263,11 +1684,13 @@ export class Monster {
 
       // Warna bar berdasarkan tingkatan monster
       let barFillColor = '#22c55e'; // Hijau untuk tingkat bawah
-      if (this.type === 'BOSS_INFERNAL_DRAGON') barFillColor = '#f97316'; // Kobaran api raja naga
+      if (this.type === 'BOSS_INFERNAL_DRAGON') barFillColor = '#f97316';
       else if (this.type === 'BOSS_TITAN_GOLEM') barFillColor = '#ef4444';
+      else if (this.type === 'BOSS_ANCIENT_ENT') barFillColor = '#10b981';
+      else if (this.type === 'BOSS_OBSIDIAN_BEHEMOTH') barFillColor = '#8b5cf6';
       else if (this.type === 'BOSS_SLIME') barFillColor = '#ec4899';
-      else if (this.tier === 'MID') barFillColor = '#f59e0b'; // Oranye/Amber untuk tingkat menengah
-      else if (this.tier === 'HIGH') barFillColor = '#a855f7'; // Ungu untuk elit
+      else if (this.tier === 'MID') barFillColor = '#f59e0b';
+      else if (this.tier === 'HIGH') barFillColor = '#a855f7';
 
       // Health fill
       const pct = Math.min(1, Math.max(0, this.hp / this.maxHp));
@@ -1278,9 +1701,9 @@ export class Monster {
       ctx.font = 'bold 7.5px sans-serif';
       ctx.textAlign = 'center';
 
-      let tagColor = '#86efac'; // Hijau terang
+      let tagColor = '#86efac';
       if (isBoss) tagColor = '#facc15';
-      else if (this.tier === 'MID') tagColor = '#fcd34d'; // Kuning keemasan untuk tingkat menengah
+      else if (this.tier === 'MID') tagColor = '#fcd34d';
       else if (this.tier === 'HIGH') tagColor = '#d8b4fe';
 
       ctx.fillStyle = tagColor;
