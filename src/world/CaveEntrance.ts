@@ -27,7 +27,7 @@ export class CaveEntrance {
   public isNearPlayer(playerCenterX: number, playerCenterY: number): boolean {
     const entranceCenterX = this.x + this.width / 2;
     const entranceCenterY = this.y + this.height - 12;
-    return Math.hypot(entranceCenterX - playerCenterX, entranceCenterY - playerCenterY) < 46;
+    return Math.hypot(entranceCenterX - playerCenterX, entranceCenterY - playerCenterY) < 58;
   }
 
   public update(deltaTime: number): void {
@@ -65,12 +65,12 @@ export class CaveEntrance {
 
     ctx.save();
 
-    // 1. Mountain Rock Backdrop & Shading
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(x - 6, y - 2, this.width + 12, this.height + 4);
+    // 1. Mountain Rock Backdrop & Shading (Unifies with surrounding cliffs)
+    ctx.fillStyle = '#1a202c';
+    ctx.fillRect(x - 4, y - 2, this.width + 8, this.height + 4);
 
     // 2. Heavy Jagged Rock Boulders Arch
-    ctx.fillStyle = '#1e293b';
+    ctx.fillStyle = '#2d3748';
     ctx.beginPath();
     ctx.arc(x + 32, y + 28, 30, Math.PI, 0, false);
     ctx.lineTo(x + 64, y + 64);
@@ -79,17 +79,21 @@ export class CaveEntrance {
     ctx.fill();
 
     // Rock Highlights & Chiselled Chunks
-    ctx.fillStyle = '#334155';
+    ctx.fillStyle = '#3b4759';
     ctx.fillRect(x + 2, y + 16, 12, 10);
     ctx.fillRect(x + 50, y + 16, 12, 10);
     ctx.fillRect(x + 14, y + 6, 12, 8);
     ctx.fillRect(x + 38, y + 6, 12, 8);
     ctx.fillRect(x + 24, y + 2, 16, 6);
 
-    ctx.fillStyle = '#475569';
+    ctx.fillStyle = '#4a5568';
     ctx.fillRect(x + 4, y + 18, 6, 3);
     ctx.fillRect(x + 52, y + 18, 6, 3);
     ctx.fillRect(x + 26, y + 4, 12, 2);
+
+    ctx.fillStyle = '#718096';
+    ctx.fillRect(x + 6, y + 8, 4, 2);
+    ctx.fillRect(x + 40, y + 8, 4, 2);
 
     // 3. Dark Cavern Mouth (Pitch Dark Void with Deep Purple Rim)
     ctx.fillStyle = '#020617';
@@ -150,28 +154,35 @@ export class CaveEntrance {
     ctx.fillRect(x + 55, y + 24, 2, 4);
 
     // 6. Ancient Stone Slab Name Header
-    ctx.fillStyle = '#1e1b4b';
-    ctx.fillRect(x + 10, y - 9, 44, 12);
-    ctx.strokeStyle = '#c084fc';
+    ctx.fillStyle = 'rgba(9, 13, 22, 0.92)';
+    ctx.fillRect(x + 4, y - 13, 56, 13);
+    ctx.strokeStyle = '#f59e0b';
     ctx.lineWidth = 1.2;
-    ctx.strokeRect(x + 10, y - 9, 44, 12);
+    ctx.strokeRect(x + 4, y - 13, 56, 13);
 
-    ctx.font = 'bold 7.5px sans-serif';
+    // Slab corner accents
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(x + 5, y - 12, 2, 2);
+    ctx.fillRect(x + 57, y - 12, 2, 2);
+    ctx.fillRect(x + 5, y - 3, 2, 2);
+    ctx.fillRect(x + 57, y - 3, 2, 2);
+
+    ctx.font = 'bold 8px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillStyle = '#facc15';
-    ctx.fillText('DUNGEON GOA', x + 32, y);
+    ctx.fillStyle = '#fde047';
+    ctx.fillText('DUNGEON GUA', x + 32, y - 3.5);
 
     // 7. Interactive Prompt when player is near
     if (isPlayerNear) {
       const bob = Math.sin(this.animTimer) * 2;
-      const promptY = y - 24 + bob;
+      const promptY = y - 29 + bob;
 
       // Glow box
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-      ctx.fillRect(x - 2, promptY, 68, 15);
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
+      ctx.fillRect(x - 5, promptY, 74, 15);
       ctx.strokeStyle = '#38bdf8';
       ctx.lineWidth = 1.5;
-      ctx.strokeRect(x - 2, promptY, 68, 15);
+      ctx.strokeRect(x - 5, promptY, 74, 15);
 
       ctx.font = 'bold 8.5px sans-serif';
       ctx.fillStyle = '#fef08a';

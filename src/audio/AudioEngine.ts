@@ -120,7 +120,7 @@ export class AudioEngine {
     const osc = ctx.createOscillator();
     const gain = ctx.createGain();
 
-    if (role === 'KNIGHT' || role === 'BERSERKER' || role === 'PALADIN') {
+    if (role === 'KNIGHT') {
       // Ayunan pedang tajam (pitch sweep ke bawah + filter bandpass)
       osc.type = 'sawtooth';
       osc.frequency.setValueAtTime(540, t);
@@ -129,8 +129,8 @@ export class AudioEngine {
       gain.gain.setValueAtTime(0.28, t);
       gain.gain.linearRampToValueAtTime(0.01, t + 0.12);
       gain.gain.setValueAtTime(0, t + 0.13);
-    } else if (role === 'ARCHER' || role === 'ASSASSIN') {
-      // Suara tebasan cepat / desing panah
+    } else if (role === 'ASSASSIN') {
+      // Suara tebasan cepat belati / pisau pembunuh
       osc.type = 'triangle';
       osc.frequency.setValueAtTime(800, t);
       osc.frequency.exponentialRampToValueAtTime(220, t + 0.09);
@@ -138,8 +138,17 @@ export class AudioEngine {
       gain.gain.setValueAtTime(0.25, t);
       gain.gain.linearRampToValueAtTime(0.01, t + 0.09);
       gain.gain.setValueAtTime(0, t + 0.1);
+    } else if (role === 'MAGICIAN' || role === 'HEALER' || role === 'NECROMANCER') {
+      // Suara ayunan tongkat sihir magis
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(420, t);
+      osc.frequency.exponentialRampToValueAtTime(160, t + 0.1);
+
+      gain.gain.setValueAtTime(0.25, t);
+      gain.gain.linearRampToValueAtTime(0.01, t + 0.1);
+      gain.gain.setValueAtTime(0, t + 0.11);
     } else {
-      // Tinju tangan kosong Novice / Staf
+      // Tinju tangan kosong Novice
       osc.type = 'sine';
       osc.frequency.setValueAtTime(280, t);
       osc.frequency.exponentialRampToValueAtTime(90, t + 0.1);

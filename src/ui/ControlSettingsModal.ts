@@ -1,5 +1,4 @@
 import { ControlSettingsManager, DEFAULT_CONTROL_CONFIG } from '../core/ControlSettings.ts';
-import { PwaService } from '../services/PwaService.ts';
 import { NotificationModal } from './NotificationModal.ts';
 import { CanvasText } from '../utils/CanvasText.ts';
 import { AudioEngine } from '../audio/AudioEngine.ts';

@@ -1252,11 +1252,11 @@ export class Game {
       // 6. Render Spell Effects
       this.skillBarUI.renderWorldEffects(ctx);
 
-      // 7. Render Floating Texts
-      this.floatingText.render(ctx);
-
-      // 8. Render Atmospheric Subterranean Torch Lighting & Fog of War
+      // 7. Render Atmospheric Subterranean Torch Lighting & Fog of War
       this.dungeonMap.renderAtmosphericLighting(ctx, this.camera, playerCenterX, playerCenterY);
+
+      // 8. Render Floating Texts (Crisp & Readable above darkness)
+      this.floatingText.render(ctx);
     }
 
     ctx.restore();

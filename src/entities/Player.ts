@@ -513,10 +513,20 @@ export class Player {
       }
 
       // Boundary safety clamping (mencegah karakter keluar batas atau NaN)
-      const worldMaxX = CONSTANTS.MAP_WIDTH * CONSTANTS.TILE_SIZE - this.width - 32;
-      const worldMaxY = CONSTANTS.MAP_HEIGHT * CONSTANTS.TILE_SIZE - this.height - 32;
-      if (isNaN(this.x) || this.x < 32 || this.x > worldMaxX) this.x = 50 * CONSTANTS.TILE_SIZE;
-      if (isNaN(this.y) || this.y < 32 || this.y > worldMaxY) this.y = 50 * CONSTANTS.TILE_SIZE;
+      const mapW = ((tileMap as any).width || CONSTANTS.MAP_WIDTH);
+      const mapH = ((tileMap as any).height || CONSTANTS.MAP_HEIGHT);
+      const worldMaxX = mapW * CONSTANTS.TILE_SIZE - this.width - 32;
+      const worldMaxY = mapH * CONSTANTS.TILE_SIZE - this.height - 32;
+      if (isNaN(this.x)) {
+        this.x = (mapW / 2) * CONSTANTS.TILE_SIZE;
+      } else {
+        this.x = Math.max(32, Math.min(worldMaxX, this.x));
+      }
+      if (isNaN(this.y)) {
+        this.y = (mapH / 2) * CONSTANTS.TILE_SIZE;
+      } else {
+        this.y = Math.max(32, Math.min(worldMaxY, this.y));
+      }
     } else {
       this.animTimer = 0;
     }

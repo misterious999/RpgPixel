@@ -3,7 +3,7 @@ import { ROLE_INFO } from '../data/RolesData.ts';
 import { Player } from '../entities/Player.ts';
 import { FloatingTextManager } from '../ui/FloatingText.ts';
 import { CanvasText } from '../utils/CanvasText.ts';
-import { WEAPONS_DATA, WeaponData, getWeaponsForRole } from '../data/WeaponsData.ts';
+import { WeaponData, getWeaponsForRole } from '../data/WeaponsData.ts';
 import { ITEM_DEFINITIONS } from '../items/ItemTypes.ts';
 
 export class BlacksmithNPC {
@@ -199,7 +199,7 @@ export class BlacksmithNPC {
     }
   }
 
-  public render(ctx: CanvasRenderingContext2D, isNear: boolean, player: Player): void {
+  public render(ctx: CanvasRenderingContext2D, isNear: boolean, _player: Player): void {
     const x = this.x;
     const y = this.y;
 
@@ -396,9 +396,7 @@ export class BlacksmithNPC {
       ctx.fillText(safeTabLabel, tx + (tabW - 4) / 2, tabY + tabH / 2);
     }
 
-    // Role Indicator Subheader
-    const currentRole = this.activeTab === 'COLLECTION' ? this.selectedRole : (player.role !== 'NOVICE' ? player.role : 'KNIGHT');
-    const rInfo = ROLE_INFO[currentRole];
+    // Display Gold Counter on top right of subheader
     const playerGold = player.inventory.getItemCount('GOLD_COIN');
 
     // Display Gold Counter on top right of subheader

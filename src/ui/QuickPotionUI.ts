@@ -10,7 +10,7 @@ export class QuickPotionUI {
     private floatingText: FloatingTextManager
   ) {}
 
-  public getSlots(screenWidth: number, screenHeight: number) {
+  public getSlots(_screenWidth: number, screenHeight: number) {
     const cfg = ControlSettingsManager.get();
     const scale = cfg.buttonScale;
     const r = 18 * scale;

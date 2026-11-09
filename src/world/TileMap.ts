@@ -66,7 +66,9 @@ export class TileMap {
         // Area luas bebas hambatan untuk petualangan leluasa!
 
         // Roads / paths through center (lebar & lega)
-        if (Math.abs(x - 50) <= 2 || Math.abs(y - 50) <= 2) {
+        // Jalan utara berakhir rapi tepat di depan pintu masuk gua (y >= 33)
+        const isNorthOfCave = y < 33 && Math.abs(x - 50) <= 2;
+        if (!isNorthOfCave && (Math.abs(x - 50) <= 2 || Math.abs(y - 50) <= 2)) {
           this.tiles[y][x] = TileType.DIRT_PATH;
           continue;
         }
@@ -91,19 +93,26 @@ export class TileMap {
       }
     }
 
-    // Mountain cliff ridge flanking the Cave / Dungeon Entrance (North of plaza)
-    for (let cy = 31; cy <= 33; cy++) {
-      for (let cx = 45; cx <= 48; cx++) {
-        if (this.tiles[cy] && this.tiles[cy][cx] !== undefined) {
-          this.tiles[cy][cx] = TileType.CLIFF;
-        }
-      }
-      for (let cx = 52; cx <= 55; cx++) {
+    // Tebing pegunungan megah melingkari Pintu Masuk Dungeon Gua (Utara Plaza)
+    // Tembok tebing belakang (y=30..31) tanpa menembus danau atau pantai berpasir di barat
+    for (let cy = 30; cy <= 31; cy++) {
+      for (let cx = 48; cx <= 54; cx++) {
         if (this.tiles[cy] && this.tiles[cy][cx] !== undefined) {
           this.tiles[cy][cx] = TileType.CLIFF;
         }
       }
     }
+    // Tebing dinding samping mengapit pintu gua di y=32 (kiri x=48, kanan x=51..54, pintu di x=49..50)
+    if (this.tiles[32] && this.tiles[32][48] !== undefined) {
+      this.tiles[32][48] = TileType.CLIFF;
+    }
+    for (let cx = 51; cx <= 54; cx++) {
+      if (this.tiles[32] && this.tiles[32][cx] !== undefined) {
+        this.tiles[32][cx] = TileType.CLIFF;
+      }
+    }
+
+    // Jalan setapak megah langsung menuju pintu gua (y=33..36, x=49..51)
     for (let py = 33; py <= 36; py++) {
       for (let px = 49; px <= 51; px++) {
         if (this.tiles[py] && this.tiles[py][px] !== undefined) {
@@ -111,6 +120,13 @@ export class TileMap {
         }
       }
     }
+  }
+
+  public getTileAt(tileX: number, tileY: number): TileType {
+    if (tileX < 0 || tileX >= this.width || tileY < 0 || tileY >= this.height) {
+      return TileType.CLIFF;
+    }
+    return this.tiles[tileY]?.[tileX] ?? TileType.GRASS;
   }
 
   public isTileSolid(tileX: number, tileY: number): boolean {
@@ -252,10 +268,64 @@ export class TileMap {
         break;
       }
       case TileType.CLIFF: {
-        ctx.fillStyle = '#334155';
+        // Base rugged mountain bedrock
+        ctx.fillStyle = '#2d3748';
         ctx.fillRect(x, y, size, size);
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(x + 2, y + 4, size - 4, size - 8);
+
+        // Stratified rock layers / chiseled stone texture
+        ctx.fillStyle = '#3b4759';
+        ctx.fillRect(x + 1, y + 2, size - 2, 7);
+        ctx.fillRect(x + 1, y + 11, size - 2, 9);
+        ctx.fillRect(x + 1, y + 22, size - 2, 8);
+
+        // Rocky horizontal ridges & shelf highlights
+        ctx.fillStyle = '#4a5568';
+        ctx.fillRect(x + 2, y + 2, size - 4, 2);
+        ctx.fillRect(x + 2, y + 11, size - 4, 2);
+        ctx.fillRect(x + 2, y + 22, size - 4, 2);
+
+        // Chiseled highlights on prominent rock edges
+        ctx.fillStyle = '#718096';
+        ctx.fillRect(x + 4, y + 2, 10, 1.5);
+        ctx.fillRect(x + 18, y + 11, 8, 1.5);
+        ctx.fillRect(x + 8, y + 22, 12, 1.5);
+
+        // Deep shadowy crevices & vertical fissures
+        ctx.fillStyle = '#1a202c';
+        ctx.fillRect(x, y + size - 2, size, 2); // Bottom shadow
+        ctx.fillRect(x + 14, y + 4, 2, 7);
+        ctx.fillRect(x + 26, y + 13, 2, 8);
+
+        // Seamless Top Moss / Grass Overhang if tile above is not cliff
+        const tileAbove = this.tiles[tileY - 1]?.[tileX];
+        if (tileAbove !== TileType.CLIFF) {
+          // Lush green moss & grass crest drooping over the rock edge
+          ctx.fillStyle = '#276749';
+          ctx.fillRect(x, y, size, 5);
+          ctx.fillStyle = '#38a169';
+          ctx.fillRect(x, y, size, 3);
+          // Grass tufts / blades
+          ctx.fillStyle = '#48bb78';
+          ctx.fillRect(x + 3, y + 3, 3, 3);
+          ctx.fillRect(x + 11, y + 3, 4, 3);
+          ctx.fillRect(x + 21, y + 3, 3, 4);
+          ctx.fillRect(x + 27, y + 3, 2, 2);
+        }
+
+        // Shaded left edge if exposed
+        const tileLeft = this.tiles[tileY]?.[tileX - 1];
+        if (tileLeft !== TileType.CLIFF) {
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.25)';
+          ctx.fillRect(x, y, 2, size);
+        }
+
+        // Highlighted or shaded right edge if exposed
+        const tileRight = this.tiles[tileY]?.[tileX + 1];
+        if (tileRight !== TileType.CLIFF) {
+          ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+          ctx.fillRect(x + size - 2, y, 2, size);
+        }
+
         break;
       }
     }
