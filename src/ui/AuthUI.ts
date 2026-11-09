@@ -120,8 +120,8 @@ export class AuthUI {
       if (chest.isOpen) openedChestsIndices.push(idx);
     });
 
-    // Jika berada di dalam goa/dungeon saat cloud-save, simpan koordinat aman di depan pintu goa overworld
-    const isDungeon = this.getCurrentMap && this.getCurrentMap() === 'DUNGEON';
+    // Jika berada di dalam dungeon (Lt.1, Lt.2, atau Lt.3) saat cloud-save, simpan koordinat aman di depan pintu goa overworld
+    const isDungeon = this.getCurrentMap && this.getCurrentMap() !== 'OVERWORLD';
     const spawnX = isDungeon ? 50 * CONSTANTS.TILE_SIZE + 6 : this.player.x;
     const spawnY = isDungeon ? 35 * CONSTANTS.TILE_SIZE + 3 : this.player.y;
 

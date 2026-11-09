@@ -15,7 +15,7 @@ export class AudioEngine {
   public static volume: number = 0.8;
 
   private static bgmInterval: number | null = null;
-  private static currentMapBgm: 'OVERWORLD' | 'DUNGEON' | null = null;
+  private static currentMapBgm: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | null = null;
 
   /**
    * Inisialisasi AudioContext saat interaksi pengguna pertama kali
@@ -650,7 +650,7 @@ export class AudioEngine {
   // BACKGROUND AMBIENT THEME (BGM RETRO)
   // ===============================================================
 
-  public static playBgm(map: 'OVERWORLD' | 'DUNGEON'): void {
+  public static playBgm(map: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3'): void {
     this.currentMapBgm = map;
     if (!this.isMusicEnabled) return;
 
@@ -662,11 +662,30 @@ export class AudioEngine {
     let step = 0;
     // Overworld: Melodi pastoral ceria & menenangkan (Pentatonik C mayor rileks)
     const overworldNotes = [261.63, 293.66, 329.63, 392.0, 440.0, 392.0, 329.63, 293.66];
-    // Dungeon: Arpeggio gelap misterius (D minor / Phrygian)
+    // Dungeon Lt.1: Arpeggio gelap misterius (D minor / Phrygian)
     const dungeonNotes = [146.83, 155.56, 174.61, 220.0, 196.0, 155.56];
+    // Dungeon Lt.2 (Crypt): Resonant subterranean pulse
+    const floor2Notes = [110.0, 130.81, 146.83, 164.81, 130.81, 123.47];
+    // Dungeon Lt.3 (Infernal Sanctum): Tritone dark infernal theme
+    const floor3Notes = [98.0, 103.83, 123.47, 138.59, 116.54, 98.0];
 
-    const notes = map === 'OVERWORLD' ? overworldNotes : dungeonNotes;
-    const speed = map === 'OVERWORLD' ? 450 : 600;
+    let notes = overworldNotes;
+    let speed = 450;
+    let oscType: OscillatorType = 'triangle';
+
+    if (map === 'DUNGEON') {
+      notes = dungeonNotes;
+      speed = 600;
+      oscType = 'sine';
+    } else if (map === 'DUNGEON_FLOOR_2') {
+      notes = floor2Notes;
+      speed = 650;
+      oscType = 'sine';
+    } else if (map === 'DUNGEON_FLOOR_3') {
+      notes = floor3Notes;
+      speed = 520;
+      oscType = 'sawtooth';
+    }
 
     this.bgmInterval = window.setInterval(() => {
       if (!this.isMusicEnabled || !this.ctx || !this.bgmGain) return;
@@ -677,10 +696,11 @@ export class AudioEngine {
       const osc = this.ctx.createOscillator();
       const gain = this.ctx.createGain();
 
-      osc.type = map === 'OVERWORLD' ? 'triangle' : 'sine';
+      osc.type = oscType;
       osc.frequency.setValueAtTime(freq, t);
 
-      gain.gain.setValueAtTime(0.08, t);
+      const noteVol = oscType === 'sawtooth' ? 0.04 : 0.08;
+      gain.gain.setValueAtTime(noteVol, t);
       gain.gain.exponentialRampToValueAtTime(0.001, t + (speed / 1000) * 0.9);
 
       osc.connect(gain);

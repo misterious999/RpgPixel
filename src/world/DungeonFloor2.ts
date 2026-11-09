@@ -33,6 +33,11 @@ export class DungeonFloor2 {
   public ladderUpX: number = 20 * CONSTANTS.TILE_SIZE;
   public ladderUpY: number = 38 * CONSTANTS.TILE_SIZE;
 
+  // Floor 3 Portal (Unlocked after defeating Floor 2 Boss Titan)
+  public floor3PortalX: number = 20 * CONSTANTS.TILE_SIZE;
+  public floor3PortalY: number = 5 * CONSTANTS.TILE_SIZE;
+  public isFloor3Unlocked: boolean = false;
+
   // Boss telegraph red zone effects
   public telegraphs: BossTelegraph[] = [];
 
@@ -129,6 +134,13 @@ export class DungeonFloor2 {
     return Math.hypot(px - lx, py - ly) < 32;
   }
 
+  public isNearFloor3Portal(px: number, py: number): boolean {
+    if (!this.isFloor3Unlocked) return false;
+    const lx = this.floor3PortalX + 16;
+    const ly = this.floor3PortalY + 16;
+    return Math.hypot(px - lx, py - ly) < 36;
+  }
+
   public isTileSolid(tx: number, ty: number): boolean {
     if (tx < 0 || tx >= this.width || ty < 0 || ty >= this.height) return true;
     const t = this.tiles[ty][tx];
@@ -176,6 +188,38 @@ export class DungeonFloor2 {
         ctx.textBaseline = 'middle';
         ctx.fillText('⚠️', tel.x, tel.y);
       }
+      ctx.restore();
+    }
+
+    // Render Floor 3 Infernal Portal if unlocked
+    if (this.isFloor3Unlocked) {
+      const px = this.floor3PortalX;
+      const py = this.floor3PortalY;
+      ctx.save();
+      // Molten portal pit
+      ctx.fillStyle = '#450a0a';
+      ctx.fillRect(px, py, ts, ts);
+
+      // Rotating Magma vortex
+      const rot = this.animTimer * 3;
+      const grad = ctx.createRadialGradient(px + 16, py + 16, 2, px + 16, py + 16, 15);
+      grad.addColorStop(0, '#fef08a');
+      grad.addColorStop(0.5, '#ea580c');
+      grad.addColorStop(1, '#7f1d1d');
+      ctx.fillStyle = grad;
+      ctx.beginPath();
+      ctx.arc(px + 16, py + 16, 13, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Fiery spikes
+      ctx.strokeStyle = '#f97316';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(px + 2, py + 2, ts - 4, ts - 4);
+
+      ctx.font = 'bold 8px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillStyle = '#fdba74';
+      ctx.fillText('▼ Ke Lantai 3', px + 16, py - 4);
       ctx.restore();
     }
   }

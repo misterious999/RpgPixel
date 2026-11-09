@@ -4,6 +4,8 @@ import { Monster } from '../entities/Monster.ts';
 import { Chest } from '../world/Chest.ts';
 import { TileMap, TileType } from '../world/TileMap.ts';
 import { DungeonMap } from '../world/DungeonMap.ts';
+import { DungeonFloor2 } from '../world/DungeonFloor2.ts';
+import { DungeonFloor3 } from '../world/DungeonFloor3.ts';
 
 export type MiniMapMode = 'NORMAL' | 'EXPANDED' | 'MINIMIZED';
 
@@ -13,6 +15,8 @@ export class MiniMapUI {
   // Cache offscreen canvases for terrain so we don't redraw 10,000 tiles every frame!
   private overworldCanvas: HTMLCanvasElement | null = null;
   private dungeonCanvas: HTMLCanvasElement | null = null;
+  private floor2Canvas: HTMLCanvasElement | null = null;
+  private floor3Canvas: HTMLCanvasElement | null = null;
 
   private pulseTimer: number = 0;
 
@@ -51,7 +55,7 @@ export class MiniMapUI {
   }
 
   /**
-   * Menghasilkan peta statis dungeon
+   * Menghasilkan peta statis dungeon Lantai 1
    */
   private generateDungeonCache(dungeonMap: DungeonMap): HTMLCanvasElement {
     const c = document.createElement('canvas');
@@ -63,6 +67,44 @@ export class MiniMapUI {
       for (let x = 0; x < dungeonMap.width; x++) {
         const isSolid = dungeonMap.isTileSolid(x, y);
         ctx.fillStyle = isSolid ? '#0f172a' : '#334155';
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+    return c;
+  }
+
+  /**
+   * Menghasilkan peta statis dungeon Lantai 2
+   */
+  private generateFloor2Cache(dungeonFloor2: DungeonFloor2): HTMLCanvasElement {
+    const c = document.createElement('canvas');
+    c.width = dungeonFloor2.width;
+    c.height = dungeonFloor2.height;
+    const ctx = c.getContext('2d')!;
+
+    for (let y = 0; y < dungeonFloor2.height; y++) {
+      for (let x = 0; x < dungeonFloor2.width; x++) {
+        const isSolid = dungeonFloor2.isTileSolid(x, y);
+        ctx.fillStyle = isSolid ? '#090d16' : '#1e293b';
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+    return c;
+  }
+
+  /**
+   * Menghasilkan peta statis dungeon Lantai 3
+   */
+  private generateFloor3Cache(dungeonFloor3: DungeonFloor3): HTMLCanvasElement {
+    const c = document.createElement('canvas');
+    c.width = dungeonFloor3.width;
+    c.height = dungeonFloor3.height;
+    const ctx = c.getContext('2d')!;
+
+    for (let y = 0; y < dungeonFloor3.height; y++) {
+      for (let x = 0; x < dungeonFloor3.width; x++) {
+        const isSolid = dungeonFloor3.isTileSolid(x, y);
+        ctx.fillStyle = isSolid ? '#09090b' : '#3f1313';
         ctx.fillRect(x, y, 1, 1);
       }
     }
@@ -98,7 +140,13 @@ export class MiniMapUI {
       const y = (screenHeight - h) / 2;
 
       // Close button (X)
-      if (touchX >= x + w - 38 && touchX <= x + w - 6 && touchY >= y + 4 && touchY <= y + 36) {
+      const closeBtn = { x: x + w - 36, y: y + 6, size: 26 };
+      if (
+        touchX >= closeBtn.x &&
+        touchX <= closeBtn.x + closeBtn.size &&
+        touchY >= closeBtn.y &&
+        touchY <= closeBtn.y + closeBtn.size
+      ) {
         this.mode = 'NORMAL';
         return true;
       }
@@ -119,7 +167,7 @@ export class MiniMapUI {
     ctx: CanvasRenderingContext2D,
     screenWidth: number,
     screenHeight: number,
-    currentMap: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2',
+    currentMap: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3',
     tileMap: TileMap,
     dungeonMap: DungeonMap,
     player: Player,
@@ -130,7 +178,9 @@ export class MiniMapUI {
     guildX: number,
     guildY: number,
     blacksmithX: number,
-    blacksmithY: number
+    blacksmithY: number,
+    dungeonFloor2?: DungeonFloor2,
+    dungeonFloor3?: DungeonFloor3
   ): void {
     ctx.save();
 
@@ -162,11 +212,43 @@ export class MiniMapUI {
     if (!this.dungeonCanvas) {
       this.dungeonCanvas = this.generateDungeonCache(dungeonMap);
     }
+    if (dungeonFloor2 && !this.floor2Canvas) {
+      this.floor2Canvas = this.generateFloor2Cache(dungeonFloor2);
+    }
+    if (dungeonFloor3 && !this.floor3Canvas) {
+      this.floor3Canvas = this.generateFloor3Cache(dungeonFloor3);
+    }
 
     const isOverworld = currentMap === 'OVERWORLD';
-    const sourceCanvas = isOverworld ? this.overworldCanvas : this.dungeonCanvas;
-    const mapTileWidth = isOverworld ? CONSTANTS.MAP_WIDTH : dungeonMap.width;
-    const mapTileHeight = isOverworld ? CONSTANTS.MAP_HEIGHT : dungeonMap.height;
+    let sourceCanvas = this.overworldCanvas;
+    let mapTileWidth = CONSTANTS.MAP_WIDTH;
+    let mapTileHeight = CONSTANTS.MAP_HEIGHT;
+    let mapTitle = '🌍 Lembah';
+    let fullMapTitle = '🗺️ Peta Wilayah Lembah Serikat';
+    let titleColor = '#4ade80';
+
+    if (currentMap === 'DUNGEON') {
+      sourceCanvas = this.dungeonCanvas!;
+      mapTileWidth = dungeonMap.width;
+      mapTileHeight = dungeonMap.height;
+      mapTitle = '🏰 Goa Lt.1';
+      fullMapTitle = '🏰 Peta Goa Makam Purba (Lantai 1)';
+      titleColor = '#c084fc';
+    } else if (currentMap === 'DUNGEON_FLOOR_2') {
+      sourceCanvas = this.floor2Canvas || this.dungeonCanvas!;
+      mapTileWidth = dungeonFloor2 ? dungeonFloor2.width : 40;
+      mapTileHeight = dungeonFloor2 ? dungeonFloor2.height : 40;
+      mapTitle = '⚡ Makam Lt.2';
+      fullMapTitle = '⚡ Peta Labirin Titan Abisal (Lantai 2)';
+      titleColor = '#60a5fa';
+    } else if (currentMap === 'DUNGEON_FLOOR_3') {
+      sourceCanvas = this.floor3Canvas || this.dungeonCanvas!;
+      mapTileWidth = dungeonFloor3 ? dungeonFloor3.width : 40;
+      mapTileHeight = dungeonFloor3 ? dungeonFloor3.height : 40;
+      mapTitle = '🔥 Neraka Lt.3';
+      fullMapTitle = '🔥 Peta Sanctuarium Neraka Abisal (Lantai 3)';
+      titleColor = '#f97316';
+    }
 
     const pTileX = player.x / CONSTANTS.TILE_SIZE;
     const pTileY = player.y / CONSTANTS.TILE_SIZE;
@@ -188,11 +270,11 @@ export class MiniMapUI {
       ctx.stroke();
 
       // Judul Mini-map
-      ctx.fillStyle = isOverworld ? '#4ade80' : '#c084fc';
+      ctx.fillStyle = titleColor;
       ctx.font = 'bold 9px sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
-      ctx.fillText(isOverworld ? '🌍 Lembah' : '🏰 Goa B.T.', mx + 6, my + 4);
+      ctx.fillText(mapTitle, mx + 6, my + 4);
 
       // Label Perbesar
       ctx.fillStyle = '#94a3b8';
@@ -212,7 +294,7 @@ export class MiniMapUI {
       ctx.clip();
 
       // Gambar terrain radar
-      const viewTileRadius = 24; // Luas tile yang terlihat di radar
+      const viewTileRadius = 24;
       const srcX = Math.max(0, Math.min(mapTileWidth - viewTileRadius * 2, pTileX - viewTileRadius));
       const srcY = Math.max(0, Math.min(mapTileHeight - viewTileRadius * 2, pTileY - viewTileRadius));
       const srcW = viewTileRadius * 2;
@@ -224,7 +306,7 @@ export class MiniMapUI {
       const toRadarX = (tx: number) => radarX + ((tx - srcX) / srcW) * radarW;
       const toRadarY = (ty: number) => radarY + ((ty - srcY) / srcH) * radarH;
 
-      // 1. Tampilkan Titik Ikon Khusus di Overworld / Dungeon
+      // 1. Tampilkan Titik Ikon Khusus di Overworld / Dungeon Floors
       if (isOverworld) {
         // Guild Elaine (Emas)
         const gx = toRadarX(guildX / CONSTANTS.TILE_SIZE);
@@ -245,7 +327,7 @@ export class MiniMapUI {
         ctx.beginPath();
         ctx.arc(cx, cy, 3, 0, Math.PI * 2);
         ctx.fill();
-      } else {
+      } else if (currentMap === 'DUNGEON') {
         // Tangga Keluar Dungeon ke Permukaan (Ungu Bercahaya)
         const lx = toRadarX(dungeonMap.ladderX / CONSTANTS.TILE_SIZE);
         const ly = toRadarY(dungeonMap.ladderY / CONSTANTS.TILE_SIZE);
@@ -256,6 +338,42 @@ export class MiniMapUI {
         ctx.strokeStyle = '#fde047';
         ctx.lineWidth = 1;
         ctx.stroke();
+
+        // Tangga ke Lantai 2 jika terbuka
+        if (dungeonMap.isFloor2Unlocked) {
+          const s2x = toRadarX(dungeonMap.floor2StairsX / CONSTANTS.TILE_SIZE);
+          const s2y = toRadarY(dungeonMap.floor2StairsY / CONSTANTS.TILE_SIZE);
+          ctx.fillStyle = '#60a5fa';
+          ctx.beginPath();
+          ctx.arc(s2x, s2y, 3.5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (currentMap === 'DUNGEON_FLOOR_2' && dungeonFloor2) {
+        // Tangga kembali ke Lantai 1
+        const lx = toRadarX(dungeonFloor2.ladderUpX / CONSTANTS.TILE_SIZE);
+        const ly = toRadarY(dungeonFloor2.ladderUpY / CONSTANTS.TILE_SIZE);
+        ctx.fillStyle = '#c084fc';
+        ctx.beginPath();
+        ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Portal Lantai 3 jika terbuka
+        if (dungeonFloor2.isFloor3Unlocked) {
+          const px = toRadarX(dungeonFloor2.floor3PortalX / CONSTANTS.TILE_SIZE);
+          const py = toRadarY(dungeonFloor2.floor3PortalY / CONSTANTS.TILE_SIZE);
+          ctx.fillStyle = '#f97316';
+          ctx.beginPath();
+          ctx.arc(px, py, 4, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (currentMap === 'DUNGEON_FLOOR_3' && dungeonFloor3) {
+        // Portal kembali ke Lantai 2
+        const px = toRadarX(dungeonFloor3.portalUpX / CONSTANTS.TILE_SIZE);
+        const py = toRadarY(dungeonFloor3.portalUpY / CONSTANTS.TILE_SIZE);
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(px, py, 3.5, 0, Math.PI * 2);
+        ctx.fill();
       }
 
       // 2. Peti Harta Karun (Kuning Bintang)
@@ -277,14 +395,26 @@ export class MiniMapUI {
           const mx = toRadarX(m.x / CONSTANTS.TILE_SIZE);
           const my = toRadarY(m.y / CONSTANTS.TILE_SIZE);
           let mColor = `rgba(239, 68, 68, ${0.6 + pulse * 0.4})`;
-          if (m.type === 'BOSS_SLIME') {
-            mColor = '#f43f5e';
+          let radius = 2.2;
+
+          if (m.type === 'BOSS_INFERNAL_DRAGON') {
+            mColor = '#f97316';
+            radius = 4.5;
+          } else if (m.type === 'BOSS_TITAN_GOLEM') {
+            mColor = '#ef4444';
+            radius = 4;
+          } else if (m.type === 'BOSS_SLIME') {
+            mColor = '#ec4899';
+            radius = 3.5;
           } else if (isOverworld) {
             mColor = m.tier === 'MID' ? `rgba(245, 158, 11, ${0.7 + pulse * 0.3})` : `rgba(34, 197, 94, ${0.7 + pulse * 0.3})`;
+          } else if (m.tier === 'HIGH') {
+            mColor = `rgba(168, 85, 247, ${0.7 + pulse * 0.3})`;
           }
+
           ctx.fillStyle = mColor;
           ctx.beginPath();
-          ctx.arc(mx, my, m.type === 'BOSS_SLIME' ? 3.5 : 2.2, 0, Math.PI * 2);
+          ctx.arc(mx, my, radius, 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -348,7 +478,7 @@ export class MiniMapUI {
       ctx.font = 'bold 14px sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'middle';
-      ctx.fillText(isOverworld ? '🗺️ Peta Wilayah Lembah Serikat' : '🏰 Peta Goa Bawah Tanah Tingkat 1', mx + 16, my + 18);
+      ctx.fillText(fullMapTitle, mx + 16, my + 18);
 
       // Tombol Tutup (X)
       ctx.fillStyle = '#ef4444';
@@ -400,7 +530,7 @@ export class MiniMapUI {
         ctx.beginPath();
         ctx.arc(cx, cy, 5, 0, Math.PI * 2);
         ctx.fill();
-      } else {
+      } else if (currentMap === 'DUNGEON') {
         // Tangga Keluar Dungeon ke Permukaan
         const lx = toMapX(dungeonMap.ladderX / CONSTANTS.TILE_SIZE);
         const ly = toMapY(dungeonMap.ladderY / CONSTANTS.TILE_SIZE);
@@ -411,6 +541,38 @@ export class MiniMapUI {
         ctx.strokeStyle = '#fde047';
         ctx.lineWidth = 1.2;
         ctx.stroke();
+
+        if (dungeonMap.isFloor2Unlocked) {
+          const s2x = toMapX(dungeonMap.floor2StairsX / CONSTANTS.TILE_SIZE);
+          const s2y = toMapY(dungeonMap.floor2StairsY / CONSTANTS.TILE_SIZE);
+          ctx.fillStyle = '#60a5fa';
+          ctx.beginPath();
+          ctx.arc(s2x, s2y, 5, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (currentMap === 'DUNGEON_FLOOR_2' && dungeonFloor2) {
+        const lx = toMapX(dungeonFloor2.ladderUpX / CONSTANTS.TILE_SIZE);
+        const ly = toMapY(dungeonFloor2.ladderUpY / CONSTANTS.TILE_SIZE);
+        ctx.fillStyle = '#c084fc';
+        ctx.beginPath();
+        ctx.arc(lx, ly, 5, 0, Math.PI * 2);
+        ctx.fill();
+
+        if (dungeonFloor2.isFloor3Unlocked) {
+          const px = toMapX(dungeonFloor2.floor3PortalX / CONSTANTS.TILE_SIZE);
+          const py = toMapY(dungeonFloor2.floor3PortalY / CONSTANTS.TILE_SIZE);
+          ctx.fillStyle = '#f97316';
+          ctx.beginPath();
+          ctx.arc(px, py, 6, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      } else if (currentMap === 'DUNGEON_FLOOR_3' && dungeonFloor3) {
+        const px = toMapX(dungeonFloor3.portalUpX / CONSTANTS.TILE_SIZE);
+        const py = toMapY(dungeonFloor3.portalUpY / CONSTANTS.TILE_SIZE);
+        ctx.fillStyle = '#38bdf8';
+        ctx.beginPath();
+        ctx.arc(px, py, 5, 0, Math.PI * 2);
+        ctx.fill();
       }
 
       // Peti Harta Karun
@@ -431,14 +593,28 @@ export class MiniMapUI {
           const mxPos = toMapX(m.x / CONSTANTS.TILE_SIZE);
           const myPos = toMapY(m.y / CONSTANTS.TILE_SIZE);
           let mColor = '#ef4444';
-          if (m.type === 'BOSS_SLIME') {
-            mColor = '#f43f5e';
+          let mRadius = 2.5;
+
+          if (m.type === 'BOSS_INFERNAL_DRAGON') {
+            mColor = '#f97316';
+            mRadius = 6;
+          } else if (m.type === 'BOSS_TITAN_GOLEM') {
+            mColor = '#ef4444';
+            mRadius = 5.5;
+          } else if (m.type === 'BOSS_SLIME') {
+            mColor = '#ec4899';
+            mRadius = 5;
           } else if (isOverworld) {
             mColor = m.tier === 'MID' ? '#f59e0b' : '#22c55e';
+            mRadius = m.tier === 'MID' ? 3.5 : 2.5;
+          } else if (m.tier === 'HIGH') {
+            mColor = '#a855f7';
+            mRadius = 3.5;
           }
+
           ctx.fillStyle = mColor;
           ctx.beginPath();
-          ctx.arc(mxPos, myPos, m.type === 'BOSS_SLIME' ? 5 : (m.tier === 'MID' ? 3.5 : 2.5), 0, Math.PI * 2);
+          ctx.arc(mxPos, myPos, mRadius, 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -463,23 +639,43 @@ export class MiniMapUI {
       ctx.textAlign = 'left';
       ctx.fillText('📌 Keterangan Simbol:', legX, legY);
 
-      const legends = isOverworld
-        ? [
-            { color: '#38bdf8', label: 'Posisi Kamu (Hero)' },
-            { color: '#eab308', label: 'Resepsionis Guild Elaine' },
-            { color: '#f97316', label: 'Pandai Besi Brokk' },
-            { color: '#c084fc', label: 'Pintu Goa (Dungeon)' },
-            { color: '#fde047', label: 'Peti Harta Karun' },
-            { color: '#22c55e', label: 'Monster Tingkat Bawah (Rimba Luar)' },
-            { color: '#f59e0b', label: 'Monster Tingkat Menengah (Sekitar Dungeon)' }
-          ]
-        : [
-            { color: '#38bdf8', label: 'Posisi Kamu (Hero)' },
-            { color: '#c084fc', label: 'Tangga Keluar Permukaan' },
-            { color: '#f43f5e', label: 'Altar Raja Slime (Bos)' },
-            { color: '#ef4444', label: 'Monster Goa' },
-            { color: '#fde047', label: 'Peti Rahasia Bawah Tanah' }
-          ];
+      let legends = [
+        { color: '#38bdf8', label: 'Posisi Kamu (Hero)' },
+        { color: '#eab308', label: 'Resepsionis Guild Elaine' },
+        { color: '#f97316', label: 'Pandai Besi Brokk' },
+        { color: '#c084fc', label: 'Pintu Goa (Dungeon)' },
+        { color: '#fde047', label: 'Peti Harta Karun' },
+        { color: '#22c55e', label: 'Monster Tingkat Bawah (Rimba)' },
+        { color: '#f59e0b', label: 'Monster Tingkat Menengah (Goa)' }
+      ];
+
+      if (currentMap === 'DUNGEON') {
+        legends = [
+          { color: '#38bdf8', label: 'Posisi Kamu (Hero)' },
+          { color: '#c084fc', label: 'Tangga Keluar Permukaan' },
+          { color: '#60a5fa', label: 'Tangga Menuju Lantai 2' },
+          { color: '#ec4899', label: 'Altar Raja Slime (Bos Lt.1)' },
+          { color: '#ef4444', label: 'Monster Goa Makam' },
+          { color: '#fde047', label: 'Peti Harta Karun' }
+        ];
+      } else if (currentMap === 'DUNGEON_FLOOR_2') {
+        legends = [
+          { color: '#38bdf8', label: 'Posisi Kamu (Hero)' },
+          { color: '#c084fc', label: 'Tangga Kembali ke Lantai 1' },
+          { color: '#f97316', label: 'Portal Magma ke Lantai 3' },
+          { color: '#ef4444', label: 'Titan Abisal Kolosal (Bos Lt.2)' },
+          { color: '#a855f7', label: 'Monster Makam Kuno' },
+          { color: '#fde047', label: 'Peti Harta Karun' }
+        ];
+      } else if (currentMap === 'DUNGEON_FLOOR_3') {
+        legends = [
+          { color: '#38bdf8', label: 'Posisi Kamu (Hero)' },
+          { color: '#38bdf8', label: 'Portal Kembali ke Lantai 2' },
+          { color: '#f97316', label: 'Raja Naga Api Ignis (Bos Lt.3)' },
+          { color: '#a855f7', label: 'Monster Neraka Abisal' },
+          { color: '#fde047', label: 'Peti Harta Karun' }
+        ];
+      }
 
       legends.forEach((item, idx) => {
         const itemY = legY + 22 + idx * 24;

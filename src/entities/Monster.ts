@@ -11,7 +11,11 @@ export type MonsterType =
   | 'GOBLIN'
   | 'STONE_GOLEM'
   | 'CRYPT_SHADOW'
-  | 'BOSS_TITAN_GOLEM';
+  | 'BOSS_TITAN_GOLEM'
+  | 'INFERNO_HELLHOUND'
+  | 'ABYSSAL_REAPER'
+  | 'INFERNAL_KNIGHT'
+  | 'BOSS_INFERNAL_DRAGON';
 export type MonsterTier = 'LOW' | 'MID' | 'HIGH' | 'BOSS';
 
 export interface MonsterDrop {
@@ -208,6 +212,62 @@ export class Monster {
         this.tier = 'BOSS';
         this.tierLabel = 'Penguasa Makam Kuno';
         break;
+      case 'INFERNO_HELLHOUND':
+        this.name = 'Hellhound Api Abisal';
+        this.width = 26;
+        this.height = 20;
+        this.maxHp = 160;
+        this.level = 9;
+        this.attackPower = 28;
+        this.expReward = 140;
+        this.goldReward = 90;
+        this.speed = 56;
+        this.aggroRange = 130;
+        this.tier = 'HIGH';
+        this.tierLabel = 'Neraka Bawah';
+        break;
+      case 'ABYSSAL_REAPER':
+        this.name = 'Penyabit Jiwa Abisal';
+        this.width = 24;
+        this.height = 26;
+        this.maxHp = 210;
+        this.level = 11;
+        this.attackPower = 35;
+        this.expReward = 190;
+        this.goldReward = 125;
+        this.speed = 46;
+        this.aggroRange = 140;
+        this.tier = 'HIGH';
+        this.tierLabel = 'Neraka Elit';
+        break;
+      case 'INFERNAL_KNIGHT':
+        this.name = 'Ksatria Neraka Membara';
+        this.width = 26;
+        this.height = 28;
+        this.maxHp = 280;
+        this.level = 13;
+        this.attackPower = 42;
+        this.expReward = 260;
+        this.goldReward = 160;
+        this.speed = 38;
+        this.aggroRange = 135;
+        this.tier = 'HIGH';
+        this.tierLabel = 'Neraka Elit';
+        break;
+      case 'BOSS_INFERNAL_DRAGON':
+        this.name = 'Raja Naga Api Ignis';
+        this.width = 56;
+        this.height = 52;
+        this.maxHp = 1200;
+        this.level = 18;
+        this.attackPower = 52;
+        this.expReward = 1200;
+        this.goldReward = 800;
+        this.speed = 30;
+        this.aggroRange = 180;
+        this.tier = 'BOSS';
+        this.tierLabel = 'Penguasa Neraka Abisal';
+        break;
     }
 
     this.hp = this.maxHp;
@@ -222,14 +282,14 @@ export class Monster {
 
     // Knockback away from hit source
     const angle = Math.atan2((this.y + this.height / 2) - fromY, (this.x + this.width / 2) - fromX);
-    const isBigBoss = this.type === 'BOSS_SLIME' || this.type === 'BOSS_TITAN_GOLEM';
-    const knockForce = this.type === 'BOSS_TITAN_GOLEM' ? 25 : (this.type === 'BOSS_SLIME' ? 60 : 140);
+    const isBigBoss = this.type === 'BOSS_SLIME' || this.type === 'BOSS_TITAN_GOLEM' || this.type === 'BOSS_INFERNAL_DRAGON';
+    const knockForce = this.type === 'BOSS_INFERNAL_DRAGON' ? 15 : (this.type === 'BOSS_TITAN_GOLEM' ? 25 : (this.type === 'BOSS_SLIME' ? 60 : 140));
     this.knockbackX = Math.cos(angle) * knockForce;
     this.knockbackY = Math.sin(angle) * knockForce;
 
     if (this.hp <= 0) {
       this.isDead = true;
-      this.respawnTimer = isBigBoss ? (this.type === 'BOSS_TITAN_GOLEM' ? 60 : 45) : 22;
+      this.respawnTimer = this.type === 'BOSS_INFERNAL_DRAGON' ? 75 : (this.type === 'BOSS_TITAN_GOLEM' ? 60 : (this.type === 'BOSS_SLIME' ? 45 : 22));
       return { isDead: true, damage };
     }
 
@@ -281,6 +341,18 @@ export class Monster {
       }
     }
 
+    // Boss Infernal Dragon: Telegraph AOE Magma & Hellfire Breath
+    if (this.type === 'BOSS_INFERNAL_DRAGON' && onSpawnTelegraph && !this.isDead) {
+      if (distToPlayer <= 220 && this.telegraphCooldown <= 0) {
+        this.telegraphCooldown = 3.8;
+        // Meteor landing circle directly under player
+        onSpawnTelegraph(playerCenterX, playerCenterY, 54, 1.6, 52);
+        // Fiery breath blast cone in front of dragon
+        const breathX = myCenterX + (this.direction === 'left' ? -48 : 48);
+        onSpawnTelegraph(breathX, myCenterY + 6, 62, 2.0, 58);
+      }
+    }
+
     // 1. Knockback Decay
     let moveX = 0;
     let moveY = 0;
@@ -328,8 +400,8 @@ export class Monster {
           distToCompanion = Math.hypot(myCenterX - companionCenterX, myCenterY - companionCenterY);
         }
 
-        const isBoss = this.type === 'BOSS_SLIME' || this.type === 'BOSS_TITAN_GOLEM';
-        const attackReach = this.type === 'BOSS_TITAN_GOLEM' ? 36 : (this.type === 'BOSS_SLIME' ? 32 : 22);
+        const isBoss = this.type === 'BOSS_SLIME' || this.type === 'BOSS_TITAN_GOLEM' || this.type === 'BOSS_INFERNAL_DRAGON';
+        const attackReach = this.type === 'BOSS_INFERNAL_DRAGON' ? 44 : (this.type === 'BOSS_TITAN_GOLEM' ? 36 : (this.type === 'BOSS_SLIME' ? 32 : 22));
 
         // PRIORITAS 1: Serang Minion/Pet
         if (targetMinion) {
@@ -498,6 +570,18 @@ export class Monster {
         break;
       case 'BOSS_TITAN_GOLEM':
         this.renderBossTitanGolem(ctx, x, y, isFlashing);
+        break;
+      case 'INFERNO_HELLHOUND':
+        this.renderHellhound(ctx, x, y, isFlashing);
+        break;
+      case 'ABYSSAL_REAPER':
+        this.renderAbyssalReaper(ctx, x, y, isFlashing);
+        break;
+      case 'INFERNAL_KNIGHT':
+        this.renderInfernalKnight(ctx, x, y, isFlashing);
+        break;
+      case 'BOSS_INFERNAL_DRAGON':
+        this.renderBossDragon(ctx, x, y, isFlashing);
         break;
     }
 
@@ -924,9 +1008,251 @@ export class Monster {
     }
   }
 
+  private renderHellhound(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const isLeft = this.direction === 'left';
+    const run = Math.sin(this.animTimer * 10) * 3;
+
+    // Body
+    ctx.fillStyle = flash ? '#ffffff' : '#3f0f15';
+    ctx.fillRect(x + 4, y + 6, 18, 9);
+
+    if (!flash) {
+      // Fiery spine spikes
+      ctx.fillStyle = '#ea580c';
+      ctx.fillRect(x + 7, y + 3, 3, 3);
+      ctx.fillRect(x + 12, y + 2, 3, 4);
+      ctx.fillRect(x + 17, y + 4, 3, 3);
+
+      // Head & Snout
+      const headX = isLeft ? x + 1 : x + 16;
+      ctx.fillStyle = '#1c0709';
+      ctx.fillRect(headX, y + 3, 9, 8);
+
+      // Glowing Jaws & Eyes
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(isLeft ? headX + 1 : headX + 5, y + 5, 3, 2);
+      ctx.fillStyle = '#fde047';
+      ctx.fillRect(isLeft ? headX + 2 : headX + 6, y + 5, 1, 1);
+
+      // Legs (Prowling)
+      ctx.fillStyle = '#2a080c';
+      ctx.fillRect(x + 5, y + 14, 3, 6 + run);
+      ctx.fillRect(x + 10, y + 14, 3, 6 - run);
+      ctx.fillRect(x + 15, y + 14, 3, 6 + run);
+      ctx.fillRect(x + 19, y + 14, 3, 6 - run);
+
+      // Flaming tail
+      const tailX = isLeft ? x + 21 : x + 2;
+      ctx.fillStyle = '#ea580c';
+      ctx.fillRect(tailX, y + 4 - run, 3, 4);
+      ctx.fillStyle = '#fde047';
+      ctx.fillRect(tailX + (isLeft ? 1 : -1), y + 2 - run, 2, 2);
+    }
+  }
+
+  private renderAbyssalReaper(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const floatY = Math.sin(this.animTimer * 4.5) * 3;
+    const isLeft = this.direction === 'left';
+
+    // Demonic Shadow Aura
+    ctx.fillStyle = flash ? '#ffffff' : 'rgba(185, 28, 28, 0.35)';
+    ctx.beginPath();
+    ctx.arc(x + 12, y + 12 + floatY, 15, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Dark Bloodstained Cowl & Robe
+    ctx.fillStyle = flash ? '#ffffff' : '#18181b';
+    ctx.beginPath();
+    ctx.moveTo(x + 12, y + 2 + floatY);
+    ctx.lineTo(x + 22, y + 23 + floatY);
+    ctx.lineTo(x + 2, y + 23 + floatY);
+    ctx.closePath();
+    ctx.fill();
+
+    if (!flash) {
+      // Hood Interior
+      ctx.fillStyle = '#09090b';
+      ctx.beginPath();
+      ctx.ellipse(x + 12, y + 8 + floatY, 5, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Burning Hellfire Eyes
+      ctx.fillStyle = '#ea580c';
+      const eyeDir = isLeft ? -2 : 1;
+      ctx.fillRect(x + 10 + eyeDir, y + 7 + floatY, 2, 2);
+      ctx.fillRect(x + 13 + eyeDir, y + 7 + floatY, 2, 2);
+
+      // Floating Soul Scythe
+      const scytheX = isLeft ? x + 2 : x + 19;
+      // Scythe Staff
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(scytheX, y + 1 + floatY, 2, 24);
+      // Curved Molten Blade
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.moveTo(scytheX, y + 2 + floatY);
+      ctx.quadraticCurveTo(isLeft ? scytheX - 10 : scytheX + 10, y - 6 + floatY, isLeft ? scytheX - 8 : scytheX + 8, y + 8 + floatY);
+      ctx.lineTo(scytheX + 1, y + 4 + floatY);
+      ctx.fill();
+      ctx.fillStyle = '#fde047';
+      ctx.fillRect(isLeft ? scytheX - 6 : scytheX + 4, y + 1 + floatY, 3, 2);
+    }
+  }
+
+  private renderInfernalKnight(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const bob = Math.sin(this.animTimer * 5) * 1.5;
+    const isLeft = this.direction === 'left';
+
+    // Obsidian Plate Armor Torso
+    ctx.fillStyle = flash ? '#ffffff' : '#18181b';
+    ctx.fillRect(x + 6, y + 8 + bob, 14, 12);
+
+    if (!flash) {
+      // Horned Demonic Helm
+      ctx.fillStyle = '#09090b';
+      ctx.fillRect(x + 8, y + 2 + bob, 10, 8);
+      // Helm Horns
+      ctx.fillStyle = '#7f1d1d';
+      ctx.fillRect(x + 6, y + bob, 2, 4);
+      ctx.fillRect(x + 18, y + bob, 2, 4);
+
+      // Glowing Crimson Visor Slit
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(x + 10 + (isLeft ? -1 : 1), y + 6 + bob, 5, 2);
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(x + 11 + (isLeft ? -1 : 1), y + 6 + bob, 2, 1);
+
+      // Molten Breastplate Runes
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(x + 9, y + 12 + bob, 8, 2);
+      ctx.fillRect(x + 12, y + 10 + bob, 2, 6);
+
+      // Armored Greaves / Legs
+      ctx.fillStyle = '#27272a';
+      ctx.fillRect(x + 7, y + 20 + bob, 4, 7);
+      ctx.fillRect(x + 15, y + 20 + bob, 4, 7);
+
+      // Greatsword coated in Fire
+      const swordX = isLeft ? x : x + 21;
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillRect(swordX, y + 4 + bob, 3, 18);
+      // Fire flame edge
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(swordX + (isLeft ? -2 : 2), y + 6 + bob, 2, 12);
+      ctx.fillStyle = '#fde047';
+      ctx.fillRect(swordX, y + 2 + bob, 3, 3);
+    }
+  }
+
+  private renderBossDragon(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const flap = Math.sin(this.animTimer * 3.5) * 6;
+    const breathe = Math.sin(this.animTimer * 4) * 2;
+    const isLeft = this.direction === 'left';
+
+    ctx.save();
+    const wingY = y + 12;
+
+    // Wing Membrane (Molten Crimson)
+    ctx.fillStyle = flash ? '#ffffff' : '#7f1d1d';
+    ctx.beginPath();
+    ctx.moveTo(x + 28, y + 24);
+    ctx.lineTo(x - 2, wingY - 14 + flap);
+    ctx.lineTo(x + 4, wingY + 12);
+    ctx.lineTo(x + 18, wingY + 18);
+    ctx.fill();
+
+    ctx.beginPath();
+    ctx.moveTo(x + 28, y + 24);
+    ctx.lineTo(x + 58, wingY - 14 + flap);
+    ctx.lineTo(x + 52, wingY + 12);
+    ctx.lineTo(x + 38, wingY + 18);
+    ctx.fill();
+
+    // Wing Struts / Bones (Dark Obsidian)
+    ctx.strokeStyle = flash ? '#ffffff' : '#18181b';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(x + 28, y + 24);
+    ctx.lineTo(x - 2, wingY - 14 + flap);
+    ctx.moveTo(x + 28, y + 24);
+    ctx.lineTo(x + 58, wingY - 14 + flap);
+    ctx.stroke();
+
+    // Dragon Main Torso & Abyssal Scales
+    ctx.fillStyle = flash ? '#ffffff' : '#1c0709';
+    ctx.beginPath();
+    ctx.ellipse(x + 28, y + 28, 16, 14, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    if (!flash) {
+      // Molten Glowing Heart Core
+      const corePulse = (Math.sin(this.animTimer * 5) + 1) * 0.5;
+      const coreGrad = ctx.createRadialGradient(x + 28, y + 28, 2, x + 28, y + 28, 10);
+      coreGrad.addColorStop(0, '#fef08a');
+      coreGrad.addColorStop(0.5, '#f97316');
+      coreGrad.addColorStop(1, 'rgba(220, 38, 38, 0)');
+      ctx.fillStyle = coreGrad;
+      ctx.beginPath();
+      ctx.arc(x + 28, y + 28, 9 + corePulse * 2, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Dragon Head & Jaws
+      const headX = isLeft ? x + 10 : x + 36;
+      const headY = y + 10 + breathe;
+
+      ctx.fillStyle = '#0f0203';
+      ctx.beginPath();
+      ctx.ellipse(headX, headY, 11, 8, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Crown Horns
+      ctx.fillStyle = '#ea580c';
+      ctx.beginPath();
+      ctx.moveTo(headX, headY - 4);
+      ctx.lineTo(isLeft ? headX + 8 : headX - 8, headY - 16);
+      ctx.lineTo(isLeft ? headX - 2 : headX + 2, headY - 4);
+      ctx.fill();
+
+      // Flaming Reptilian Eye
+      ctx.fillStyle = '#fde047';
+      const eyeDir = isLeft ? -4 : 4;
+      ctx.fillRect(headX + eyeDir, headY - 2, 3, 3);
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(headX + eyeDir + 1, headY - 2, 1, 1);
+
+      // Flaming Snout / Fangs
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(isLeft ? headX - 10 : headX + 7, headY + 2, 3, 3);
+
+      // Claws & Talons
+      ctx.fillStyle = '#450a0a';
+      ctx.fillRect(x + 18, y + 40, 6, 8);
+      ctx.fillRect(x + 32, y + 40, 6, 8);
+      ctx.fillStyle = '#09090b';
+      ctx.fillRect(x + 16, y + 46, 3, 3);
+      ctx.fillRect(x + 22, y + 46, 3, 3);
+      ctx.fillRect(x + 30, y + 46, 3, 3);
+      ctx.fillRect(x + 36, y + 46, 3, 3);
+
+      // Barbed Dragon Tail
+      const tailX = isLeft ? x + 44 : x + 8;
+      ctx.strokeStyle = '#2a080c';
+      ctx.lineWidth = 3.5;
+      ctx.beginPath();
+      ctx.moveTo(x + 28, y + 36);
+      ctx.quadraticCurveTo(tailX + (isLeft ? 8 : -8), y + 42, tailX + (isLeft ? 14 : -14), y + 32);
+      ctx.stroke();
+      // Tail Flame
+      ctx.fillStyle = '#f97316';
+      ctx.fillRect(tailX + (isLeft ? 12 : -16), y + 28, 5, 5);
+    }
+
+    ctx.restore();
+  }
+
   private renderHealthBar(ctx: CanvasRenderingContext2D, x: number, y: number): void {
-    const isBoss = this.type === 'BOSS_SLIME' || this.type === 'BOSS_TITAN_GOLEM';
-    const barW = this.type === 'BOSS_TITAN_GOLEM' ? 56 : (this.type === 'BOSS_SLIME' ? 44 : 24);
+    const isBoss = this.type === 'BOSS_SLIME' || this.type === 'BOSS_TITAN_GOLEM' || this.type === 'BOSS_INFERNAL_DRAGON';
+    const barW = this.type === 'BOSS_INFERNAL_DRAGON' ? 68 : (this.type === 'BOSS_TITAN_GOLEM' ? 56 : (this.type === 'BOSS_SLIME' ? 44 : 24));
     const barH = isBoss ? 5 : 3;
     const barX = x + (this.width - barW) / 2;
     const barY = isBoss ? y - 16 : y - 8;
@@ -939,7 +1265,8 @@ export class Monster {
 
       // Warna bar berdasarkan tingkatan monster
       let barFillColor = '#22c55e'; // Hijau untuk tingkat bawah
-      if (this.type === 'BOSS_TITAN_GOLEM') barFillColor = '#ef4444';
+      if (this.type === 'BOSS_INFERNAL_DRAGON') barFillColor = '#f97316'; // Kobaran api raja naga
+      else if (this.type === 'BOSS_TITAN_GOLEM') barFillColor = '#ef4444';
       else if (this.type === 'BOSS_SLIME') barFillColor = '#ec4899';
       else if (this.tier === 'MID') barFillColor = '#f59e0b'; // Oranye/Amber untuk tingkat menengah
       else if (this.tier === 'HIGH') barFillColor = '#a855f7'; // Ungu untuk elit

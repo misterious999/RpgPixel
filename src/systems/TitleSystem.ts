@@ -46,6 +46,13 @@ export const TITLE_DEFINITIONS: Record<string, TitleDefinition> = {
     description: 'Telah menumbangkan Titan Abisal Kolosal di Lantai 2!',
     color: '#ef4444'
   },
+  DRAGON_SLAYER: {
+    id: 'DRAGON_SLAYER',
+    name: '« Pembantai Naga Abisal »',
+    badge: '🐲',
+    description: 'Telah menaklukkan Raja Naga Api Ignis di Lantai 3!',
+    color: '#f97316'
+  },
   GOURMET_CHEF: {
     id: 'GOURMET_CHEF',
     name: '« Koki Bintang Lima »',

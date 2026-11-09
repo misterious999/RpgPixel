@@ -31,6 +31,7 @@ import { VillageManager } from '../world/VillageManager.ts';
 import { AtmosphereEngine } from '../world/AtmosphereEngine.ts';
 import { TimeWeatherEngine } from '../world/TimeWeatherEngine.ts';
 import { DungeonFloor2 } from '../world/DungeonFloor2.ts';
+import { DungeonFloor3 } from '../world/DungeonFloor3.ts';
 import { Companion, CompanionType, COMPANIONS_DATA } from '../entities/Companion.ts';
 import { CookingSystem } from '../systems/CookingSystem.ts';
 import { Pet, PetType, PET_DATA } from '../systems/TamingSystem.ts';
@@ -63,7 +64,7 @@ export class Game {
   private activeSkillBanner: { name: string; color: string; role: string; timer: number; maxTimer: number } | null = null;
 
   // Map & Dungeon state
-  public currentMap: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' = 'OVERWORLD';
+  public currentMap: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' = 'OVERWORLD';
   private caveEntrance: CaveEntrance;
   private dungeonMap: DungeonMap;
   private dungeonMonsters: Monster[] = [];
@@ -74,6 +75,12 @@ export class Game {
   private dungeonFloor2: DungeonFloor2 = new DungeonFloor2();
   private floor2Monsters: Monster[] = [];
   private floor2WorldItems: WorldItem[] = [];
+
+  // Dungeon Floor 3 (Abyssal Infernal Sanctum)
+  private dungeonFloor3: DungeonFloor3 = new DungeonFloor3();
+  private floor3Monsters: Monster[] = [];
+  private floor3Chests: Chest[] = [];
+  private floor3WorldItems: WorldItem[] = [];
 
   // Day/Night & Weather Engine
   public timeWeatherEngine: TimeWeatherEngine = new TimeWeatherEngine();
@@ -201,6 +208,7 @@ export class Game {
     this.dungeonMap = new DungeonMap();
     this.spawnInitialDungeonObjects();
     this.initFloor2Monsters();
+    this.initFloor3Monsters();
 
     this.cookingSystem.onCookSuccess = () => {
       this.titleSystem.unlockTitle('GOURMET_CHEF', this.player, this.floatingText);
@@ -573,10 +581,16 @@ export class Game {
         }
       }
 
-      // Pulihkan lokasi map (Dungeon atau Overworld)
+      // Pulihkan lokasi map (Overworld, Dungeon Lt.1, Lt.2, atau Lt.3)
       if (data.currentMap === 'DUNGEON') {
         this.currentMap = 'DUNGEON';
         this.camera.setWorldBounds(this.dungeonMap.width * CONSTANTS.TILE_SIZE, this.dungeonMap.height * CONSTANTS.TILE_SIZE);
+      } else if (data.currentMap === 'DUNGEON_FLOOR_2') {
+        this.currentMap = 'DUNGEON_FLOOR_2';
+        this.camera.setWorldBounds(this.dungeonFloor2.width * CONSTANTS.TILE_SIZE, this.dungeonFloor2.height * CONSTANTS.TILE_SIZE);
+      } else if (data.currentMap === 'DUNGEON_FLOOR_3') {
+        this.currentMap = 'DUNGEON_FLOOR_3';
+        this.camera.setWorldBounds(this.dungeonFloor3.width * CONSTANTS.TILE_SIZE, this.dungeonFloor3.height * CONSTANTS.TILE_SIZE);
       } else {
         this.currentMap = 'OVERWORLD';
         this.camera.setWorldBounds(CONSTANTS.MAP_WIDTH * CONSTANTS.TILE_SIZE, CONSTANTS.MAP_HEIGHT * CONSTANTS.TILE_SIZE);
@@ -729,6 +743,14 @@ export class Game {
     this.player.y = this.dungeonMap.entranceSpawnY;
     this.player.direction = 'up';
 
+    if (this.companion) {
+      this.companion.x = this.player.x - 20;
+      this.companion.y = this.player.y;
+    }
+    if (this.pet) {
+      this.pet.x = this.player.x + 20;
+      this.pet.y = this.player.y;
+    }
     for (const minion of this.player.minions) {
       minion.x = this.player.x - 16;
       minion.y = this.player.y;
@@ -763,6 +785,14 @@ export class Game {
     }
     this.player.direction = 'down';
 
+    if (this.companion) {
+      this.companion.x = this.player.x - 20;
+      this.companion.y = this.player.y;
+    }
+    if (this.pet) {
+      this.pet.x = this.player.x + 20;
+      this.pet.y = this.player.y;
+    }
     for (const minion of this.player.minions) {
       minion.x = this.player.x - 16;
       minion.y = this.player.y;
@@ -796,6 +826,37 @@ export class Game {
       new Monster('f2_golem_4', 'STONE_GOLEM', 30 * ts + 4, 24 * ts + 4),
       // Boss Arena: Altar Golem Titan (Utara)
       new Monster('f2_boss_titan', 'BOSS_TITAN_GOLEM', 20 * ts, 8 * ts)
+    ];
+  }
+
+  private initFloor3Monsters(): void {
+    const ts = CONSTANTS.TILE_SIZE;
+    this.floor3Monsters = [
+      // West Hellhound Kennels (Lantai 3 Barat)
+      new Monster('f3_hellhound_1', 'INFERNO_HELLHOUND', 7 * ts, 18 * ts),
+      new Monster('f3_hellhound_2', 'INFERNO_HELLHOUND', 10 * ts, 22 * ts),
+      new Monster('f3_hellhound_3', 'INFERNO_HELLHOUND', 6 * ts, 23 * ts),
+      // East Reaper Sanctum (Lantai 3 Timur)
+      new Monster('f3_reaper_1', 'ABYSSAL_REAPER', 30 * ts, 18 * ts),
+      new Monster('f3_reaper_2', 'ABYSSAL_REAPER', 33 * ts, 22 * ts),
+      new Monster('f3_reaper_3', 'ABYSSAL_REAPER', 31 * ts, 24 * ts),
+      // Central Caldera Hall
+      new Monster('f3_hellhound_4', 'INFERNO_HELLHOUND', 16 * ts, 22 * ts),
+      new Monster('f3_reaper_4', 'ABYSSAL_REAPER', 24 * ts, 22 * ts),
+      new Monster('f3_knight_1', 'INFERNAL_KNIGHT', 20 * ts, 19 * ts),
+      // Molten Throne Corridor & Arena Guards (Utara)
+      new Monster('f3_knight_2', 'INFERNAL_KNIGHT', 15 * ts, 11 * ts),
+      new Monster('f3_knight_3', 'INFERNAL_KNIGHT', 25 * ts, 11 * ts),
+      new Monster('f3_knight_4', 'INFERNAL_KNIGHT', 20 * ts, 14 * ts),
+      // Boss: Raja Naga Api Ignis di Singgasana Magma (North Arena)
+      new Monster('f3_boss_dragon', 'BOSS_INFERNAL_DRAGON', 20 * ts - 12, 6 * ts)
+    ];
+
+    // Peti Harta Karun Lantai 3 (Ruang Rahasia Barat & Timur & Tahta Naga)
+    this.floor3Chests = [
+      new Chest('f3_chest_1', 5 * ts, 16 * ts, 'GOLD'),
+      new Chest('f3_chest_2', 34 * ts, 16 * ts, 'GOLD'),
+      new Chest('f3_chest_3', 20 * ts, 3 * ts, 'GOLD')
     ];
   }
 
@@ -864,6 +925,74 @@ export class Game {
 
     this.triggerMapTransition('「 GOA PURBA ABISAL · TINGKAT 1 」', '~ Kembali ke Ruang Altar Bos ~');
     this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '▲ Naik ke Lantai 1', '#c084fc', 3.0);
+    this.saveSessionSnapshot();
+  }
+
+  public enterFloor3(): void {
+    if (this.transitionCooldown > 0) return;
+    this.transitionCooldown = 1.0;
+    this.input.consumeAction();
+
+    this.currentMap = 'DUNGEON_FLOOR_3';
+    this.player.x = this.dungeonFloor3.entranceSpawnX;
+    this.player.y = this.dungeonFloor3.entranceSpawnY;
+    this.player.direction = 'up';
+
+    if (this.companion) {
+      this.companion.x = this.player.x - 20;
+      this.companion.y = this.player.y + 10;
+    }
+    if (this.pet) {
+      this.pet.x = this.player.x + 20;
+      this.pet.y = this.player.y + 10;
+    }
+    for (const minion of this.player.minions) {
+      minion.x = this.player.x - 16;
+      minion.y = this.player.y;
+    }
+
+    AudioEngine.playMapTransition(true);
+    AudioEngine.playBgm('DUNGEON');
+
+    this.camera.setWorldBounds(this.dungeonFloor3.width * CONSTANTS.TILE_SIZE, this.dungeonFloor3.height * CONSTANTS.TILE_SIZE);
+    this.camera.update(this.player.x, this.player.y);
+
+    this.triggerMapTransition('「 SANCTUARIUM NERAKA ABISAL · LANTAI 3 」', '~ Sarang Raja Naga Api Ignis & Ksatria Neraka ~');
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🔥 Memasuki Lantai 3 Neraka!', '#f97316', 3.0);
+    this.saveSessionSnapshot();
+  }
+
+  public exitFloor3(): void {
+    if (this.transitionCooldown > 0) return;
+    this.transitionCooldown = 1.0;
+    this.input.consumeAction();
+
+    this.currentMap = 'DUNGEON_FLOOR_2';
+    this.player.x = this.dungeonFloor2.floor3PortalX;
+    this.player.y = this.dungeonFloor2.floor3PortalY + 36;
+    this.player.direction = 'down';
+
+    if (this.companion) {
+      this.companion.x = this.player.x - 20;
+      this.companion.y = this.player.y;
+    }
+    if (this.pet) {
+      this.pet.x = this.player.x + 20;
+      this.pet.y = this.player.y;
+    }
+    for (const minion of this.player.minions) {
+      minion.x = this.player.x - 16;
+      minion.y = this.player.y;
+    }
+
+    AudioEngine.playMapTransition(false);
+    AudioEngine.playBgm('DUNGEON');
+
+    this.camera.setWorldBounds(this.dungeonFloor2.width * CONSTANTS.TILE_SIZE, this.dungeonFloor2.height * CONSTANTS.TILE_SIZE);
+    this.camera.update(this.player.x, this.player.y);
+
+    this.triggerMapTransition('「 MAKAM KUNO RUINAS ABISAL · LANTAI 2 」', '~ Kembali ke Labirin Titan Abisal ~');
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '▲ Naik ke Lantai 2', '#60a5fa', 3.0);
     this.saveSessionSnapshot();
   }
 
@@ -1065,7 +1194,7 @@ export class Game {
     );
 
     // Audio Monster Defeated
-    AudioEngine.playMonsterDefeated(monster.type === 'BOSS_SLIME' || monster.type === 'BOSS_TITAN_GOLEM');
+    AudioEngine.playMonsterDefeated(monster.type === 'BOSS_SLIME' || monster.type === 'BOSS_TITAN_GOLEM' || monster.type === 'BOSS_INFERNAL_DRAGON');
 
     // Update Progres Misi Petualang (Quest Manager)
     this.questManager.onMonsterDefeated(monster.type, this.floatingText, this.player.x, this.player.y);
@@ -1075,7 +1204,9 @@ export class Game {
         ? this.worldItems
         : this.currentMap === 'DUNGEON'
         ? this.dungeonWorldItems
-        : this.floor2WorldItems;
+        : this.currentMap === 'DUNGEON_FLOOR_2'
+        ? this.floor2WorldItems
+        : this.floor3WorldItems;
 
     // Drop Koin Emas
     targetItems.push(new WorldItem(monster.x + 4, monster.y + 4, 'GOLD_COIN', goldReward));
@@ -1131,8 +1262,34 @@ export class Game {
       targetItems.push(new WorldItem(monster.x + 28, monster.y + 16, 'MANA_POTION', 4));
       targetItems.push(new WorldItem(monster.x + 18, monster.y + 20, 'GOLD_COIN', 300));
 
+      this.dungeonFloor2.isFloor3Unlocked = true;
       this.titleSystem.unlockTitle('TITAN_BREAKER', this.player, this.floatingText);
       this.floatingText.spawn(monster.x + 16, monster.y - 32, '⚡ TITAN ABISAL DITUMBANGKAN!!', '#ef4444', 4.0);
+      this.floatingText.spawn(monster.x + 16, monster.y - 48, '🔥 PORTAL KE LANTAI 3 TERBUKA!', '#f97316', 4.0);
+    }
+    // --- DUNGEON FLOOR 3 MONSTER DROPS ---
+    else if (monster.type === 'INFERNO_HELLHOUND') {
+      if (Math.random() < 0.8) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'WOLF_MEAT', 2));
+      if (Math.random() < 0.5) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DARK_IRON_ORE', 2));
+      if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'HEALTH_POTION', 1));
+    } else if (monster.type === 'ABYSSAL_REAPER') {
+      if (Math.random() < 0.6) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DUNGEON_GEM', 1));
+      if (Math.random() < 0.6) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 3));
+      if (Math.random() < 0.5) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'MANA_POTION', 2));
+    } else if (monster.type === 'INFERNAL_KNIGHT') {
+      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DARK_IRON_ORE', 3));
+      if (Math.random() < 0.6) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'ANCIENT_BONE', 2));
+      if (Math.random() < 0.5) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'HEALTH_POTION', 2));
+    } else if (monster.type === 'BOSS_INFERNAL_DRAGON') {
+      targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 8));
+      targetItems.push(new WorldItem(monster.x + 28, monster.y + 12, 'DARK_IRON_ORE', 12));
+      targetItems.push(new WorldItem(monster.x + 10, monster.y + 16, 'HEALTH_POTION', 6));
+      targetItems.push(new WorldItem(monster.x + 36, monster.y + 16, 'MANA_POTION', 6));
+      targetItems.push(new WorldItem(monster.x + 20, monster.y + 24, 'GOLD_COIN', 600));
+
+      this.titleSystem.unlockTitle('DRAGON_SLAYER', this.player, this.floatingText);
+      this.floatingText.spawn(monster.x + 20, monster.y - 32, '👑 RAJA NAGA IGNIS DIKALAHKAN!!', '#facc15', 5.0);
+      this.floatingText.spawn(monster.x + 20, monster.y - 50, '🏆 SELURUH LANTAI DUNGEON TELAH DITAKLUKKAN!', '#f97316', 5.5);
     }
 
     // Title Progress Tracking
@@ -1313,9 +1470,17 @@ export class Game {
         const cey = this.caveEntrance.y;
         if (box.x < cex + 16 && box.x + box.width > cex && box.y < cey + 60 && box.y + box.height > cey + 24) return true;
         if (box.x < cex + 64 && box.x + box.width > cex + 48 && box.y < cey + 60 && box.y + box.height > cey + 24) return true;
-      } else {
-        // Dungeon Chests
+      } else if (this.currentMap === 'DUNGEON') {
+        // Dungeon Floor 1 Chests
         for (const chest of this.dungeonChests) {
+          const cb = chest.getCollisionBox();
+          if (box.x < cb.x + cb.width && box.x + box.width > cb.x && box.y < cb.y + cb.height && box.y + box.height > cb.y) {
+            return true;
+          }
+        }
+      } else if (this.currentMap === 'DUNGEON_FLOOR_3') {
+        // Dungeon Floor 3 Chests
+        for (const chest of this.floor3Chests) {
           const cb = chest.getCollisionBox();
           if (box.x < cb.x + cb.width && box.x + box.width > cb.x && box.y < cb.y + cb.height && box.y + box.height > cb.y) {
             return true;
@@ -1330,7 +1495,14 @@ export class Game {
       ? { axisX: 0, axisY: 0, isAction: false, isSprint: false }
       : this.input.state;
 
-    const activeMap = this.currentMap === 'OVERWORLD' ? this.tileMap : (this.currentMap === 'DUNGEON' ? this.dungeonMap : this.dungeonFloor2);
+    const activeMap =
+      this.currentMap === 'OVERWORLD'
+        ? this.tileMap
+        : this.currentMap === 'DUNGEON'
+        ? this.dungeonMap
+        : this.currentMap === 'DUNGEON_FLOOR_2'
+        ? this.dungeonFloor2
+        : this.dungeonFloor3;
     this.player.update(deltaTime, activeInput, activeMap, obstacleChecker);
 
     // Update Day/Night & Weather Engine
@@ -1355,7 +1527,9 @@ export class Game {
           ? this.overworldMonsters
           : this.currentMap === 'DUNGEON'
           ? this.dungeonMonsters
-          : this.floor2Monsters;
+          : this.currentMap === 'DUNGEON_FLOOR_2'
+          ? this.floor2Monsters
+          : this.floor3Monsters;
 
       this.companion.update(deltaTime, this.player, activeMonsters, this.floatingText, (targetM) => {
         if (targetM.isDead) this.handleMonsterDefeated(targetM);
@@ -1369,7 +1543,9 @@ export class Game {
           ? this.worldItems
           : this.currentMap === 'DUNGEON'
           ? this.dungeonWorldItems
-          : this.floor2WorldItems;
+          : this.currentMap === 'DUNGEON_FLOOR_2'
+          ? this.floor2WorldItems
+          : this.floor3WorldItems;
 
       this.pet.update(deltaTime, this.player, activeItems, this.floatingText);
     }
@@ -1721,12 +1897,20 @@ export class Game {
 
       // 9.5 Minion AI Combat & Escort Update
       this.updateMinions(deltaTime, this.dungeonMonsters);
-    } else {
+    } else if (this.currentMap === 'DUNGEON_FLOOR_2') {
       // --- DUNGEON FLOOR 2 SPECIFIC UPDATES (Ancient Crypt Ruins) ---
       // Ladder up to Floor 1
       if (this.dungeonFloor2.isNearLadderUp(playerCenterX, playerCenterY)) {
         if (this.input.isActionJustPressed || this.input.state.isAction) {
           this.exitFloor2();
+          return;
+        }
+      }
+
+      // Portal down to Floor 3 (Infernal Sanctum)
+      if (this.dungeonFloor2.isNearFloor3Portal(playerCenterX, playerCenterY)) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.enterFloor3();
           return;
         }
       }
@@ -1855,6 +2039,164 @@ export class Game {
 
       // Minions vs Floor 2 Monsters
       this.updateMinions(deltaTime, this.floor2Monsters);
+    } else if (this.currentMap === 'DUNGEON_FLOOR_3') {
+      // --- DUNGEON FLOOR 3 SPECIFIC UPDATES (Sanctuarium Neraka Abisal) ---
+      // Portal up to Floor 2
+      if (this.dungeonFloor3.isNearPortalUp(playerCenterX, playerCenterY)) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.exitFloor3();
+          return;
+        }
+      }
+
+      // Update Floor 3 Engine & Floating Embers & Telegraphs
+      this.dungeonFloor3.update(deltaTime);
+
+      // Check Boss AOE Telegraph Ground Damage (Meteors & Hellfire Breath)
+      for (const tel of this.dungeonFloor3.telegraphs) {
+        if (tel.timer <= deltaTime * 1.5) {
+          const dist = Math.hypot(playerCenterX - tel.x, playerCenterY - tel.y);
+          if (dist < tel.radius) {
+            const died = this.player.takeDamage(tel.damage);
+            this.camera.shake(6.0, 0.25);
+            AudioEngine.playHit(true);
+            this.floatingText.spawn(this.player.x + 12, this.player.y - 14, `🔥 METEOR NERAKA -${tel.damage}!`, '#f97316', 2.2);
+            if (died) {
+              AudioEngine.playPlayerDeath();
+              this.exitDungeon(true);
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur di Lantai 3 dan dipulangkan ke Kota!', '#ef4444', 3.5);
+              return;
+            }
+          }
+        }
+      }
+
+      // Floor 3 World Items
+      for (let i = this.floor3WorldItems.length - 1; i >= 0; i--) {
+        const item = this.floor3WorldItems[i];
+        const pickedUp = item.update(deltaTime, playerCenterX, playerCenterY);
+        if (pickedUp) {
+          const added = this.player.inventory.addItem(item.itemId, item.count);
+          if (added > 0) {
+            AudioEngine.playItemPickup(item.itemId === 'GOLD_COIN');
+            const def = ITEM_DEFINITIONS[item.itemId];
+            const name = def ? def.name : item.itemId;
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `+${added} ${name}`, '#38bdf8');
+            this.floor3WorldItems.splice(i, 1);
+          }
+        }
+      }
+
+      // Floor 3 Chests
+      for (const chest of this.floor3Chests) {
+        chest.update(deltaTime);
+        if (!chest.isOpen && chest.isNearPlayer(playerCenterX, playerCenterY)) {
+          if (this.input.isActionJustPressed || this.input.state.isAction) {
+            this.input.consumeAction();
+            AudioEngine.playChestOpen();
+            const rewards = chest.open();
+            for (const reward of rewards) {
+              this.player.inventory.addItem(reward.itemId, reward.count);
+              const def = ITEM_DEFINITIONS[reward.itemId];
+              const name = def ? def.name : reward.itemId;
+              this.floatingText.spawn(chest.x + 11, chest.y - 12, `+${reward.count} ${name}`, '#facc15', 2.0);
+            }
+            const leveledUp = this.player.addExp(80);
+            if (leveledUp) {
+              AudioEngine.playLevelUp();
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 30, `🎉 LEVEL UP! Sekarang Lv. ${this.player.level}`, '#fde047', 3.0);
+            }
+            this.authUI.saveCurrentGame();
+          }
+        }
+      }
+
+      // Floor 3 Monsters AI & Boss Telegraph Hook
+      for (const monster of this.floor3Monsters) {
+        monster.update(
+          deltaTime,
+          playerCenterX,
+          playerCenterY,
+          (tx, ty) => this.dungeonFloor3.isTileSolid(tx, ty),
+          (atk) => {
+            const died = this.player.takeDamage(atk);
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `-${atk} HP`, '#ef4444');
+            AudioEngine.playPlayerHurt();
+            this.camera.shake(4.8, 0.20);
+            if (died) {
+              AudioEngine.playPlayerDeath();
+              this.exitDungeon(true);
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur di Lantai 3 dan dipulangkan ke Kota!', '#ef4444', 3.5);
+            }
+          },
+          this.player.minions,
+          (minion, atk) => {
+            this.handleMonsterAttackMinion(monster, minion, atk);
+          },
+          this.companion,
+          (tx, ty, r, dur, dmg) => {
+            this.dungeonFloor3.spawnTelegraph(tx, ty, r, dur, dmg);
+          }
+        );
+      }
+
+      // Player Melee Attack vs Floor 3 Monsters
+      const attackHitbox = this.player.getAttackHitbox();
+      if (attackHitbox) {
+        for (const monster of this.floor3Monsters) {
+          if (monster.isDead) continue;
+          if (this.hitMonstersInSwing.has(monster.id)) continue;
+          if (
+            attackHitbox.x < monster.x + monster.width &&
+            attackHitbox.x + attackHitbox.width > monster.x &&
+            attackHitbox.y < monster.y + monster.height &&
+            attackHitbox.y + attackHitbox.height > monster.y
+          ) {
+            this.hitMonstersInSwing.add(monster.id);
+            const { damage, isCrit } = this.player.getAttackDamage();
+            const res = monster.takeDamage(damage, playerCenterX, playerCenterY);
+            AudioEngine.playHit(isCrit);
+            this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, isCrit);
+            this.camera.shake(isCrit ? 5.2 : 2.8, isCrit ? 0.18 : 0.11);
+            const hitText = isCrit ? `💥 CRIT -${res.damage}!` : `-${res.damage}`;
+            this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 10, hitText, isCrit ? '#facc15' : '#ffffff');
+            if (res.isDead) {
+              this.handleMonsterDefeated(monster);
+            }
+          }
+        }
+      }
+
+      // Skills vs Floor 3 Monsters
+      for (const effect of this.skillBarUI.visualEffects) {
+        if (['slash', 'fire', 'ice', 'lightning', 'wind', 'earth', 'abnormal', 'shockwave', 'grasp', 'devour'].includes(effect.type)) {
+          for (const monster of this.floor3Monsters) {
+            if (monster.isDead) continue;
+            const dist = Math.hypot(effect.x - (monster.x + monster.width / 2), effect.y - (monster.y + monster.height / 2));
+            if (dist < effect.radius + monster.width / 2) {
+              if (monster.hurtTimer <= 0) {
+                let spellDmg = 34 + this.player.level * 4.2;
+                if (effect.type === 'abnormal' || effect.type === 'devour') {
+                  spellDmg = 82 + this.player.level * 7.2;
+                } else if (effect.type === 'grasp' || effect.type === 'shockwave') {
+                  spellDmg = 42 + this.player.level * 4.8;
+                }
+                const res = monster.takeDamage(spellDmg, effect.x, effect.y);
+                AudioEngine.playHit(false);
+                this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, true);
+                this.camera.shake(3.6, 0.14);
+                this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 8, `✨ -${res.damage}`, effect.color);
+                if (res.isDead) {
+                  this.handleMonsterDefeated(monster);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Minions vs Floor 3 Monsters
+      this.updateMinions(deltaTime, this.floor3Monsters);
     }
 
     // 10. Update Floating Text Notifications
@@ -1871,9 +2213,14 @@ export class Game {
       const tileX = Math.floor(this.player.x / CONSTANTS.TILE_SIZE);
       const tileY = Math.floor(this.player.y / CONSTANTS.TILE_SIZE);
       const roleInfo = ROLE_INFO[this.player.role];
-      const locText = this.currentMap === 'DUNGEON'
-        ? '<span style="color: #c084fc; font-weight: 700;">🏰 Goa Bawah Tanah (Dungeon Lt.1)</span>'
-        : '<span style="color: #4ade80; font-weight: 700;">🌍 Lembah Serikat (Overworld)</span>';
+      const locText =
+        this.currentMap === 'DUNGEON'
+          ? '<span style="color: #c084fc; font-weight: 700;">🏰 Goa Makam Kuno (Lt.1)</span>'
+          : this.currentMap === 'DUNGEON_FLOOR_2'
+          ? '<span style="color: #60a5fa; font-weight: 700;">⚡ Labirin Titan Abisal (Lt.2)</span>'
+          : this.currentMap === 'DUNGEON_FLOOR_3'
+          ? '<span style="color: #f97316; font-weight: 700;">🔥 Neraka Abisal Ignis (Lt.3)</span>'
+          : '<span style="color: #4ade80; font-weight: 700;">🌍 Lembah Serikat (Overworld)</span>';
 
       const weapon = this.player.equippedWeapon;
       const weaponHtml = weapon
@@ -2047,7 +2394,7 @@ export class Game {
 
       // 8. Render Floating Texts (Crisp & Readable above darkness)
       this.floatingText.render(ctx);
-    } else {
+    } else if (this.currentMap === 'DUNGEON_FLOOR_2') {
       // --- DUNGEON FLOOR 2 WORLD RENDERING (Ancient Crypt Ruins) ---
       // 1. Render Floor 2 Map Tiles & Boss Telegraph Red Warning Zones
       this.dungeonFloor2.render(ctx, this.camera);
@@ -2080,6 +2427,53 @@ export class Game {
 
       // 6. Render Floor 2 Atmospheric Darkness & Purple Torch Light
       this.dungeonFloor2.renderAtmosphericLighting(ctx, this.camera, playerCenterX, playerCenterY);
+
+      // 7. Render Abyssal Mana Motes
+      this.atmosphereEngine.render(ctx);
+
+      // 8. Render Combat Hit Sparks
+      this.renderHitSparks(ctx);
+
+      // 9. Render Floating Texts
+      this.floatingText.render(ctx);
+    } else if (this.currentMap === 'DUNGEON_FLOOR_3') {
+      // --- DUNGEON FLOOR 3 WORLD RENDERING (Sanctuarium Neraka Abisal) ---
+      // 1. Render Floor 3 Map Tiles & Boss Danger Telegraphs & Floating Embers
+      this.dungeonFloor3.render(ctx, this.camera);
+
+      // 2. Render Floor 3 Items
+      for (const item of this.floor3WorldItems) {
+        item.render(ctx);
+      }
+
+      // 2.5 Render Floor 3 Chests
+      for (const chest of this.floor3Chests) {
+        chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY));
+      }
+
+      // 3. Render Floor 3 Monsters (Hellhound, Abyssal Reaper, Infernal Knight, Ignis Dragon)
+      for (const monster of this.floor3Monsters) {
+        monster.render(ctx);
+      }
+
+      // Render Companion if active
+      if (this.companion) {
+        this.companion.render(ctx);
+      }
+
+      // Render Pet if active
+      if (this.pet) {
+        this.pet.render(ctx);
+      }
+
+      // 4. Render Player
+      this.player.render(ctx);
+
+      // 5. Render Spell Effects
+      this.skillBarUI.renderWorldEffects(ctx);
+
+      // 6. Render Floor 3 Atmospheric Darkness & Hellfire Braziers Light
+      this.dungeonFloor3.renderAtmosphericLighting(ctx, this.camera, playerCenterX, playerCenterY);
 
       // 7. Render Abyssal Mana Motes
       this.atmosphereEngine.render(ctx);
@@ -2126,8 +2520,22 @@ export class Game {
       this.controlSettingsModal.render(ctx, screenWidth, screenHeight);
 
       // 12.1 Render Mini-Map UI
-      const activeMonsters = this.currentMap === 'OVERWORLD' ? this.overworldMonsters : this.dungeonMonsters;
-      const activeChests = this.currentMap === 'OVERWORLD' ? this.chests : this.dungeonChests;
+      const activeMonsters =
+        this.currentMap === 'OVERWORLD'
+          ? this.overworldMonsters
+          : this.currentMap === 'DUNGEON'
+          ? this.dungeonMonsters
+          : this.currentMap === 'DUNGEON_FLOOR_2'
+          ? this.floor2Monsters
+          : this.floor3Monsters;
+
+      const activeChests =
+        this.currentMap === 'OVERWORLD'
+          ? this.chests
+          : this.currentMap === 'DUNGEON'
+          ? this.dungeonChests
+          : this.floor3Chests;
+
       this.miniMapUI.render(
         ctx,
         screenWidth,
@@ -2143,7 +2551,9 @@ export class Game {
         this.guildNPC.x,
         this.guildNPC.y,
         this.blacksmithNPC.x,
-        this.blacksmithNPC.y
+        this.blacksmithNPC.y,
+        this.dungeonFloor2,
+        this.dungeonFloor3
       );
 
       // 12.2 Render Active Quest HUD Tracker (Top-Left)
@@ -2325,6 +2735,42 @@ export class Game {
         ctx.textAlign = 'center';
         ctx.fillStyle = '#93c5fd';
         ctx.fillText('Tekan [A] Naik Tangga (Lantai 1) ▲', pX + pW / 2, pY + 17);
+        ctx.restore();
+      }
+
+      if (this.currentMap === 'DUNGEON_FLOOR_2' && this.dungeonFloor2.isNearFloor3Portal(playerCenterX, playerCenterY)) {
+        ctx.save();
+        const pW = 230;
+        const pH = 26;
+        const pX = (screenWidth - pW) / 2;
+        const pY = screenHeight - 90;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillRect(pX, pY, pW, pH);
+        ctx.strokeStyle = '#f97316';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(pX, pY, pW, pH);
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fdba74';
+        ctx.fillText('Tekan [A] Masuk Neraka Abisal Lantai 3 ▼', pX + pW / 2, pY + 17);
+        ctx.restore();
+      }
+
+      if (this.currentMap === 'DUNGEON_FLOOR_3' && this.dungeonFloor3.isNearPortalUp(playerCenterX, playerCenterY)) {
+        ctx.save();
+        const pW = 210;
+        const pH = 26;
+        const pX = (screenWidth - pW) / 2;
+        const pY = screenHeight - 90;
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+        ctx.fillRect(pX, pY, pW, pH);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(pX, pY, pW, pH);
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#93c5fd';
+        ctx.fillText('Tekan [A] Masuk Portal Naik (Lantai 2) ▲', pX + pW / 2, pY + 17);
         ctx.restore();
       }
 
@@ -2606,9 +3052,18 @@ export class Game {
     const cardX = (screenWidth - cardW) / 2;
     const cardY = 50;
 
-    const isDungeon = this.currentMap === 'DUNGEON';
-    const mainTheme = isDungeon ? '#c084fc' : '#facc15';
-    const subTheme = isDungeon ? '#f0abfc' : '#fef08a';
+    let mainTheme = '#facc15';
+    let subTheme = '#fef08a';
+    if (this.currentMap === 'DUNGEON') {
+      mainTheme = '#c084fc';
+      subTheme = '#f0abfc';
+    } else if (this.currentMap === 'DUNGEON_FLOOR_2') {
+      mainTheme = '#60a5fa';
+      subTheme = '#93c5fd';
+    } else if (this.currentMap === 'DUNGEON_FLOOR_3') {
+      mainTheme = '#f97316';
+      subTheme = '#fdba74';
+    }
 
     // Dark anime backdrop with gold/purple trim
     ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
