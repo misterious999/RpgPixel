@@ -84,9 +84,9 @@ export class TileMap {
     }
 
     // --- WILAYAH PEDESAAN KHUSUS (DESA SERIKAT OAKHAVEN) ---
-    // Bersihkan area pedesaan (x=41..59, y=42..56) dari pohon liar penghalang bangunan
-    for (let vy = 42; vy <= 56; vy++) {
-      for (let vx = 41; vx <= 59; vx++) {
+    // Bersihkan seluruh area pedesaan (x=39..61, y=41..58) dari pohon liar penghalang jalan & bangunan
+    for (let vy = 41; vy <= 58; vy++) {
+      for (let vx = 39; vx <= 61; vx++) {
         if (this.tiles[vy] && this.tiles[vy][vx] !== undefined) {
           this.tiles[vy][vx] = TileType.GRASS;
         }
@@ -104,7 +104,7 @@ export class TileMap {
     }
 
     // Jalan Raya Utama Desa (Utara-Selatan & Barat-Timur)
-    for (let vy = 42; vy <= 56; vy++) {
+    for (let vy = 41; vy <= 58; vy++) {
       for (let vx = 49; vx <= 51; vx++) {
         if (this.tiles[vy] && this.tiles[vy][vx] !== undefined) {
           this.tiles[vy][vx] = TileType.COBBLESTONE;
@@ -147,14 +147,79 @@ export class TileMap {
       }
     }
 
-    // Jalan setapak megah langsung menuju pintu gua (y=33..36, x=49..51)
-    for (let py = 33; py <= 36; py++) {
-      for (let px = 49; px <= 51; px++) {
-        if (this.tiles[py] && this.tiles[py][px] !== undefined) {
-          this.tiles[py][px] = TileType.DIRT_PATH;
+    // --- HUTAN RIMBA SEKITAR DUNGEON (DUNGEON PERIMETER FOREST) ---
+    // Hutan lebat alami yang mengelilingi tebing dan gerbang dungeon gua (y=16..40, x=38..76)
+    // Dilengkapi jalan setapak menuju pintu gua, pelataran gerbang, serta glade rimba luar
+    for (let fy = 16; fy <= 40; fy++) {
+      for (let fx = 38; fx <= 76; fx++) {
+        const cur = this.tiles[fy]?.[fx];
+        // Lindungi air danau, pasir pantai, tebing tebing gua, dan batas utara desa
+        if (cur === TileType.WATER || cur === TileType.SAND || cur === TileType.CLIFF) {
+          continue;
+        }
+        if (fy >= 41) {
+          continue; // Jangan merambah ke wilayah pedesaan
+        }
+
+        // 1. Jalan Raya Utama ke Dungeon Gua (x=49..51, y=32..40)
+        if (fx >= 49 && fx <= 51 && fy >= 32 && fy <= 40) {
+          this.tiles[fy][fx] = TileType.DIRT_PATH;
+          continue;
+        }
+
+        // 2. Pelataran / Halaman Terbuka Depan Pintu Gerbang Dungeon (x=47..53, y=32..35)
+        // Area pertempuran monster tingkat menengah penjaga pintu dungeon
+        if (fx >= 47 && fx <= 53 && fy >= 32 && fy <= 35) {
+          this.tiles[fy][fx] = (fx + fy) % 2 === 0 ? TileType.GRASS : TileType.DIRT_PATH;
+          continue;
+        }
+
+        // 3. Jalur Jalan Setapak Rimba (Navigasi petualang leluasa)
+        // Jalur cabang timur dari jalan raya ke rimba luar (y=36..37, x=52..72)
+        const isTrailEast = (fy === 36 || fy === 37) && (fx >= 52 && fx <= 72);
+        // Jalur rimba utara-timur (x=64..65, y=20..37)
+        const isTrailNorthEast = (fx === 64 || fx === 65) && (fy >= 20 && fy <= 37);
+        // Jalur lereng timur gua menuju punggungan atas (x=55..56, y=22..34)
+        const isTrailNorthGate = (fx === 55 || fx === 56) && (fy >= 22 && fy <= 34);
+        // Jalur punggungan hutan utara di atas tebing (y=22..23, x=55..66)
+        const isTrailNorthRidge = (fy === 22 || fy === 23) && (fx >= 55 && fx <= 66);
+
+        if (isTrailEast || isTrailNorthEast || isTrailNorthGate || isTrailNorthRidge) {
+          this.tiles[fy][fx] = TileType.DIRT_PATH;
+          continue;
+        }
+
+        // 4. Padang Terbuka Glade Rimba Luar (Tempat Monster Tingkat Bawah Slime Hutan)
+        // Jaraknya agak jauh dari dungeon (> 12-20 tile dari pintu dungeon)
+        const isGladeEast1 = Math.hypot(fx - 64, fy - 30) < 3.5; // Glade Rimba Timur 1
+        const isGladeEast2 = Math.hypot(fx - 70, fy - 25) < 3.2; // Glade Rimba Timur Jauh
+        const isGladeSouthEast = Math.hypot(fx - 66, fy - 38) < 3.2; // Glade Rimba Tenggara
+        const isGladeNorth = Math.hypot(fx - 58, fy - 20) < 3.2; // Glade Rimba Utara
+        const isGladeNorthEast = Math.hypot(fx - 66, fy - 21) < 3.0; // Glade Rimba Timur Laut
+
+        if (isGladeEast1 || isGladeEast2 || isGladeSouthEast || isGladeNorth || isGladeNorthEast) {
+          this.tiles[fy][fx] = (fx * 3 + fy * 7) % 3 === 0 ? TileType.GRASS_FLOWERS : TileType.GRASS;
+          continue;
+        }
+
+        // 5. Pohon Rimbun Hutan Rimba Sekitar Dungeon
+        const fNoise = Math.sin(fx * 0.45) * Math.cos(fy * 0.45) + Math.sin(fx * 0.22 + fy * 0.31) * 0.55;
+        if (fNoise > -0.15) {
+          this.tiles[fy][fx] = TileType.TREE;
+        } else if (fNoise < -0.42) {
+          this.tiles[fy][fx] = TileType.GRASS_FLOWERS;
+        } else {
+          this.tiles[fy][fx] = TileType.GRASS;
         }
       }
     }
+  }
+
+  /**
+   * Menentukan apakah koordinat tile berada di dalam wilayah aman pedesaan
+   */
+  public isVillageArea(tileX: number, tileY: number): boolean {
+    return tileX >= 39 && tileX <= 61 && tileY >= 41 && tileY <= 59;
   }
 
   public getTileAt(tileX: number, tileY: number): TileType {

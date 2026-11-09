@@ -1,6 +1,7 @@
 import { CONSTANTS } from '../core/Constants.ts';
 
 export type MonsterType = 'SLIME' | 'BAT' | 'SKELETON' | 'BOSS_SLIME' | 'FOREST_SLIME' | 'WILD_WOLF' | 'GOBLIN';
+export type MonsterTier = 'LOW' | 'MID' | 'HIGH' | 'BOSS';
 
 export interface MonsterDrop {
   itemId: string;
@@ -11,6 +12,9 @@ export class Monster {
   public id: string;
   public name: string;
   public type: MonsterType;
+  public tier: MonsterTier = 'LOW';
+  public tierLabel: string = 'Tingkat Bawah';
+  public isPlayerNearby: boolean = false;
   public x: number;
   public y: number;
   public spawnX: number;
@@ -63,6 +67,8 @@ export class Monster {
         this.goldReward = 16;
         this.speed = 36;
         this.aggroRange = 100;
+        this.tier = 'LOW';
+        this.tierLabel = 'Goa Bawah';
         break;
       case 'BAT':
         this.name = 'Kelelawar Gua';
@@ -75,6 +81,8 @@ export class Monster {
         this.goldReward = 14;
         this.speed = 60;
         this.aggroRange = 120;
+        this.tier = 'MID';
+        this.tierLabel = 'Goa Menengah';
         break;
       case 'SKELETON':
         this.name = 'Prajurit Tengkorak';
@@ -87,6 +95,8 @@ export class Monster {
         this.goldReward = 38;
         this.speed = 42;
         this.aggroRange = 115;
+        this.tier = 'HIGH';
+        this.tierLabel = 'Goa Elit';
         break;
       case 'BOSS_SLIME':
         this.name = 'Raja Slime Purba';
@@ -99,6 +109,8 @@ export class Monster {
         this.goldReward = 180;
         this.speed = 32;
         this.aggroRange = 140;
+        this.tier = 'BOSS';
+        this.tierLabel = 'Penguasa Goa';
         break;
       case 'FOREST_SLIME':
         this.name = 'Slime Hutan';
@@ -111,30 +123,36 @@ export class Monster {
         this.goldReward = 12;
         this.speed = 32;
         this.aggroRange = 90;
+        this.tier = 'LOW';
+        this.tierLabel = 'Tingkat Bawah';
         break;
       case 'WILD_WOLF':
-        this.name = 'Serigala Liar';
+        this.name = 'Serigala Rimba';
         this.width = 24;
         this.height = 20;
-        this.maxHp = 60;
+        this.maxHp = 65;
         this.level = 3;
         this.attackPower = 11;
         this.expReward = 38;
         this.goldReward = 22;
-        this.speed = 52;
-        this.aggroRange = 125;
+        this.speed = 48;
+        this.aggroRange = 120;
+        this.tier = 'MID';
+        this.tierLabel = 'Tingkat Menengah';
         break;
       case 'GOBLIN':
-        this.name = 'Pengintai Goblin';
+        this.name = 'Pengawal Gerbang Goblin';
         this.width = 20;
         this.height = 24;
-        this.maxHp = 75;
+        this.maxHp = 80;
         this.level = 4;
-        this.attackPower = 13;
-        this.expReward = 48;
-        this.goldReward = 30;
+        this.attackPower = 14;
+        this.expReward = 50;
+        this.goldReward = 32;
         this.speed = 40;
         this.aggroRange = 110;
+        this.tier = 'MID';
+        this.tierLabel = 'Tingkat Menengah';
         break;
     }
 
@@ -190,6 +208,7 @@ export class Monster {
     const myCenterX = this.x + this.width / 2;
     const myCenterY = this.y + this.height / 2;
     const distToPlayer = Math.hypot(myCenterX - playerCenterX, myCenterY - playerCenterY);
+    this.isPlayerNearby = distToPlayer < 75;
 
     // 1. Knockback Decay
     let moveX = 0;
@@ -201,9 +220,17 @@ export class Monster {
       this.knockbackX *= 0.82;
       this.knockbackY *= 0.82;
     } else {
-      // 2. AI Movement: Aggro Chase or Idle Wander
-      if (distToPlayer <= this.aggroRange) {
-        // Chase Player
+      // Leash to Spawn Area (Mencegah monster hutan rimba berkeliaran keluar habitatnya)
+      const distFromSpawn = Math.hypot(this.x - this.spawnX, this.y - this.spawnY);
+
+      if (distFromSpawn > 220) {
+        // Monster terlalu jauh dari habitat aslinya, tarik kembali perlahan
+        const backAngle = Math.atan2(this.spawnY - this.y, this.spawnX - this.x);
+        moveX = Math.cos(backAngle) * this.speed * deltaTime * 0.85;
+        moveY = Math.sin(backAngle) * this.speed * deltaTime * 0.85;
+        this.direction = (this.spawnX < this.x) ? 'left' : 'right';
+      } else if (distToPlayer <= this.aggroRange) {
+        // 2. AI Movement: Aggro Chase
         const angle = Math.atan2(playerCenterY - myCenterY, playerCenterX - myCenterX);
         moveX = Math.cos(angle) * this.speed * deltaTime;
         moveY = Math.sin(angle) * this.speed * deltaTime;
@@ -235,10 +262,18 @@ export class Monster {
       }
     }
 
-    // 3. Collision with Map Walls
+    // 3. Collision with Map Walls & Village Safe Zone Protection
     const nextX = this.x + moveX;
     const nextY = this.y + moveY;
     const ts = CONSTANTS.TILE_SIZE;
+    const isOverworld = this.type === 'FOREST_SLIME' || this.type === 'WILD_WOLF' || this.type === 'GOBLIN';
+
+    // Helper cek batas pedesaan (x: 39..61, y: 41..59)
+    const isInsideVillage = (px: number, py: number) => {
+      const tx = px / ts;
+      const ty = py / ts;
+      return tx >= 39 && tx <= 61 && ty >= 41 && ty <= 59;
+    };
 
     // Check X move
     const leftTileX = Math.floor(nextX / ts);
@@ -256,6 +291,12 @@ export class Monster {
       }
       if (collidesX) break;
     }
+
+    // Larangan mutlak monster masuk pedesaan pada sumbu X
+    if (isOverworld && (isInsideVillage(nextX, this.y) || isInsideVillage(nextX + this.width, this.y + this.height))) {
+      collidesX = true;
+    }
+
     if (!collidesX) this.x = nextX;
 
     // Check Y move
@@ -274,6 +315,12 @@ export class Monster {
       }
       if (collidesY) break;
     }
+
+    // Larangan mutlak monster masuk pedesaan pada sumbu Y
+    if (isOverworld && (isInsideVillage(this.x, nextY) || isInsideVillage(this.x + this.width, nextY + this.height))) {
+      collidesY = true;
+    }
+
     if (!collidesY) this.y = nextY;
   }
 
@@ -589,28 +636,40 @@ export class Monster {
 
   private renderHealthBar(ctx: CanvasRenderingContext2D, x: number, y: number): void {
     const isBoss = this.type === 'BOSS_SLIME';
-    const barW = isBoss ? 44 : 22;
+    const barW = isBoss ? 44 : 24;
     const barH = isBoss ? 5 : 3;
     const barX = x + (this.width - barW) / 2;
-    const barY = isBoss ? y - 16 : y - 7;
+    const barY = isBoss ? y - 16 : y - 8;
 
-    // Show name and health bar if boss or damaged
-    if (this.hp < this.maxHp || isBoss) {
-      // Background
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+    // Tampilkan bar & nama jika bos, terluka, atau pemain berada di dekatnya
+    if (this.hp < this.maxHp || isBoss || this.isPlayerNearby) {
+      // Background container
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.88)';
       ctx.fillRect(barX - 1, barY - 1, barW + 2, barH + 2);
+
+      // Warna bar berdasarkan tingkatan monster
+      let barFillColor = '#22c55e'; // Hijau untuk tingkat bawah
+      if (isBoss) barFillColor = '#ec4899';
+      else if (this.tier === 'MID') barFillColor = '#f59e0b'; // Oranye/Amber untuk tingkat menengah
+      else if (this.tier === 'HIGH') barFillColor = '#a855f7'; // Ungu untuk elit
 
       // Health fill
       const pct = Math.min(1, Math.max(0, this.hp / this.maxHp));
-      ctx.fillStyle = isBoss ? '#ec4899' : '#22c55e';
+      ctx.fillStyle = barFillColor;
       ctx.fillRect(barX, barY, Math.round(barW * pct), barH);
 
-      // Name / Level Tag
+      // Name & Tier Level Tag
       ctx.font = 'bold 7.5px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillStyle = isBoss ? '#facc15' : '#cbd5e1';
+
+      let tagColor = '#86efac'; // Hijau terang
+      if (isBoss) tagColor = '#facc15';
+      else if (this.tier === 'MID') tagColor = '#fcd34d'; // Kuning keemasan untuk tingkat menengah
+      else if (this.tier === 'HIGH') tagColor = '#d8b4fe';
+
+      ctx.fillStyle = tagColor;
       ctx.fillText(
-        isBoss ? `👑 ${this.name} [Lv.${this.level}]` : `[Lv.${this.level}] ${this.name}`,
+        isBoss ? `👑 ${this.name} [Lv.${this.level}]` : `[Lv.${this.level} • ${this.tierLabel}] ${this.name}`,
         x + this.width / 2,
         barY - 3
       );

@@ -557,25 +557,28 @@ export class Game {
     }
 
     // 3. Overworld Wild Monsters
+    // Pedesaan Oakhaven (x=39..61, y=41..59) bebas monster sepenuhnya!
     this.overworldMonsters = [
-      // Slime Hutan (Padang Rumput Barat & Utara)
-      new Monster('ow_slime_1', 'FOREST_SLIME', 42 * ts + 6, 42 * ts + 6),
-      new Monster('ow_slime_2', 'FOREST_SLIME', 58 * ts + 6, 44 * ts + 6),
-      new Monster('ow_slime_3', 'FOREST_SLIME', 44 * ts + 6, 60 * ts + 6),
-      new Monster('ow_slime_4', 'FOREST_SLIME', 56 * ts + 6, 58 * ts + 6),
-      new Monster('ow_slime_5', 'FOREST_SLIME', 38 * ts + 6, 52 * ts + 6),
+      // --- MONSTER TINGKAT BAWAH (Hanya muncul di dalam hutan yang jaraknya agak jauh dari dungeon) ---
+      // Slime Hutan menghuni padang glade rimba luar (Rimba Timur & Rimba Utara, jarak > 14 tile dari pintu dungeon)
+      new Monster('ow_slime_1', 'FOREST_SLIME', 64 * ts + 10, 30 * ts + 10), // Glade Rimba Timur 1
+      new Monster('ow_slime_2', 'FOREST_SLIME', 65 * ts + 8, 32 * ts + 12),  // Glade Rimba Timur 1
+      new Monster('ow_slime_3', 'FOREST_SLIME', 70 * ts + 8, 25 * ts + 10),  // Glade Rimba Timur Jauh
+      new Monster('ow_slime_4', 'FOREST_SLIME', 66 * ts + 10, 38 * ts + 8),  // Glade Rimba Tenggara
+      new Monster('ow_slime_5', 'FOREST_SLIME', 58 * ts + 8, 20 * ts + 10),  // Glade Rimba Utara
+      new Monster('ow_slime_6', 'FOREST_SLIME', 66 * ts + 10, 21 * ts + 10), // Glade Rimba Timur Laut
 
-      // Serigala Liar (Hutan Belantara Timur & Selatan)
-      new Monster('ow_wolf_1', 'WILD_WOLF', 66 * ts + 6, 45 * ts + 6),
-      new Monster('ow_wolf_2', 'WILD_WOLF', 68 * ts + 6, 55 * ts + 6),
-      new Monster('ow_wolf_3', 'WILD_WOLF', 34 * ts + 6, 65 * ts + 6),
-      new Monster('ow_wolf_4', 'WILD_WOLF', 52 * ts + 6, 70 * ts + 6),
+      // --- MONSTER TINGKAT MENENGAH (Hanya muncul di sekitar dungeon dan pintu dungeon) ---
+      // Pengawal Gerbang Goblin berjaga ketat di pelataran pintu masuk gua dungeon
+      new Monster('ow_gate_gob_1', 'GOBLIN', 47 * ts + 8, 33 * ts + 12),  // Sisi kiri pintu masuk dungeon
+      new Monster('ow_gate_gob_2', 'GOBLIN', 52 * ts + 8, 33 * ts + 12),  // Sisi kanan pintu masuk dungeon
+      new Monster('ow_gate_gob_3', 'GOBLIN', 49 * ts + 16, 35 * ts + 6),  // Pelataran depan pintu gua dungeon
 
-      // Pengintai Goblin (Lereng Tebing & Danau)
-      new Monster('ow_gob_1', 'GOBLIN', 32 * ts + 6, 36 * ts + 6),
-      new Monster('ow_gob_2', 'GOBLIN', 72 * ts + 6, 38 * ts + 6),
-      new Monster('ow_gob_3', 'GOBLIN', 62 * ts + 6, 68 * ts + 6),
-      new Monster('ow_gob_4', 'GOBLIN', 35 * ts + 6, 45 * ts + 6)
+      // Serigala Rimba mengintai di hutan rimba yang melingkari sekitar dungeon
+      new Monster('ow_dung_wolf_1', 'WILD_WOLF', 55 * ts + 8, 32 * ts + 10), // Hutan timur dekat gerbang gua
+      new Monster('ow_dung_wolf_2', 'WILD_WOLF', 56 * ts + 8, 35 * ts + 8),  // Hutan tenggara gerbang gua
+      new Monster('ow_dung_wolf_3', 'WILD_WOLF', 45 * ts + 8, 35 * ts + 10), // Hutan barat daya dekat danau
+      new Monster('ow_dung_wolf_4', 'WILD_WOLF', 54 * ts + 8, 27 * ts + 10)  // Lereng hutan utara di atas tebing gua
     ];
   }
 

@@ -259,15 +259,21 @@ export class MiniMapUI {
         }
       }
 
-      // 3. Monster (Titik Merah Berkedip)
+      // 3. Monster (Titik Berkedip sesuai Tingkat Monster)
       const pulse = (Math.sin(this.pulseTimer * 8) + 1) * 0.5;
       for (const m of monsters) {
         if (!m.isDead) {
           const mx = toRadarX(m.x / CONSTANTS.TILE_SIZE);
           const my = toRadarY(m.y / CONSTANTS.TILE_SIZE);
-          ctx.fillStyle = m.type === 'BOSS_SLIME' ? '#f43f5e' : `rgba(239, 68, 68, ${0.6 + pulse * 0.4})`;
+          let mColor = `rgba(239, 68, 68, ${0.6 + pulse * 0.4})`;
+          if (m.type === 'BOSS_SLIME') {
+            mColor = '#f43f5e';
+          } else if (isOverworld) {
+            mColor = m.tier === 'MID' ? `rgba(245, 158, 11, ${0.7 + pulse * 0.3})` : `rgba(34, 197, 94, ${0.7 + pulse * 0.3})`;
+          }
+          ctx.fillStyle = mColor;
           ctx.beginPath();
-          ctx.arc(mx, my, m.type === 'BOSS_SLIME' ? 3.5 : 2, 0, Math.PI * 2);
+          ctx.arc(mx, my, m.type === 'BOSS_SLIME' ? 3.5 : 2.2, 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -402,9 +408,15 @@ export class MiniMapUI {
         if (!m.isDead) {
           const mxPos = toMapX(m.x / CONSTANTS.TILE_SIZE);
           const myPos = toMapY(m.y / CONSTANTS.TILE_SIZE);
-          ctx.fillStyle = m.type === 'BOSS_SLIME' ? '#f43f5e' : '#ef4444';
+          let mColor = '#ef4444';
+          if (m.type === 'BOSS_SLIME') {
+            mColor = '#f43f5e';
+          } else if (isOverworld) {
+            mColor = m.tier === 'MID' ? '#f59e0b' : '#22c55e';
+          }
+          ctx.fillStyle = mColor;
           ctx.beginPath();
-          ctx.arc(mxPos, myPos, m.type === 'BOSS_SLIME' ? 5 : 2.5, 0, Math.PI * 2);
+          ctx.arc(mxPos, myPos, m.type === 'BOSS_SLIME' ? 5 : (m.tier === 'MID' ? 3.5 : 2.5), 0, Math.PI * 2);
           ctx.fill();
         }
       }
@@ -436,7 +448,8 @@ export class MiniMapUI {
             { color: '#f97316', label: 'Pandai Besi Brokk' },
             { color: '#c084fc', label: 'Pintu Goa (Dungeon)' },
             { color: '#fde047', label: 'Peti Harta Karun' },
-            { color: '#ef4444', label: 'Monster Rimba Liar' }
+            { color: '#22c55e', label: 'Monster Tingkat Bawah (Rimba Luar)' },
+            { color: '#f59e0b', label: 'Monster Tingkat Menengah (Sekitar Dungeon)' }
           ]
         : [
             { color: '#38bdf8', label: 'Posisi Kamu (Hero)' },

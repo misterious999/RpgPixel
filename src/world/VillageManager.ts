@@ -62,7 +62,7 @@ export class VillageManager {
         accentColor: '#38bdf8',
         avatarIcon: '🛡️',
         greetingText: 'Salam damai, Petualang! Wilayah lembah butuh pahlawan tangguh.',
-        loreText: 'Kawanan Slime Hutan di luar lembah mulai meresahkan pedagang dan warga desa kita. Kalahkan 4 Slime Hutan demi menjaga ketertiban perbatasan!',
+        loreText: 'Kawanan Slime Hutan tingkat bawah di pedalaman rimba luar mulai meresahkan pengelana. Kalahkan 4 Slime Hutan demi menjaga ketertiban perbatasan!',
         actionPrompt: '🛡️ [A] Misi Slime'
       },
       {
@@ -79,8 +79,8 @@ export class VillageManager {
         outfitColor: '#166534', // Forest green tunic & bow
         accentColor: '#4ade80',
         avatarIcon: '🏹',
-        greetingText: 'Ssshh... Angin timur membawa kabar tentang serigala liar yang ganas.',
-        loreText: 'Kawanan serigala buas bersembunyi di hutan lebat sebelah timur desa. Kalahkan 3 Serigala Liar untuk melindungi para pengelana!',
+        greetingText: 'Ssshh... Angin utara membawa kabar tentang serigala rimba yang ganas.',
+        loreText: 'Kawanan serigala buas tingkat menengah mengintai di hutan lebat sekitar gerbang dungeon. Kalahkan 3 Serigala Rimba untuk membuka jalan para pengelana!',
         actionPrompt: '🏹 [A] Misi Serigala'
       },
       {
