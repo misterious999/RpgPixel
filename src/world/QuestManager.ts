@@ -31,8 +31,8 @@ export const INITIAL_QUESTS: Quest[] = [
     id: 'Q_FOREST_SLIME',
     title: 'Perburuan Slime Lembah',
     category: 'OVERWORLD',
-    giver: 'Resepsionis Elaine',
-    description: 'Slime liar mulai berkembang biak di padang rumput luar kota. Basmi 4 Slime Hutan untuk menjaga ketertiban perbatasan.',
+    giver: 'Kapten Galahad',
+    description: 'Slime liar mulai berkembang biak di padang rumput luar desa. Basmi 4 Slime Hutan untuk menjaga ketertiban perbatasan.',
     targetType: 'KILL_MONSTER',
     targetMonsterType: 'FOREST_SLIME',
     targetName: 'Slime Hutan',
@@ -49,8 +49,8 @@ export const INITIAL_QUESTS: Quest[] = [
     id: 'Q_WILD_WOLF',
     title: 'Ancaman Rimba Liar',
     category: 'OVERWORLD',
-    giver: 'Resepsionis Elaine',
-    description: 'Kawanan serigala buas mengintai dari dalam hutan lebat timur. Kalahkan 3 Serigala Liar demi keselamatan para pengelana.',
+    giver: 'Ranger Kaelen',
+    description: 'Kawanan serigala buas mengintai dari dalam hutan lebat timur desa. Kalahkan 3 Serigala Liar demi keselamatan para pengelana.',
     targetType: 'KILL_MONSTER',
     targetMonsterType: 'WILD_WOLF',
     targetName: 'Serigala Liar',
@@ -67,8 +67,8 @@ export const INITIAL_QUESTS: Quest[] = [
     id: 'Q_DUNGEON_BAT',
     title: 'Eksplorasi Goa Purba',
     category: 'DUNGEON',
-    giver: 'Resepsionis Elaine',
-    description: 'Goa bawah tanah dipenuhi kelelawar misterius dan hawa dingin. Jelajahi goa terdalam dan basmi 4 Kelelawar Gua.',
+    giver: 'Cendekiawan Ignis',
+    description: 'Goa bawah tanah dipenuhi kelelawar misterius dan hawa dingin abisal. Jelajahi goa terdalam dan basmi 4 Kelelawar Gua.',
     targetType: 'KILL_MONSTER',
     targetMonsterType: 'BAT',
     targetName: 'Kelelawar Gua',
@@ -85,8 +85,8 @@ export const INITIAL_QUESTS: Quest[] = [
     id: 'Q_BOSS_SLIME',
     title: 'Tantangan Raja Goa Purba',
     category: 'BOSS',
-    giver: 'Resepsionis Elaine',
-    description: 'Di altar utara goa terdalam bersemayam Raja Slime Purba berkekuatan dahsyat. Kalahkan sang penguasa kegelapan goa!',
+    giver: 'Morgrim sang Jagal',
+    description: 'Di ruang altar utara goa terdalam bersemayam Raja Slime Purba berkekuatan dahsyat. Kalahkan sang penguasa kegelapan goa!',
     targetType: 'KILL_MONSTER',
     targetMonsterType: 'BOSS_SLIME',
     targetName: 'Raja Slime Purba',
@@ -137,7 +137,7 @@ export class QuestManager {
           q.status = 'COMPLETED';
           AudioEngine.playQuestComplete();
           if (floatingText) {
-            floatingText.spawn(playerX + 10, playerY - 30, `📜 Misi Selesai: [${q.title}]! Lapor ke Elaine.`, '#facc15', 3.5);
+            floatingText.spawn(playerX + 10, playerY - 30, `📜 Misi Selesai: [${q.title}]! Lapor ke ${q.giver} di Serikat.`, '#facc15', 3.5);
           }
         } else {
           if (floatingText) {

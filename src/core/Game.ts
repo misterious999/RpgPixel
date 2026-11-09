@@ -27,6 +27,7 @@ import { AudioEngine } from '../audio/AudioEngine.ts';
 import { QuestManager } from '../world/QuestManager.ts';
 import { MiniMapUI } from '../ui/MiniMapUI.ts';
 import { QuickPotionUI } from '../ui/QuickPotionUI.ts';
+import { VillageManager } from '../world/VillageManager.ts';
 
 export class Game {
   private canvas: HTMLCanvasElement;
@@ -64,6 +65,7 @@ export class Game {
   private overworldMonsters: Monster[] = [];
   private guildNPC: GuildNPC;
   private blacksmithNPC: BlacksmithNPC;
+  public villageManager: VillageManager;
 
   private lastTime: number = 0;
   private fps: number = 60;
@@ -129,6 +131,7 @@ export class Game {
 
     AudioEngine.init();
     this.questManager = new QuestManager();
+    this.villageManager = new VillageManager(this.questManager);
     this.miniMapUI = new MiniMapUI();
     this.quickPotionUI = new QuickPotionUI(this.player, this.floatingText);
 
@@ -239,6 +242,11 @@ export class Game {
           PwaService.promptInstall();
           return true;
         }
+      }
+
+      // 0. Village Dialog Modal
+      if (this.currentMap === 'OVERWORLD' && this.villageManager.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight, this.player, this.floatingText)) {
+        return true;
       }
 
       // 1. Guild Appraisal Modal
@@ -805,6 +813,7 @@ export class Game {
     if (this.currentMap === 'OVERWORLD') {
       this.tileMap.update(deltaTime);
       this.caveEntrance.update(deltaTime);
+      this.villageManager.update(deltaTime);
     } else {
       this.dungeonMap.update(deltaTime);
     }
@@ -817,6 +826,10 @@ export class Game {
 
     const obstacleChecker = (box: { x: number; y: number; width: number; height: number }) => {
       if (this.currentMap === 'OVERWORLD') {
+        // Village structures (fountain, cottages, fences)
+        if (this.villageManager.checkCollision(box)) {
+          return true;
+        }
         // Overworld Chests
         for (const chest of this.chests) {
           const cb = chest.getCollisionBox();
@@ -853,8 +866,8 @@ export class Game {
       return false;
     };
 
-    // Freeze player if inventory, guild dialog, blacksmith workshop, control settings, or notification modal is open
-    const activeInput = (this.inventoryUI.isOpen || this.guildNPC.isAppraisalOpen || this.blacksmithNPC.isWorkshopOpen || this.controlSettingsModal.isOpen || NotificationModal.isOpen)
+    // Freeze player if inventory, village dialog, guild dialog, blacksmith workshop, control settings, or notification modal is open
+    const activeInput = (this.inventoryUI.isOpen || this.villageManager.isDialogOpen || this.guildNPC.isAppraisalOpen || this.blacksmithNPC.isWorkshopOpen || this.controlSettingsModal.isOpen || NotificationModal.isOpen)
       ? { axisX: 0, axisY: 0, isAction: false, isSprint: false }
       : this.input.state;
 
@@ -866,6 +879,14 @@ export class Game {
 
     // --- OVERWORLD SPECIFIC UPDATES ---
     if (this.currentMap === 'OVERWORLD') {
+      // Village NPC Interaction (Quest & Ambient)
+      if (!this.villageManager.isDialogOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen) {
+        const nearNPC = this.villageManager.isNearAnyNPC(playerCenterX, playerCenterY);
+        if (nearNPC && this.input.state.isAction) {
+          this.villageManager.openDialog(nearNPC);
+        }
+      }
+
       // 4. Guild Receptionist Interaction
       if (!this.guildNPC.isAppraisalOpen && this.guildNPC.isNearPlayer(playerCenterX, playerCenterY)) {
         if (this.input.state.isAction) {
@@ -1194,6 +1215,9 @@ export class Game {
       // 1. Render Overworld TileMap
       this.tileMap.render(ctx, this.camera);
 
+      // Render Desa Khusus Oakhaven (Bangunan, Balai Serikat, Air Mancur, Lampu & NPC)
+      this.villageManager.renderEnvironment(ctx, playerCenterX, playerCenterY);
+
       // 2. Render Cave / Dungeon Entrance
       this.caveEntrance.render(ctx, this.caveEntrance.isNearPlayer(playerCenterX, playerCenterY));
 
@@ -1286,6 +1310,9 @@ export class Game {
 
       // 12. Weaponsmith Workshop Modal
       this.blacksmithNPC.renderModal(ctx, screenWidth, screenHeight, this.player);
+
+      // 12.0 Village NPC Dialog Modal (Quest & Ambient)
+      this.villageManager.renderDialogModal(ctx, screenWidth, screenHeight);
 
       // 12. Control Settings Modal (Gear ⚙️ & customization)
       this.controlSettingsModal.render(ctx, screenWidth, screenHeight);

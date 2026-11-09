@@ -8,6 +8,7 @@ import { AudioEngine } from '../audio/AudioEngine.ts';
 
 export class InventoryUI {
   public isOpen: boolean = false;
+  public isCardModalOpen: boolean = false;
   private selectedSlotIndex: number | null = 0;
 
   // Touch button dimensions for Backpack icon
@@ -25,6 +26,9 @@ export class InventoryUI {
 
   public toggle(): void {
     this.isOpen = !this.isOpen;
+    if (!this.isOpen) {
+      this.isCardModalOpen = false;
+    }
     AudioEngine.playButtonClick();
     if (this.isOpen) {
       // Auto-select first non-empty slot if available
@@ -61,6 +65,56 @@ export class InventoryUI {
     }
 
     if (!this.isOpen) return false;
+
+    // Jika Modal Kartu Petualang sedang terbuka, proses sentuhan pada kartu atau tombol tutup
+    if (this.isCardModalOpen) {
+      const cardW = Math.min(500, screenWidth - 24);
+      const cardH = Math.min(290, screenHeight - 16);
+      const cardX = (screenWidth - cardW) / 2;
+      const cardY = (screenHeight - cardH) / 2;
+
+      // Close button (X) top-right
+      if (
+        touchX >= cardX + cardW - 36 &&
+        touchX <= cardX + cardW - 4 &&
+        touchY >= cardY + 4 &&
+        touchY <= cardY + 36
+      ) {
+        this.isCardModalOpen = false;
+        AudioEngine.playButtonClick();
+        return true;
+      }
+
+      // Bottom Close Button: [✕ TUTUP KARTU PETUALANG]
+      const bBtnW = 160;
+      const bBtnH = 28;
+      const bBtnX = cardX + (cardW - bBtnW) / 2;
+      const bBtnY = cardY + cardH - 34;
+      if (
+        touchX >= bBtnX &&
+        touchX <= bBtnX + bBtnW &&
+        touchY >= bBtnY &&
+        touchY <= bBtnY + bBtnH
+      ) {
+        this.isCardModalOpen = false;
+        AudioEngine.playButtonClick();
+        return true;
+      }
+
+      // Klik di luar kartu juga menutup modal kartu
+      if (
+        touchX < cardX ||
+        touchX > cardX + cardW ||
+        touchY < cardY ||
+        touchY > cardY + cardH
+      ) {
+        this.isCardModalOpen = false;
+        AudioEngine.playButtonClick();
+        return true;
+      }
+
+      return true; // Telan sentuhan saat kartu terbuka
+    }
 
     // Landscape 2-Column Modal layout bounds
     const modalWidth = Math.min(540, screenWidth - 20);
@@ -193,14 +247,8 @@ export class InventoryUI {
   }
 
   private inspectAdventurerCard(): void {
-    const roleName = ROLE_INFO[this.player.role] ? ROLE_INFO[this.player.role].name : this.player.role;
-    this.floatingText.spawn(
-      this.player.x + 10,
-      this.player.y - 14,
-      `🪪 ${this.player.username} (${roleName} Lv.${this.player.level}) - Terikat Permanen!`,
-      '#38bdf8',
-      3.0
-    );
+    AudioEngine.playButtonClick();
+    this.isCardModalOpen = true;
   }
 
   public render(ctx: CanvasRenderingContext2D, screenWidth: number, screenHeight: number): void {
@@ -439,6 +487,195 @@ export class InventoryUI {
       }
     }
 
+    // Render Adventurer Card Passport Overlay jika aktif
+    if (this.isCardModalOpen) {
+      this.renderAdventurerCardModal(ctx, screenWidth, screenHeight);
+    }
+
     ctx.restore();
+  }
+
+  private renderAdventurerCardModal(
+    ctx: CanvasRenderingContext2D,
+    screenWidth: number,
+    screenHeight: number
+  ): void {
+    const cardW = Math.min(500, screenWidth - 24);
+    const cardH = Math.min(290, screenHeight - 16);
+    const cardX = (screenWidth - cardW) / 2;
+    const cardY = (screenHeight - cardH) / 2;
+
+    const curRole = ROLE_INFO[this.player.role] || ROLE_INFO.NOVICE;
+
+    // Dark backdrop overlay
+    ctx.fillStyle = 'rgba(2, 6, 23, 0.88)';
+    ctx.fillRect(0, 0, screenWidth, screenHeight);
+
+    // Card Outer Box
+    ctx.fillStyle = '#090d16';
+    ctx.beginPath();
+    ctx.roundRect(cardX, cardY, cardW, cardH, 10);
+    ctx.fill();
+
+    // Ornate Golden Passport Frame
+    ctx.strokeStyle = '#ca8a04';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    ctx.strokeStyle = '#fde047';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cardX + 4, cardY + 4, cardW - 8, cardH - 8);
+
+    // Header Gold Ribbon
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(cardX + 4, cardY + 4, cardW - 8, 24);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('★ KARTU RESMI IDENTITAS PETUALANG ★', cardX + cardW / 2, cardY + 16);
+
+    // Close button (X)
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(cardX + cardW - 16, cardY + 16, 9, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.fillText('✕', cardX + cardW - 16, cardY + 16);
+
+    // 2-Column Passport Layout
+    const colW = (cardW - 36) / 2;
+    const col1X = cardX + 12;
+    const col2X = cardX + 24 + colW;
+    const contentY = cardY + 34;
+    const contentH = cardH - 74;
+
+    // --- KOLOM 1: IDENTITAS & EMBLEM ROLE ---
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(col1X, contentY, colW, contentH);
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(col1X, contentY, colW, contentH);
+
+    // Role Emblem Portrait Box
+    const portSize = 56;
+    const portX = col1X + 10;
+    const portY = contentY + 10;
+    ctx.fillStyle = curRole.color;
+    ctx.fillRect(portX, portY, portSize, portSize);
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(portX, portY, portSize, portSize);
+
+    // Main Role Symbol
+    const mainIcon = curRole.skills[0]?.iconSymbol || '⚔️';
+    ctx.font = '28px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText(mainIcon, portX + portSize / 2, portY + portSize / 2);
+
+    // Identity Details on Right of Portrait
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+
+    ctx.fillStyle = '#f8fafc';
+    ctx.font = 'bold 13px sans-serif';
+    const safeName = CanvasText.truncate(ctx, this.player.username, colW - portSize - 28);
+    ctx.fillText(safeName, portX + portSize + 10, portY + 2);
+
+    ctx.fillStyle = curRole.color;
+    ctx.font = 'bold 10.5px sans-serif';
+    ctx.fillText(`[${curRole.tag}] ${curRole.name}`, portX + portSize + 10, portY + 20);
+
+    ctx.fillStyle = '#fde047';
+    ctx.font = 'bold 10px sans-serif';
+    ctx.fillText(`Tingkat: Level ${this.player.level}`, portX + portSize + 10, portY + 38);
+
+    // EXP Bar
+    const expBarY = portY + portSize + 8;
+    const expPct = Math.min(100, (this.player.exp / this.player.maxExp) * 100);
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(portX, expBarY, colW - 20, 8);
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(portX, expBarY, ((colW - 20) * expPct) / 100, 8);
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '8px sans-serif';
+    ctx.fillText(`EXP: ${this.player.exp}/${this.player.maxExp}`, portX, expBarY + 11);
+
+    // Status Locked Badge
+    ctx.fillStyle = 'rgba(234, 179, 8, 0.15)';
+    ctx.fillRect(portX, expBarY + 24, colW - 20, 20);
+    ctx.strokeStyle = '#ca8a04';
+    ctx.strokeRect(portX, expBarY + 24, colW - 20, 20);
+    ctx.fillStyle = '#fef08a';
+    ctx.font = 'bold 9px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('🔒 STATUS: TAKDIR TERIKAT PERMANEN', portX + (colW - 20) / 2, expBarY + 29);
+
+    // --- KOLOM 2: DATA KEMAMPUAN & STEMPEL SERIKAT ---
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(col2X, contentY, colW, contentH);
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(col2X, contentY, colW, contentH);
+
+    // Subheader
+    ctx.fillStyle = '#ca8a04';
+    ctx.fillRect(col2X, contentY, colW, 18);
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 9.5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('📋 DATA KEMAMPUAN PETUALANG', col2X + colW / 2, contentY + 9);
+
+    // Attributes list
+    const attrY = contentY + 24;
+    ctx.textAlign = 'left';
+    ctx.textBaseline = 'top';
+    ctx.fillStyle = '#e2e8f0';
+    ctx.font = '9.5px sans-serif';
+    ctx.fillText(`❤️ Darah Maksimal (HP): ${this.player.maxHp}`, col2X + 10, attrY);
+    ctx.fillText(`💧 Tenaga Sihir (MP): ${this.player.maxMp}`, col2X + 10, attrY + 15);
+    const atk = this.player.getAttackDamage().damage;
+    ctx.fillText(`⚔️ Kekuatan Serangan: ${atk} ATK`, col2X + 10, attrY + 30);
+    const gold = this.player.inventory.getItemCount('GOLD_COIN');
+    ctx.fillText(`💰 Tabungan Emas: ${gold} Koin Emas`, col2X + 10, attrY + 45);
+    const elemText = this.player.role === 'MAGICIAN' && this.player.magicianAffinities ? this.player.magicianAffinities.primary : 'Netral';
+    ctx.fillText(`🔮 Afinitas Jiwa: ${elemText}`, col2X + 10, attrY + 60);
+
+    // Guild Wax Stamp
+    const sealX = col2X + colW - 36;
+    const sealY = contentY + contentH - 34;
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.arc(sealX, sealY, 18, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#fef08a';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 6.5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('GUILD', sealX, sealY - 4);
+    ctx.fillText('SEAL', sealX, sealY + 4);
+
+    // Bottom Close Button
+    const bBtnW = 160;
+    const bBtnH = 26;
+    const bBtnX = cardX + (cardW - bBtnW) / 2;
+    const bBtnY = cardY + cardH - 32;
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(bBtnX, bBtnY, bBtnW, bBtnH);
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(bBtnX, bBtnY, bBtnW, bBtnH);
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.font = 'bold 11px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('✕ TUTUP KARTU PETUALANG', bBtnX + bBtnW / 2, bBtnY + bBtnH / 2);
   }
 }

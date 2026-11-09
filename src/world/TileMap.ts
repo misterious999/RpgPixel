@@ -9,7 +9,8 @@ export enum TileType {
   WATER = 4, // Solid
   TREE = 5,  // Solid
   ROCK = 6,  // Solid
-  CLIFF = 7  // Solid
+  CLIFF = 7, // Solid
+  COBBLESTONE = 8
 }
 
 export class TileMap {
@@ -82,13 +83,47 @@ export class TileMap {
       }
     }
 
-    // Pastikan area spawn utama & guild plaza luas dan bersih (radius 5 tile)
-    for (let dy = -5; dy <= 5; dy++) {
-      for (let dx = -5; dx <= 5; dx++) {
-        const sx = 50 + dx;
-        const sy = 50 + dy;
-        if (this.tiles[sy] && this.tiles[sy][sx] !== undefined) {
-          this.tiles[sy][sx] = (Math.abs(dx) <= 2 || Math.abs(dy) <= 2) ? TileType.DIRT_PATH : TileType.GRASS;
+    // --- WILAYAH PEDESAAN KHUSUS (DESA SERIKAT OAKHAVEN) ---
+    // Bersihkan area pedesaan (x=41..59, y=42..56) dari pohon liar penghalang bangunan
+    for (let vy = 42; vy <= 56; vy++) {
+      for (let vx = 41; vx <= 59; vx++) {
+        if (this.tiles[vy] && this.tiles[vy][vx] !== undefined) {
+          this.tiles[vy][vx] = TileType.GRASS;
+        }
+      }
+    }
+
+    // Alun-alun & Jalan Utama Paving Batu (Cobblestone Plaza)
+    // Tepat di tengah-tengahnya berdiri Balai Serikat Guild & Air Mancur Desa
+    for (let py = 46; py <= 54; py++) {
+      for (let px = 47; px <= 53; px++) {
+        if (this.tiles[py] && this.tiles[py][px] !== undefined) {
+          this.tiles[py][px] = TileType.COBBLESTONE;
+        }
+      }
+    }
+
+    // Jalan Raya Utama Desa (Utara-Selatan & Barat-Timur)
+    for (let vy = 42; vy <= 56; vy++) {
+      for (let vx = 49; vx <= 51; vx++) {
+        if (this.tiles[vy] && this.tiles[vy][vx] !== undefined) {
+          this.tiles[vy][vx] = TileType.COBBLESTONE;
+        }
+      }
+    }
+    for (let vy = 49; vy <= 51; vy++) {
+      for (let vx = 43; vx <= 57; vx++) {
+        if (this.tiles[vy] && this.tiles[vy][vx] !== undefined) {
+          this.tiles[vy][vx] = TileType.COBBLESTONE;
+        }
+      }
+    }
+
+    // Kebun Bunga Desa di sekitar Toko Bunga Lily
+    for (let fy = 44; fy <= 46; fy++) {
+      for (let fx = 55; fx <= 58; fx++) {
+        if (this.tiles[fy] && this.tiles[fy][fx] !== undefined) {
+          this.tiles[fy][fx] = TileType.GRASS_FLOWERS;
         }
       }
     }
@@ -326,6 +361,37 @@ export class TileMap {
           ctx.fillRect(x + size - 2, y, 2, size);
         }
 
+        break;
+      }
+      case TileType.COBBLESTONE: {
+        // Paver stone base
+        ctx.fillStyle = '#64748b';
+        ctx.fillRect(x, y, size, size);
+
+        // Mortar lines separating pavers
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(x, y, size, 1);
+        ctx.fillRect(x, y, 1, size);
+        ctx.fillRect(x, y + 16, size, 1);
+        ctx.fillRect(x + 16, y, 1, size);
+
+        // Subtle stone bevel highlights
+        ctx.fillStyle = '#94a3b8';
+        ctx.fillRect(x + 2, y + 2, 13, 1.5);
+        ctx.fillRect(x + 18, y + 2, 13, 1.5);
+        ctx.fillRect(x + 2, y + 18, 13, 1.5);
+        ctx.fillRect(x + 18, y + 18, 13, 1.5);
+
+        // Variasi tekstur alami batu
+        if ((tileX * 7 + tileY * 11) % 3 === 0) {
+          ctx.fillStyle = '#475569';
+          ctx.fillRect(x + 5, y + 6, 4, 3);
+          ctx.fillRect(x + 21, y + 22, 5, 3);
+        } else if ((tileX + tileY) % 2 === 0) {
+          ctx.fillStyle = '#475569';
+          ctx.fillRect(x + 20, y + 7, 4, 3);
+          ctx.fillRect(x + 6, y + 23, 4, 3);
+        }
         break;
       }
     }
