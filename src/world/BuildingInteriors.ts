@@ -6,6 +6,7 @@ export type InteriorId =
   | 'BLACKSMITH_SHOP'
   | 'APOTHECARY_INN'
   | 'ADVENTURER_KITCHEN'
+  | 'ROYAL_BANK'
   | 'ELDORIA_SANCTUARY'
   | 'STONEWATCH_FOUNDRY';
 
@@ -45,6 +46,7 @@ export interface NearbyInteriorAction {
     | 'INN_BED'
     | 'CHEF_GASTON'
     | 'KITCHEN_CAULDRON'
+    | 'BANK_TELLER'
     | 'SYLAS'
     | 'ARIA'
     | 'BORIN'
@@ -143,6 +145,26 @@ export class BuildingInteriors {
         insideSpawnY: 9 * ts + 4,
         insideDoorX: 8 * ts,
         insideDoorY: 10.5 * ts
+      },
+
+      // 3.8 Bank Kerajaan Oakhaven (Royal Treasury & Anime Bank)
+      ROYAL_BANK: {
+        id: 'ROYAL_BANK',
+        name: 'Bank Kerajaan Oakhaven',
+        tag: '🏛️ Bank Kerajaan',
+        subtitle: '~ Penukaran Koin Dungeon & Rekening Tabungan Petualang ~',
+        icon: '🏛️',
+        accentColor: '#facc15',
+        doorWorldX: 46 * ts,
+        doorWorldY: 44 * ts,
+        overworldSpawnX: 46 * ts + 6,
+        overworldSpawnY: 45.2 * ts,
+        roomWidth: 18,
+        roomHeight: 13,
+        insideSpawnX: 9 * ts + 6,
+        insideSpawnY: 10 * ts + 4,
+        insideDoorX: 9 * ts,
+        insideDoorY: 11.5 * ts
       },
 
       // 4. Pondok Suci Tetua Roh Hutan Eldoria (Elder Sylas Sylvan Sanctuary)
@@ -300,6 +322,14 @@ export class BuildingInteriors {
 
       // Tong & Karung Bahan Makanan Kiri Bawah (x=1..2.2 tile, y=6..8 tile)
       if (rect.x < 2.2 * ts && rect.y > 6 * ts && rect.y < 8.2 * ts) return true;
+    } else if (currentRoom === 'ROYAL_BANK') {
+      // Meja Teller Counter Bank (x=6..12 tile, y=3.5..4.6 tile)
+      const dx = 6 * ts;
+      const dy = 3.5 * ts;
+      if (rect.x < dx + 6 * ts && rect.x + rect.width > dx && rect.y < dy + 1.2 * ts && rect.y + rect.height > dy) return true;
+
+      // Teralis & Brankas Baja Belakang (y < 2.8 tile)
+      if (rect.y < 2.8 * ts) return true;
     } else if (currentRoom === 'ELDORIA_SANCTUARY') {
       // Altar Roh Pohon Suci (x=7.5..10.5 tile, y=2.5..4 tile)
       const ax = 7.5 * ts;
@@ -497,6 +527,18 @@ export class BuildingInteriors {
           prompt: '🍲 [A] Gunakan Kuali Masak Petualang',
           color: '#fb923c',
           x: 3.5 * ts,
+          y: 3.2 * ts
+        };
+      }
+    } else if (currentRoom === 'ROYAL_BANK') {
+      // Bankir Barnaby di balik meja teller (x=9*ts, y=4.5*ts)
+      const barnabyDist = Math.hypot(9 * ts - playerCenterX, 4.5 * ts - playerCenterY);
+      if (barnabyDist < 46) {
+        return {
+          type: 'BANK_TELLER',
+          prompt: '🏛️ [A] Layanan Bank Kerajaan (Tukar Koin & Tabungan)',
+          color: '#facc15',
+          x: 9 * ts,
           y: 3.2 * ts
         };
       }
@@ -705,6 +747,14 @@ export class BuildingInteriors {
             ctx.strokeStyle = 'rgba(5, 150, 105, 0.25)';
             ctx.lineWidth = 0.8;
             ctx.strokeRect(px, py, ts, ts);
+          } else if (currentRoom === 'ROYAL_BANK') {
+            // Ubin Marmer Putih Polished & Emas Kerajaan (Chess Pattern)
+            const isAlt = (tx + ty) % 2 === 0;
+            ctx.fillStyle = isAlt ? '#f8fafc' : '#e2e8f0';
+            ctx.fillRect(px, py, ts, ts);
+            ctx.strokeStyle = isAlt ? 'rgba(250, 204, 21, 0.45)' : '#cbd5e1';
+            ctx.lineWidth = 0.8;
+            ctx.strokeRect(px, py, ts, ts);
           } else if (currentRoom === 'STONEWATCH_FOUNDRY') {
             // Batu Granit Hitam Kurcaci
             const isAlt = (tx + ty) % 2 === 0;
@@ -722,10 +772,10 @@ export class BuildingInteriors {
     for (let tx = 0; tx < rw; tx++) {
       const px = tx * ts;
       // Dinding atas (ty=0..1)
-      ctx.fillStyle = currentRoom === 'GUILD_HALL' || currentRoom === 'ADVENTURER_KITCHEN' ? '#451a03' : currentRoom === 'ELDORIA_SANCTUARY' ? '#064e3b' : '#090d16';
+      ctx.fillStyle = currentRoom === 'ROYAL_BANK' ? '#0f172a' : (currentRoom === 'GUILD_HALL' || currentRoom === 'ADVENTURER_KITCHEN' ? '#451a03' : currentRoom === 'ELDORIA_SANCTUARY' ? '#064e3b' : '#090d16');
       ctx.fillRect(px, 0, ts, 2 * ts);
-      // Lis balok kayu / granit pembatas dinding ke lantai
-      ctx.fillStyle = currentRoom === 'GUILD_HALL' || currentRoom === 'ADVENTURER_KITCHEN' ? '#b45309' : '#475569';
+      // Lis balok kayu / granit / emas pembatas dinding ke lantai
+      ctx.fillStyle = currentRoom === 'ROYAL_BANK' ? '#ca8a04' : (currentRoom === 'GUILD_HALL' || currentRoom === 'ADVENTURER_KITCHEN' ? '#b45309' : '#475569');
       ctx.fillRect(px, 2 * ts - 4, ts, 4);
     }
 
@@ -1211,6 +1261,133 @@ export class BuildingInteriors {
       ctx.fillRect(ox + 8, oy - 4, 12, 6);
       ctx.fillStyle = '#94a3b8';
       ctx.fillRect(ox + 4, oy + 4, 14, 6);
+    } else if (room === 'ROYAL_BANK') {
+      // --- INTERIOR BANK KERAJAAN OAKHAVEN ---
+      // 1. Permadani Beludru Merah Megah dari Pintu Keluar ke Meja Teller
+      const crX = 7.5 * ts;
+      const crW = 3 * ts;
+      ctx.fillStyle = '#991b1b';
+      ctx.fillRect(crX, 4.5 * ts, crW, 7 * ts);
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 1.5;
+      ctx.strokeRect(crX, 4.5 * ts, crW, 7 * ts);
+
+      // 2. Teralis Besi Tempa Pelindung Brankas di Dinding Belakang
+      const fenceY = 2.8 * ts;
+      ctx.strokeStyle = '#94a3b8';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(3.5 * ts, fenceY);
+      ctx.lineTo(14.5 * ts, fenceY);
+      ctx.stroke();
+      for (let fx = 4 * ts; fx <= 14 * ts; fx += 10) {
+        ctx.beginPath();
+        ctx.moveTo(fx, 1.2 * ts);
+        ctx.lineTo(fx, fenceY);
+        ctx.stroke();
+      }
+
+      // 3. Pintu Brankas Baja Raksasa (Giant Steel Vault Door) di Tengah Belakang
+      const vx = 9 * ts;
+      const vy = 1.8 * ts;
+      ctx.fillStyle = '#334155';
+      ctx.beginPath();
+      ctx.arc(vx, vy, 22, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 2.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#475569';
+      ctx.beginPath();
+      ctx.arc(vx, vy, 17, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Vault Turn Wheel
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.arc(vx, vy, 8, 0, Math.PI * 2);
+      ctx.stroke();
+      const vPulse = Math.sin(this.animTimer) * 0.3;
+      for (let s = 0; s < 4; s++) {
+        const ang = (s * Math.PI) / 2 + vPulse;
+        ctx.beginPath();
+        ctx.moveTo(vx, vy);
+        ctx.lineTo(vx + Math.cos(ang) * 12, vy + Math.sin(ang) * 12);
+        ctx.stroke();
+      }
+
+      // Tumpukan Emas & Karung Koin di Balik Teralis
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(4.5 * ts, 1.8 * ts, 14, 6);
+      ctx.fillRect(4.8 * ts, 1.5 * ts, 12, 6);
+      ctx.fillRect(5.5 * ts, 1.9 * ts, 10, 5);
+      // Karung Koin
+      ctx.fillStyle = '#b45309';
+      ctx.beginPath();
+      ctx.arc(5.8 * ts, 2.3 * ts, 7, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(5.6 * ts, 1.9 * ts, 4, 3);
+
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(12.5 * ts, 1.8 * ts, 14, 6);
+      ctx.fillRect(12.8 * ts, 1.5 * ts, 12, 6);
+      ctx.fillStyle = '#a5b4fc';
+      ctx.fillRect(13.5 * ts, 1.9 * ts, 10, 5);
+
+      // 4. Meja Teller Bank Megah (Mahogany Counter Desk)
+      const deskX = 6 * ts;
+      const deskY = 3.6 * ts;
+      const deskW = 6 * ts;
+      const deskH = 1.4 * ts;
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(deskX, deskY, deskW, deskH);
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(deskX - 2, deskY - 2, deskW + 4, 6);
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 1.2;
+      ctx.strokeRect(deskX + 4, deskY + 6, deskW - 8, deskH - 8);
+
+      // Teller Glass Screen
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.2)';
+      ctx.fillRect(deskX + 6, deskY - 14, deskW - 12, 12);
+      ctx.strokeStyle = 'rgba(250, 204, 21, 0.8)';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(deskX + 6, deskY - 14, deskW - 12, 12);
+
+      // 5. NPC Bankir Barnaby di Balik Meja Teller
+      this.drawDeskNPC(ctx, 9 * ts, 2.5 * ts, '#facc15', '#1e3a8a', 'Bankir Barnaby (Kepala Bank Kerajaan)');
+
+      // 6. Pilar Marmer Putih Megah dengan Cincin Emas
+      const pillarLocs = [
+        { x: 2 * ts, y: 3.5 * ts },
+        { x: 16 * ts, y: 3.5 * ts },
+        { x: 2 * ts, y: 8.5 * ts },
+        { x: 16 * ts, y: 8.5 * ts }
+      ];
+      for (const pil of pillarLocs) {
+        ctx.fillStyle = '#cbd5e1';
+        ctx.fillRect(pil.x - 8, pil.y - 4, 16, 8);
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillRect(pil.x - 6, pil.y - 20, 12, 20);
+        ctx.fillStyle = '#facc15';
+        ctx.fillRect(pil.x - 7, pil.y - 18, 14, 3);
+        ctx.fillRect(pil.x - 7, pil.y - 6, 14, 3);
+      }
+
+      // 7. Pot Tanaman Palem Emas
+      for (const px of [3.5 * ts, 14.5 * ts]) {
+        ctx.fillStyle = '#ca8a04';
+        ctx.beginPath();
+        ctx.arc(px, 5.5 * ts, 6, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.fillStyle = '#16a34a';
+        ctx.beginPath();
+        ctx.arc(px, 5.5 * ts - 6, 8, 0, Math.PI * 2);
+        ctx.fill();
+      }
     }
   }
 

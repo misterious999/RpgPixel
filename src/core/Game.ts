@@ -39,6 +39,7 @@ import { Companion, CompanionType } from '../entities/Companion.ts';
 import { CookingSystem } from '../systems/CookingSystem.ts';
 import { Pet } from '../systems/TamingSystem.ts';
 import { TitleSystem } from '../systems/TitleSystem.ts';
+import { BankSystem } from '../systems/BankSystem.ts';
 import { LeaderboardUI } from '../ui/LeaderboardUI.ts';
 import { CanvasText } from '../utils/CanvasText.ts';
 
@@ -79,6 +80,7 @@ export class Game {
     | 'INTERIOR_BLACKSMITH'
     | 'INTERIOR_APOTHECARY'
     | 'INTERIOR_KITCHEN'
+    | 'INTERIOR_BANK'
     | 'INTERIOR_ELDORIA'
     | 'INTERIOR_STONEWATCH' = 'OVERWORLD';
   public buildingInteriors: BuildingInteriors;
@@ -123,6 +125,8 @@ export class Game {
   // Cooking, Titles & Leaderboard Systems
   private cookingSystem: CookingSystem = new CookingSystem();
   private titleSystem: TitleSystem = new TitleSystem();
+  public bankSystem: BankSystem = new BankSystem();
+  private bankInterestTimer: number = 0;
   private leaderboardUI: LeaderboardUI = new LeaderboardUI();
 
   // Achievement kill tracking
@@ -179,6 +183,24 @@ export class Game {
     ControlSettingsManager.load();
     this.floatingText = new FloatingTextManager();
     this.inventoryUI = new InventoryUI(this.player.inventory, this.player, this.floatingText);
+    this.inventoryUI.onTeleportToVillage = () => {
+      if (this.currentMap === 'OVERWORLD') {
+        this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🌀 Kamu sudah berada di Alun-Alun Desa!', '#38bdf8');
+        return false;
+      }
+      this.currentMap = 'OVERWORLD';
+      this.buildingInteriors.activeInterior = null;
+      this.player.x = 50 * CONSTANTS.TILE_SIZE + 6;
+      this.player.y = 50 * CONSTANTS.TILE_SIZE + 3;
+      this.player.direction = 'down';
+      this.camera.setWorldBounds(this.tileMap.width * CONSTANTS.TILE_SIZE, this.tileMap.height * CONSTANTS.TILE_SIZE);
+      this.camera.update(this.player.x, this.player.y);
+      AudioEngine.playLevelUp();
+      this.triggerMapTransition('「 DESA OAKHAVEN 」', 'Kembali Melalui Gulungan Portal');
+      this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🌀 Teleportasi ke Alun-Alun Desa!', '#38bdf8', 3.0);
+      this.saveSessionSnapshot();
+      return true;
+    };
     this.skillBarUI = new SkillBarUI(this.player, this.floatingText);
     this.controlSettingsModal = new ControlSettingsModal();
     this.controlSettingsModal.onConfigChange = () => this.handleResize();
@@ -191,6 +213,7 @@ export class Game {
         !this.inventoryUI.isOpen &&
         !this.guildNPC.isAppraisalOpen &&
         !this.blacksmithNPC.isWorkshopOpen &&
+        !this.bankSystem.isOpen &&
         !this.controlSettingsModal.isOpen &&
         !NotificationModal.isOpen
       );
@@ -387,6 +410,11 @@ export class Game {
         return true;
       }
 
+      // 0.1 Bank Royal Val Modal (Pertukaran, Tabungan & Belanja)
+      if (this.bankSystem.handleTouch(touchX, touchY, this.player, this.floatingText)) {
+        return true;
+      }
+
       // 1. Guild Appraisal Modal
       if (this.guildNPC.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight, this.player, this.floatingText)) {
         return true;
@@ -572,6 +600,8 @@ export class Game {
       isGuest: this.authUI.isGuest,
       equippedWeaponId: this.player.equippedWeaponId,
       unlockedWeaponIds: this.player.unlockedWeaponIds,
+      val: this.player.val,
+      bankSavings: this.player.bankSavings,
       quests: this.questManager.serialize(),
       timestamp: Date.now()
     };
@@ -611,6 +641,8 @@ export class Game {
       if (typeof data.level === 'number') this.player.level = data.level;
       if (typeof data.exp === 'number') this.player.exp = data.exp;
       if (typeof data.maxExp === 'number') this.player.maxExp = data.maxExp;
+      if (typeof data.val === 'number') this.player.val = data.val;
+      if (typeof data.bankSavings === 'number') this.player.bankSavings = data.bankSavings;
       if (typeof data.costumeId === 'number') {
         const found = CHARACTER_COSTUMES.find((c) => c.id === data.costumeId);
         if (found) this.player.costume = found;
@@ -826,21 +858,27 @@ export class Game {
     this.dungeonChests = [
       // Peti 1: Ruang Tengkorak Kuno (West Crypt)
       new Chest(6 * ts + 5, 15 * ts + 6, [
-        { itemId: 'GOLD_COIN', count: 160 },
+        { itemId: 'BRONZE_COIN', count: 18 },
+        { itemId: 'SILVER_COIN', count: 3 },
+        { itemId: 'GOLD_COIN', count: 1 },
         { itemId: 'HEALTH_POTION', count: 2 },
         { itemId: 'ANCIENT_BONE', count: 3 },
         { itemId: 'DARK_IRON_ORE', count: 5 }
       ]),
       // Peti 2: Gua Kristal Mineral (East Cavern)
       new Chest(34 * ts + 5, 15 * ts + 6, [
-        { itemId: 'GOLD_COIN', count: 180 },
+        { itemId: 'BRONZE_COIN', count: 25 },
+        { itemId: 'SILVER_COIN', count: 5 },
+        { itemId: 'GOLD_COIN', count: 2 },
         { itemId: 'MANA_POTION', count: 3 },
         { itemId: 'DUNGEON_GEM', count: 1 },
         { itemId: 'DARK_IRON_ORE', count: 6 }
       ]),
       // Peti 3: Harta Karun Legendaris di Belakang Altar Bos (North Chamber)
       new Chest(20 * ts + 5, 3 * ts + 6, [
-        { itemId: 'GOLD_COIN', count: 350 },
+        { itemId: 'SILVER_COIN', count: 15 },
+        { itemId: 'GOLD_COIN', count: 5 },
+        { itemId: 'PLATINUM_COIN', count: 1 },
         { itemId: 'DUNGEON_GEM', count: 3 },
         { itemId: 'HEALTH_POTION', count: 4 },
         { itemId: 'MANA_POTION', count: 4 },
@@ -930,6 +968,11 @@ export class Game {
       // Saat gugur di Dungeon, pemain sadar dengan selamat di balai serikat desa
       this.player.x = 50 * CONSTANTS.TILE_SIZE + 6;
       this.player.y = 50 * CONSTANTS.TILE_SIZE + 3;
+      if (this.player.val > 0) {
+        const lostVal = Math.min(this.player.val, Math.max(10, Math.floor(this.player.val * 0.1)));
+        this.player.removeVal(lostVal);
+        this.floatingText.spawn(this.player.x + 10, this.player.y - 36, `💸 Biaya Evakuasi Balai Kota: -${lostVal} 𝒱 (Tabungan Bank Aman!)`, '#f87171', 4.0);
+      }
     } else {
       // Tempatkan pemain di pelataran depan pintu masuk goa di Hutan Rimba
       this.player.x = 50 * CONSTANTS.TILE_SIZE + 6;
@@ -1007,17 +1050,23 @@ export class Game {
     // Peti Harta Karun Lantai 3 (Ruang Rahasia Barat & Timur & Tahta Naga)
     this.floor3Chests = [
       new Chest(5 * ts + 5, 16 * ts + 6, [
-        { itemId: 'GOLD_COIN', count: 400 },
+        { itemId: 'SILVER_COIN', count: 12 },
+        { itemId: 'GOLD_COIN', count: 4 },
+        { itemId: 'PLATINUM_COIN', count: 1 },
         { itemId: 'DARK_IRON_ORE', count: 12 },
         { itemId: 'HEALTH_POTION', count: 4 }
       ]),
       new Chest(34 * ts + 5, 16 * ts + 6, [
-        { itemId: 'GOLD_COIN', count: 500 },
+        { itemId: 'SILVER_COIN', count: 16 },
+        { itemId: 'GOLD_COIN', count: 6 },
+        { itemId: 'PLATINUM_COIN', count: 1 },
         { itemId: 'DUNGEON_GEM', count: 6 },
         { itemId: 'MANA_POTION', count: 5 }
       ]),
       new Chest(20 * ts + 8, 5 * ts + 8, [
-        { itemId: 'GOLD_COIN', count: 1200 },
+        { itemId: 'SILVER_COIN', count: 30 },
+        { itemId: 'GOLD_COIN', count: 15 },
+        { itemId: 'PLATINUM_COIN', count: 3 },
         { itemId: 'DUNGEON_GEM', count: 10 },
         { itemId: 'DARK_IRON_ORE', count: 20 },
         { itemId: 'HEALTH_POTION', count: 6 },
@@ -1185,17 +1234,21 @@ export class Game {
 
     this.eldoriaChests = [
       new Chest(7 * ts + 8, 21 * ts + 8, [
-        { itemId: 'GOLD_COIN', count: 450 },
+        { itemId: 'SILVER_COIN', count: 15 },
+        { itemId: 'GOLD_COIN', count: 4 },
         { itemId: 'MAGIC_FLOWER', count: 12 },
         { itemId: 'HEALTH_POTION', count: 4 }
       ]),
       new Chest(28 * ts + 8, 21 * ts + 8, [
-        { itemId: 'GOLD_COIN', count: 550 },
+        { itemId: 'SILVER_COIN', count: 20 },
+        { itemId: 'GOLD_COIN', count: 6 },
         { itemId: 'MANA_POTION', count: 5 },
         { itemId: 'DUNGEON_GEM', count: 4 }
       ]),
       new Chest(18 * ts + 8, 6 * ts + 8, [
-        { itemId: 'GOLD_COIN', count: 1500 },
+        { itemId: 'SILVER_COIN', count: 35 },
+        { itemId: 'GOLD_COIN', count: 15 },
+        { itemId: 'PLATINUM_COIN', count: 2 },
         { itemId: 'DUNGEON_GEM', count: 8 },
         { itemId: 'MAGIC_FLOWER', count: 20 },
         { itemId: 'HEALTH_POTION', count: 8 },
@@ -1227,17 +1280,22 @@ export class Game {
 
     this.stonewatchChests = [
       new Chest(7 * ts + 8, 21 * ts + 8, [
-        { itemId: 'GOLD_COIN', count: 600 },
+        { itemId: 'SILVER_COIN', count: 18 },
+        { itemId: 'GOLD_COIN', count: 5 },
         { itemId: 'DARK_IRON_ORE', count: 15 },
         { itemId: 'HEALTH_POTION', count: 5 }
       ]),
       new Chest(27 * ts + 8, 20 * ts + 8, [
-        { itemId: 'GOLD_COIN', count: 700 },
+        { itemId: 'SILVER_COIN', count: 24 },
+        { itemId: 'GOLD_COIN', count: 8 },
+        { itemId: 'PLATINUM_COIN', count: 1 },
         { itemId: 'DARK_IRON_ORE', count: 20 },
         { itemId: 'DUNGEON_GEM', count: 5 }
       ]),
       new Chest(18 * ts + 8, 6 * ts + 8, [
-        { itemId: 'GOLD_COIN', count: 2000 },
+        { itemId: 'SILVER_COIN', count: 40 },
+        { itemId: 'GOLD_COIN', count: 20 },
+        { itemId: 'PLATINUM_COIN', count: 3 },
         { itemId: 'DUNGEON_GEM', count: 12 },
         { itemId: 'DARK_IRON_ORE', count: 35 },
         { itemId: 'HEALTH_POTION', count: 8 },
@@ -1402,6 +1460,7 @@ export class Game {
       case 'INTERIOR_BLACKSMITH': return 'BLACKSMITH_SHOP';
       case 'INTERIOR_APOTHECARY': return 'APOTHECARY_INN';
       case 'INTERIOR_KITCHEN': return 'ADVENTURER_KITCHEN';
+      case 'INTERIOR_BANK': return 'ROYAL_BANK';
       case 'INTERIOR_ELDORIA': return 'ELDORIA_SANCTUARY';
       case 'INTERIOR_STONEWATCH': return 'STONEWATCH_FOUNDRY';
       default: return null;
@@ -1423,6 +1482,7 @@ export class Game {
       case 'BLACKSMITH_SHOP': this.currentMap = 'INTERIOR_BLACKSMITH'; break;
       case 'APOTHECARY_INN': this.currentMap = 'INTERIOR_APOTHECARY'; break;
       case 'ADVENTURER_KITCHEN': this.currentMap = 'INTERIOR_KITCHEN'; break;
+      case 'ROYAL_BANK': this.currentMap = 'INTERIOR_BANK'; break;
       case 'ELDORIA_SANCTUARY': this.currentMap = 'INTERIOR_ELDORIA'; break;
       case 'STONEWATCH_FOUNDRY': this.currentMap = 'INTERIOR_STONEWATCH'; break;
     }
@@ -1725,33 +1785,42 @@ export class Game {
         ? this.eldoriaWorldItems
         : this.stonewatchWorldItems;
 
-    // Drop Koin Emas
+    // Drop Koin Emas Tradisional
     targetItems.push(new WorldItem(monster.x + 4, monster.y + 4, 'GOLD_COIN', goldReward));
 
-    // --- OVERWORLD MONSTER DROPS ---
+    // --- OVERWORLD MONSTER DROPS (Koin Perunggu Anime & Bahan) ---
     if (monster.type === 'FOREST_SLIME') {
+      if (Math.random() < 0.70) targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'BRONZE_COIN', 1 + Math.floor(Math.random() * 2)));
       if (Math.random() < 0.65) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'SLIME_JELLY', 1));
       if (Math.random() < 0.40) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'MAGIC_FLOWER', 1));
     } else if (monster.type === 'WILD_WOLF') {
+      if (Math.random() < 0.75) targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'BRONZE_COIN', 2 + Math.floor(Math.random() * 3)));
       if (Math.random() < 0.75) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'WOLF_MEAT', 1));
       if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'HEALTH_POTION', 1));
       if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'MANA_POTION', 1));
     } else if (monster.type === 'GOBLIN') {
+      if (Math.random() < 0.85) targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'BRONZE_COIN', 3 + Math.floor(Math.random() * 4)));
       if (Math.random() < 0.60) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'WOOD_LOG', 2));
       if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 1));
     }
     // --- DUNGEON FLOOR 1 MONSTER DROPS ---
     else if (monster.type === 'SLIME') {
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'BRONZE_COIN', 3 + Math.floor(Math.random() * 4)));
       if (Math.random() < 0.65) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'SLIME_JELLY', 1));
       if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 1));
     } else if (monster.type === 'BAT') {
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'BRONZE_COIN', 4 + Math.floor(Math.random() * 5)));
       if (Math.random() < 0.5) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 2));
       if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 1));
     } else if (monster.type === 'SKELETON') {
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 1 + Math.floor(Math.random() * 2)));
       if (Math.random() < 0.75) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'ANCIENT_BONE', 1));
       if (Math.random() < 0.65) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 2));
       if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 6, monster.y + 12, 'MANA_POTION', 1));
     } else if (monster.type === 'BOSS_SLIME') {
+      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'SILVER_COIN', 10));
+      targetItems.push(new WorldItem(monster.x + 12, monster.y + 6, 'GOLD_COIN', 3));
+      targetItems.push(new WorldItem(monster.x + 14, monster.y + 8, 'PLATINUM_COIN', 1));
       targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 3));
       targetItems.push(new WorldItem(monster.x + 24, monster.y + 12, 'DARK_IRON_ORE', 6));
       targetItems.push(new WorldItem(monster.x + 12, monster.y + 16, 'SLIME_JELLY', 4));
@@ -1766,13 +1835,18 @@ export class Game {
     }
     // --- DUNGEON FLOOR 2 MONSTER DROPS ---
     else if (monster.type === 'STONE_GOLEM') {
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 2 + Math.floor(Math.random() * 3)));
       targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DARK_IRON_ORE', 2));
       if (Math.random() < 0.5) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'ANCIENT_BONE', 1));
     } else if (monster.type === 'CRYPT_SHADOW') {
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 3 + Math.floor(Math.random() * 3)));
       targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 2));
       if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'MANA_POTION', 1));
       if (Math.random() < 0.4) targetItems.push(new WorldItem(monster.x + 6, monster.y + 14, 'ANCIENT_BONE', 1));
     } else if (monster.type === 'BOSS_TITAN_GOLEM') {
+      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'SILVER_COIN', 20));
+      targetItems.push(new WorldItem(monster.x + 12, monster.y + 6, 'GOLD_COIN', 6));
+      targetItems.push(new WorldItem(monster.x + 14, monster.y + 8, 'PLATINUM_COIN', 2));
       targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 5));
       targetItems.push(new WorldItem(monster.x + 24, monster.y + 12, 'DARK_IRON_ORE', 8));
       targetItems.push(new WorldItem(monster.x + 10, monster.y + 16, 'HEALTH_POTION', 4));
@@ -1786,18 +1860,25 @@ export class Game {
     }
     // --- DUNGEON FLOOR 3 MONSTER DROPS ---
     else if (monster.type === 'INFERNO_HELLHOUND') {
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 4 + Math.floor(Math.random() * 5)));
       if (Math.random() < 0.8) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'WOLF_MEAT', 2));
       if (Math.random() < 0.5) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DARK_IRON_ORE', 2));
       if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'HEALTH_POTION', 1));
     } else if (monster.type === 'ABYSSAL_REAPER') {
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 6 + Math.floor(Math.random() * 5)));
+      if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 6, monster.y + 2, 'GOLD_COIN', 1));
       if (Math.random() < 0.6) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DUNGEON_GEM', 1));
       if (Math.random() < 0.6) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 3));
       if (Math.random() < 0.5) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'MANA_POTION', 2));
     } else if (monster.type === 'INFERNAL_KNIGHT') {
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 8 + Math.floor(Math.random() * 5)));
+      if (Math.random() < 0.5) targetItems.push(new WorldItem(monster.x + 6, monster.y + 2, 'GOLD_COIN', 1));
       targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DARK_IRON_ORE', 3));
       if (Math.random() < 0.6) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'ANCIENT_BONE', 2));
       if (Math.random() < 0.5) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'HEALTH_POTION', 2));
     } else if (monster.type === 'BOSS_INFERNAL_DRAGON') {
+      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'GOLD_COIN', 15));
+      targetItems.push(new WorldItem(monster.x + 14, monster.y + 8, 'PLATINUM_COIN', 5));
       targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 8));
       targetItems.push(new WorldItem(monster.x + 28, monster.y + 12, 'DARK_IRON_ORE', 12));
       targetItems.push(new WorldItem(monster.x + 10, monster.y + 16, 'HEALTH_POTION', 6));
@@ -1810,16 +1891,21 @@ export class Game {
     }
     // --- DUNGEON ELDORIA (KUIL ROH HUTAN) MONSTER DROPS ---
     else if (monster.type === 'SYLVAN_SPRITE') {
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 2 + Math.floor(Math.random() * 4)));
       if (Math.random() < 0.70) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'MAGIC_FLOWER', 2));
       if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MANA_POTION', 1));
     } else if (monster.type === 'VINE_CREEPER') {
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 3 + Math.floor(Math.random() * 4)));
       if (Math.random() < 0.70) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'WOOD_LOG', 2));
       if (Math.random() < 0.40) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 2));
     } else if (monster.type === 'TREANT_WARRIOR') {
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 4 + Math.floor(Math.random() * 5)));
       targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'WOOD_LOG', 3));
       if (Math.random() < 0.50) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DARK_IRON_ORE', 2));
       if (Math.random() < 0.40) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'HEALTH_POTION', 1));
     } else if (monster.type === 'BOSS_ANCIENT_ENT') {
+      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'GOLD_COIN', 8));
+      targetItems.push(new WorldItem(monster.x + 14, monster.y + 8, 'PLATINUM_COIN', 2));
       targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 6));
       targetItems.push(new WorldItem(monster.x + 28, monster.y + 12, 'MAGIC_FLOWER', 10));
       targetItems.push(new WorldItem(monster.x + 10, monster.y + 16, 'WOOD_LOG', 15));
@@ -1832,16 +1918,23 @@ export class Game {
     }
     // --- DUNGEON STONEWATCH (TAMBANG BESI ABISAL) MONSTER DROPS ---
     else if (monster.type === 'CRYSTAL_SPIDER') {
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 3 + Math.floor(Math.random() * 5)));
       if (Math.random() < 0.55) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DUNGEON_GEM', 1));
       if (Math.random() < 0.50) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DARK_IRON_ORE', 2));
     } else if (monster.type === 'IRONCLAD_SKELETON') {
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 4 + Math.floor(Math.random() * 6)));
+      if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 6, monster.y + 2, 'GOLD_COIN', 1));
       targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DARK_IRON_ORE', 3));
       if (Math.random() < 0.60) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'ANCIENT_BONE', 2));
     } else if (monster.type === 'ARMORED_GOLEM') {
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 5 + Math.floor(Math.random() * 6)));
+      if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 6, monster.y + 2, 'GOLD_COIN', 1));
       targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DARK_IRON_ORE', 4));
       if (Math.random() < 0.40) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DUNGEON_GEM', 2));
       if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'HEALTH_POTION', 2));
     } else if (monster.type === 'BOSS_OBSIDIAN_BEHEMOTH') {
+      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'GOLD_COIN', 12));
+      targetItems.push(new WorldItem(monster.x + 14, monster.y + 8, 'PLATINUM_COIN', 3));
       targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 8));
       targetItems.push(new WorldItem(monster.x + 28, monster.y + 12, 'DARK_IRON_ORE', 16));
       targetItems.push(new WorldItem(monster.x + 10, monster.y + 16, 'HEALTH_POTION', 6));
@@ -2075,7 +2168,7 @@ export class Game {
     };
 
     // Freeze player if inventory, village dialog, guild dialog, blacksmith workshop, control settings, or notification modal is open
-    const activeInput = (this.inventoryUI.isOpen || this.villageManager.isDialogOpen || this.guildNPC.isAppraisalOpen || this.blacksmithNPC.isWorkshopOpen || this.controlSettingsModal.isOpen || NotificationModal.isOpen || this.cookingSystem.isOpen || this.titleSystem.isOpen || this.leaderboardUI.isOpen)
+    const activeInput = (this.inventoryUI.isOpen || this.villageManager.isDialogOpen || this.guildNPC.isAppraisalOpen || this.blacksmithNPC.isWorkshopOpen || this.bankSystem.isOpen || this.controlSettingsModal.isOpen || NotificationModal.isOpen || this.cookingSystem.isOpen || this.titleSystem.isOpen || this.leaderboardUI.isOpen)
       ? { axisX: 0, axisY: 0, isAction: false, isSprint: false }
       : this.input.state;
 
@@ -2192,7 +2285,7 @@ export class Game {
       }
 
       // Village NPC Interaction (Quest & Ambient Warga Luar Ruangan)
-      if (!this.villageManager.isDialogOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen) {
+      if (!this.villageManager.isDialogOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen && !this.bankSystem.isOpen) {
         const nearNPC = this.villageManager.isNearAnyNPC(playerCenterX, playerCenterY);
         if (nearNPC && (this.input.isActionJustPressed || this.input.state.isAction)) {
           this.input.consumeAction();
@@ -3143,7 +3236,7 @@ export class Game {
         }
         return;
       }
-      if (this.guildNPC.isAppraisalOpen || this.blacksmithNPC.isWorkshopOpen) {
+      if (this.guildNPC.isAppraisalOpen || this.blacksmithNPC.isWorkshopOpen || this.bankSystem.isOpen) {
         return;
       }
 
@@ -3200,9 +3293,19 @@ export class Game {
               this.player.mp = this.player.maxMp;
               AudioEngine.playLevelUp();
               this.floatingText.spawn(playerCenterX, playerCenterY - 24, `💤 Istirahat Nyenyak! HP +${healedHp}, MP +${healedMp}`, '#38bdf8', 2.8);
+              if (this.player.bankSavings > 0) {
+                const earned = this.player.applyBankInterest(0.01);
+                if (earned > 0) {
+                  this.floatingText.spawn(playerCenterX, playerCenterY - 44, `🏦 Bunga Tabungan Pagi Hari: +${earned} 𝒱!`, '#facc15', 3.5);
+                }
+              }
               this.authUI.saveCurrentGame();
               break;
             }
+
+            case 'BANK_TELLER':
+              this.bankSystem.open();
+              break;
 
             case 'CHEF_GASTON':
             case 'KITCHEN_CAULDRON':
@@ -3225,6 +3328,25 @@ export class Game {
               this.villageManager.openDialogById('grimm_miner');
               break;
           }
+        }
+      }
+    }
+
+    // 9.9 Bank Daily Savings Interest Check (+1% every 180s in-game day)
+    this.bankInterestTimer += deltaTime;
+    if (this.bankInterestTimer >= 180) {
+      this.bankInterestTimer = 0;
+      if (this.player.bankSavings > 0) {
+        const earned = this.player.applyBankInterest(0.01);
+        if (earned > 0) {
+          AudioEngine.playItemPickup(true);
+          this.floatingText.spawn(
+            this.player.x + 10,
+            this.player.y - 28,
+            `🏦 Bunga Tabungan Bank: +${earned} 𝒱!`,
+            '#facc15',
+            3.2
+          );
         }
       }
     }
@@ -3659,7 +3781,7 @@ export class Game {
     // --- SCREEN SPACE 1:1 RENDERING ---
     if (this.onboardingUI.state === 'PLAYING') {
       // 8. Mobile Touch D-Pad & Action Buttons
-      if (!this.inventoryUI.isOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen && !this.controlSettingsModal.isOpen) {
+      if (!this.inventoryUI.isOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen && !this.bankSystem.isOpen && !this.controlSettingsModal.isOpen) {
         this.input.renderTouchUI(ctx, screenWidth, screenHeight);
         // Mobile Skill Bar
         this.skillBarUI.renderTouchSkillBar(ctx, screenWidth, screenHeight);
@@ -3681,6 +3803,9 @@ export class Game {
 
       // 12.0 Village NPC Dialog Modal (Quest & Ambient)
       this.villageManager.renderDialogModal(ctx, screenWidth, screenHeight);
+
+      // 12.01 Royal Bank Modal (Exchange, Savings & Shop)
+      this.bankSystem.renderModal(ctx, screenWidth, screenHeight, this.player);
 
       // 12. Control Settings Modal (Gear ⚙️ & customization)
       this.controlSettingsModal.render(ctx, screenWidth, screenHeight);
@@ -3919,7 +4044,7 @@ export class Game {
         }
       } else if (this.isCurrentMapInterior()) {
         const interiorId = this.getInteriorIdFromCurrentMap();
-        if (interiorId && !this.villageManager.isDialogOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen) {
+        if (interiorId && !this.villageManager.isDialogOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen && !this.bankSystem.isOpen) {
           const action = this.buildingInteriors.getNearbyAction(interiorId, playerCenterX, playerCenterY);
           if (action) {
             this.renderBottomActionPrompt(ctx, action.prompt, action.color || '#facc15', action.color || '#fef08a');

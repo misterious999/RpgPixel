@@ -647,14 +647,19 @@ export class VillageManager {
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(fx - 1, fy - 6 - Math.abs(wave), 2, 4);
 
-    // 3. BALAI DESA / RUMAH TETUA ALDRICH (Barat Laut: 43*ts, 44*ts)
-    const h1x = 42.5 * ts;
+    // 3. BALAI DESA / RUMAH TETUA ALDRICH (Barat Laut: 41.5*ts, 43*ts)
+    const h1x = 41.5 * ts;
     const h1y = 43 * ts;
-    this.drawCottage(ctx, h1x, h1y, 76, 64, '#991b1b', '#b45309', 'Balai Desa Aldrich');
+    this.drawCottage(ctx, h1x, h1y, 74, 64, '#991b1b', '#b45309', 'Balai Desa Aldrich');
 
-    // 3.5 BENGKEL PANDAI BESI BROKK (Barat Daya Balai: 44.8*ts, 47*ts, Pintu Masuk di 46*ts, 49*ts)
+    // 3.2 BANK KERAJAAN OAKHAVEN (Utara Alun-Alun Barat: 44.8*ts, 41.5*ts, Pintu Masuk di 46*ts, 44*ts)
+    const bkX = 44.8 * ts;
+    const bkY = 41.5 * ts;
+    this.drawBankBuilding(ctx, bkX, bkY, 78, 64);
+
+    // 3.5 BENGKEL PANDAI BESI BROKK (Barat Daya Balai: 44.8*ts, 47.5*ts, Pintu Masuk di 46*ts, 49*ts)
     const bsX = 44.8 * ts;
-    const bsY = 47 * ts;
+    const bsY = 47.5 * ts;
     this.drawBlacksmithWorkshop(ctx, bsX, bsY, 76, 64);
 
     // 4. TOKO BUNGA LILY (Timur Laut: 56*ts, 43*ts)
@@ -902,6 +907,126 @@ export class VillageManager {
     ctx.font = 'bold 7px sans-serif';
     ctx.textAlign = 'center';
     ctx.fillText(nameTag, x + w / 2, y + h + 4);
+  }
+
+  /**
+   * Render Bangunan Bank Kerajaan Oakhaven (Atap Kubah Biru Safir & Lis Emas, Fasad Marmer Putih, Pilar Romawi & Lambang Koin Emas)
+   */
+  private drawBankBuilding(
+    ctx: CanvasRenderingContext2D,
+    x: number,
+    y: number,
+    w: number,
+    h: number
+  ): void {
+    // 1. Fondasi Marmer Putih Abu-abu
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(x + 2, y + h - 10, w - 4, 10);
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(x + 2, y + h - 2, w - 4, 2);
+
+    // 2. Fasad Dinding Marmer Putih
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(x + 4, y + 20, w - 8, h - 28);
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(x + 4, y + 20, w - 8, h - 28);
+
+    // 3. Pilar Marmer Romawi di Kiri dan Kanan Pintu Fasad
+    const pX1 = x + 8;
+    const pX2 = x + w - 16;
+    for (const px of [pX1, pX2]) {
+      // Column
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(px, y + 20, 8, h - 28);
+      // Gold capital & base
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(px - 1, y + 20, 10, 3);
+      ctx.fillRect(px - 1, y + h - 11, 10, 3);
+      ctx.strokeStyle = '#e2e8f0';
+      ctx.lineWidth = 0.8;
+      ctx.strokeRect(px, y + 20, 8, h - 28);
+    }
+
+    // 4. Jendela Kaca Kisi Emas
+    const jx1 = x + 18;
+    const jx2 = x + w - 28;
+    const jy = y + 28;
+    for (const jx of [jx1, jx2]) {
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(jx, jy, 10, 14);
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
+      ctx.fillRect(jx + 2, jy + 2, 6, 4);
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(jx, jy, 10, 14);
+    }
+
+    // 5. Pintu Masuk Kayu Mahoni Tebal Bertabur Paku Emas
+    const doorW = 20;
+    const doorH = 26;
+    const doorX = x + w / 2 - doorW / 2;
+    const doorY = y + h - doorH - 4;
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(doorX, doorY, doorW, doorH);
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(doorX, doorY, doorW, doorH);
+    // Gold Studs
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(doorX + 3, doorY + 6, 2, 2);
+    ctx.fillRect(doorX + doorW - 5, doorY + 6, 2, 2);
+    ctx.fillRect(doorX + 3, doorY + 16, 2, 2);
+    ctx.fillRect(doorX + doorW - 5, doorY + 16, 2, 2);
+
+    // 6. Atap Pedimen Segitiga Biru Safir & Lis Emas Kerajaan
+    ctx.fillStyle = '#1e3a8a';
+    ctx.beginPath();
+    ctx.moveTo(x - 2, y + 22);
+    ctx.lineTo(x + w / 2, y - 2);
+    ctx.lineTo(x + w + 2, y + 22);
+    ctx.closePath();
+    ctx.fill();
+
+    // Lis Emas Atap
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 2.0;
+    ctx.stroke();
+
+    // 7. Lambang Koin Emas Val di Tengah Pedimen Atap
+    const crestX = x + w / 2;
+    const crestY = y + 11;
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.arc(crestX, crestY, 6.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#ca8a04';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.font = 'bold 7px sans-serif';
+    ctx.fillStyle = '#78350f';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('𝒱', crestX, crestY + 0.5);
+
+    // 8. Plakat Papan Nama Bank Emas di Atas Pintu
+    const badgeW = 68;
+    const badgeH = 11;
+    const badgeX = x + w / 2 - badgeW / 2;
+    const badgeY = doorY - 14;
+
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 3);
+    ctx.fill();
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#fef08a';
+    ctx.font = 'bold 6px sans-serif';
+    ctx.fillText('🏛️ BANK KERAJAAN VAL', x + w / 2, badgeY + badgeH / 2 + 0.5);
   }
 
   /**

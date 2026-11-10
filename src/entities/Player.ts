@@ -60,6 +60,43 @@ export class Player {
   public equippedWeaponId: string | null = null;
   public unlockedWeaponIds: string[] = [];
 
+  // Anime Currency & Banking System (Mata Uang Val & Tabungan Bank Kerajaan)
+  public val: number = 300;          // Saldo Dompet Tunai Petualang (Val 𝒱)
+  public bankSavings: number = 500;  // Saldo Tabungan Aman di Bank Kerajaan (Val 𝒱)
+
+  public addVal(amount: number): void {
+    if (amount <= 0) return;
+    this.val += Math.floor(amount);
+  }
+
+  public removeVal(amount: number): boolean {
+    if (amount <= 0) return true;
+    if (this.val < amount) return false;
+    this.val -= Math.floor(amount);
+    return true;
+  }
+
+  public depositToBank(amount: number): boolean {
+    if (amount <= 0 || this.val < amount) return false;
+    this.val -= Math.floor(amount);
+    this.bankSavings += Math.floor(amount);
+    return true;
+  }
+
+  public withdrawFromBank(amount: number): boolean {
+    if (amount <= 0 || this.bankSavings < amount) return false;
+    this.bankSavings -= Math.floor(amount);
+    this.val += Math.floor(amount);
+    return true;
+  }
+
+  public applyBankInterest(rate: number = 0.01): number {
+    if (this.bankSavings <= 0) return 0;
+    const interest = Math.max(1, Math.floor(this.bankSavings * rate));
+    this.bankSavings += interest;
+    return interest;
+  }
+
   public get equippedWeapon(): WeaponData | null {
     if (!this.equippedWeaponId) return null;
     return WEAPONS_DATA[this.equippedWeaponId] || null;

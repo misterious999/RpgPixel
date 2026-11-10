@@ -210,7 +210,7 @@ export class MiniMapUI {
     ctx: CanvasRenderingContext2D,
     screenWidth: number,
     screenHeight: number,
-    currentMap: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | 'DUNGEON_ELDORIA' | 'DUNGEON_STONEWATCH' | 'INTERIOR_GUILD' | 'INTERIOR_BLACKSMITH' | 'INTERIOR_APOTHECARY' | 'INTERIOR_KITCHEN' | 'INTERIOR_ELDORIA' | 'INTERIOR_STONEWATCH',
+    currentMap: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | 'DUNGEON_ELDORIA' | 'DUNGEON_STONEWATCH' | 'INTERIOR_GUILD' | 'INTERIOR_BLACKSMITH' | 'INTERIOR_APOTHECARY' | 'INTERIOR_KITCHEN' | 'INTERIOR_BANK' | 'INTERIOR_ELDORIA' | 'INTERIOR_STONEWATCH',
     tileMap: TileMap,
     dungeonMap: DungeonMap,
     player: Player,
@@ -315,6 +315,12 @@ export class MiniMapUI {
         titleColor = '#f59e0b';
         mapTileWidth = 16;
         mapTileHeight = 12;
+      } else if (currentMap === 'INTERIOR_BANK') {
+        mapTitle = '🏦 Bank Royal Val';
+        fullMapTitle = '🏦 Bank Kerajaan Oakhaven & Brankas Val';
+        titleColor = '#38bdf8';
+        mapTileWidth = 18;
+        mapTileHeight = 13;
       } else if (currentMap === 'INTERIOR_ELDORIA') {
         mapTitle = '🌿 Pondok Roh';
         fullMapTitle = '🌿 Pondok Suci Tetua Roh Hutan Eldoria';

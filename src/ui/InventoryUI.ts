@@ -10,6 +10,7 @@ export class InventoryUI {
   public isOpen: boolean = false;
   public isCardModalOpen: boolean = false;
   private selectedSlotIndex: number | null = 0;
+  public onTeleportToVillage?: () => boolean | void;
 
   // Touch button dimensions for Backpack icon
   private backpackBtn = {
@@ -257,6 +258,35 @@ export class InventoryUI {
         }
         this.selectedSlotIndex = nextIndex ?? 0;
       }
+    } else if (def.id === 'ELIXIR_FULL') {
+      if (this.player.hp >= this.player.maxHp && this.player.mp >= this.player.maxMp) {
+        this.floatingText.spawn(this.player.x + 10, this.player.y - 10, 'HP & MP Sudah Penuh!', '#38bdf8');
+        return;
+      }
+      this.player.heal(this.player.maxHp);
+      this.player.restoreMp(this.player.maxMp);
+      this.inventory.removeItem(this.selectedSlotIndex, 1);
+      AudioEngine.playPotionDrink();
+      this.floatingText.spawn(this.player.x + 10, this.player.y - 10, '💖 HP & MP Pulih Penuh!', '#facc15');
+
+      if (!this.inventory.getSlot(this.selectedSlotIndex)) {
+        let nextIndex: number | null = null;
+        for (let i = 0; i < this.inventory.capacity; i++) {
+          if (this.inventory.slots[i]) {
+            nextIndex = i;
+            break;
+          }
+        }
+        this.selectedSlotIndex = nextIndex ?? 0;
+      }
+    } else if (def.id === 'PORTAL_SCROLL') {
+      if (this.onTeleportToVillage) {
+        const success = this.onTeleportToVillage();
+        if (success !== false) {
+          this.inventory.removeItem(this.selectedSlotIndex, 1);
+          this.isOpen = false;
+        }
+      }
     }
   }
 
@@ -312,10 +342,16 @@ export class InventoryUI {
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(modalX, modalY, modalWidth, 34);
     ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 13px sans-serif';
+    ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText('🎒 TAS PETUALANG (16 Slot)', modalX + 16, modalY + 17);
+    ctx.fillText('🎒 TAS PETUALANG', modalX + 14, modalY + 17);
+
+    // Val Wallet badge in Title bar
+    ctx.fillStyle = '#facc15';
+    ctx.font = 'bold 10.5px sans-serif';
+    ctx.textAlign = 'right';
+    ctx.fillText(`👛 ${this.player.val.toLocaleString()} 𝒱  |  🏦 ${this.player.bankSavings.toLocaleString()} 𝒱`, modalX + modalWidth - 36, modalY + 17);
 
     // Close Button (X)
     ctx.fillStyle = '#ef4444';
@@ -657,8 +693,7 @@ export class InventoryUI {
     ctx.fillText(`💧 Tenaga Sihir (MP): ${this.player.maxMp}`, col2X + 10, attrY + 15);
     const atk = this.player.getAttackDamage().damage;
     ctx.fillText(`⚔️ Kekuatan Serangan: ${atk} ATK`, col2X + 10, attrY + 30);
-    const gold = this.player.inventory.getItemCount('GOLD_COIN');
-    ctx.fillText(`💰 Tabungan Emas: ${gold} Koin Emas`, col2X + 10, attrY + 45);
+    ctx.fillText(`👛 Dompet: ${this.player.val.toLocaleString()} 𝒱 · 🏦 Bank: ${this.player.bankSavings.toLocaleString()} 𝒱`, col2X + 10, attrY + 45);
     const elemText = this.player.role === 'MAGICIAN' && this.player.magicianAffinities ? this.player.magicianAffinities.primary : 'Netral';
     ctx.fillText(`🔮 Afinitas Jiwa: ${elemText}`, col2X + 10, attrY + 60);
 

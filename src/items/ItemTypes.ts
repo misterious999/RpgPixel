@@ -39,10 +39,56 @@ export const ITEM_DEFINITIONS: Record<string, ItemDefinition> = {
       ctx.fillRect(x + size * 0.35, y + size * 0.45, size * 0.1, size * 0.15);
     }
   },
+  BRONZE_COIN: {
+    id: 'BRONZE_COIN',
+    name: 'Koin Tembaga Purba',
+    description: 'Koin tembaga kuno peninggalan peradaban bawah tanah. Dapat ditukar di Bank seharga 10 Val.',
+    category: 'treasure',
+    maxStack: 999,
+    color: '#d97706',
+    renderIcon: (ctx, x, y, size) => {
+      ctx.fillStyle = '#92400e';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.5, y + size * 0.5, size * 0.36, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#b45309';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.5, y + size * 0.5, size * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#fef3c7';
+      ctx.font = `bold ${Math.floor(size * 0.35)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('C', x + size * 0.5, y + size * 0.5);
+    }
+  },
+  SILVER_COIN: {
+    id: 'SILVER_COIN',
+    name: 'Koin Perak Kuno',
+    description: 'Koin perak berukir lambang ksatria purba. Dapat ditukar di Bank seharga 100 Val.',
+    category: 'treasure',
+    maxStack: 999,
+    color: '#cbd5e1',
+    renderIcon: (ctx, x, y, size) => {
+      ctx.fillStyle = '#64748b';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.5, y + size * 0.5, size * 0.36, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#e2e8f0';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.5, y + size * 0.5, size * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#475569';
+      ctx.font = `bold ${Math.floor(size * 0.35)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('S', x + size * 0.5, y + size * 0.5);
+    }
+  },
   GOLD_COIN: {
     id: 'GOLD_COIN',
-    name: 'Koin Emas',
-    description: 'Mata uang kerajaan yang berkilau.',
+    name: 'Koin Emas Abisal',
+    description: 'Koin emas murni dari monster dan peti dungeon. Dapat ditukar di Bank seharga 1.000 Val.',
     category: 'treasure',
     maxStack: 999,
     color: '#eab308',
@@ -59,7 +105,30 @@ export const ITEM_DEFINITIONS: Record<string, ItemDefinition> = {
       ctx.font = `bold ${Math.floor(size * 0.4)}px sans-serif`;
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('$', x + size * 0.5, y + size * 0.5);
+      ctx.fillText('G', x + size * 0.5, y + size * 0.5);
+    }
+  },
+  PLATINUM_COIN: {
+    id: 'PLATINUM_COIN',
+    name: 'Koin Platina Raja Purba',
+    description: 'Koin platina berkilau kemakmuran peninggalan raja purba abisal. Dapat ditukar di Bank seharga 10.000 Val!',
+    category: 'treasure',
+    maxStack: 999,
+    color: '#a5b4fc',
+    renderIcon: (ctx, x, y, size) => {
+      ctx.fillStyle = '#6366f1';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.5, y + size * 0.5, size * 0.38, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#c7d2fe';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.5, y + size * 0.5, size * 0.28, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#4338ca';
+      ctx.font = `bold ${Math.floor(size * 0.4)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('P', x + size * 0.5, y + size * 0.5);
     }
   },
   WOOD_LOG: {
@@ -387,6 +456,51 @@ export const ITEM_DEFINITIONS: Record<string, ItemDefinition> = {
       ctx.moveTo(x + size * 0.6, y + size * 0.45);
       ctx.quadraticCurveTo(x + size * 0.65, y + size * 0.3, x + size * 0.58, y + size * 0.2);
       ctx.stroke();
+    }
+  },
+  ELIXIR_FULL: {
+    id: 'ELIXIR_FULL',
+    name: 'Elixir Agung',
+    description: 'Ramuan legendaris peninggalan permaisuri sihir. Memulihkan 100% HP dan 100% MP secara instan!',
+    category: 'consumable',
+    maxStack: 20,
+    effectValue: 9999,
+    color: '#ec4899',
+    renderIcon: (ctx, x, y, size) => {
+      // Crystal diamond bottle
+      ctx.fillStyle = '#ec4899';
+      ctx.beginPath();
+      ctx.moveTo(x + size * 0.5, y + size * 0.15);
+      ctx.lineTo(x + size * 0.8, y + size * 0.55);
+      ctx.lineTo(x + size * 0.5, y + size * 0.85);
+      ctx.lineTo(x + size * 0.2, y + size * 0.55);
+      ctx.closePath();
+      ctx.fill();
+      ctx.strokeStyle = '#fbcfe8';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+      // Sparkle
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(x + size * 0.45, y + size * 0.45, size * 0.1, size * 0.1);
+    }
+  },
+  PORTAL_SCROLL: {
+    id: 'PORTAL_SCROLL',
+    name: 'Gulungan Teleportasi',
+    description: 'Gulungan sihir teleportasi darurat yang seketika membawamu kembali ke Alun-Alun Serena.',
+    category: 'consumable',
+    maxStack: 10,
+    color: '#38bdf8',
+    renderIcon: (ctx, x, y, size) => {
+      // Rolled parchment
+      ctx.fillStyle = '#fde68a';
+      ctx.fillRect(x + size * 0.25, y + size * 0.28, size * 0.5, size * 0.44);
+      ctx.fillStyle = '#b45309';
+      ctx.fillRect(x + size * 0.2, y + size * 0.25, size * 0.1, size * 0.5);
+      ctx.fillRect(x + size * 0.7, y + size * 0.25, size * 0.1, size * 0.5);
+      // Blue magic ribbon seal
+      ctx.fillStyle = '#0284c7';
+      ctx.fillRect(x + size * 0.44, y + size * 0.4, size * 0.12, size * 0.2);
     }
   }
 };
