@@ -419,18 +419,28 @@ export class InventoryUI {
           ctx.lineTo(col2X + col2W - 12, detailY + 54);
           ctx.stroke();
 
-          // Description (Wrapped strictly inside col2W - 24)
+          // Action Button Positioning (Defined first to guarantee no text overlaps)
+          const btnX = col2X + 12;
+          const btnWidth = col2W - 24;
+          const btnHeight = 30;
+          const btnY = modalY + modalHeight - btnHeight - 12;
+
+          // Description & Effect Area (Strictly clamped before button)
+          const descStartY = detailY + 60;
+          const availSpace = btnY - descStartY - 6;
+          const maxDescLines = availSpace < 50 ? 2 : 3;
+
           ctx.fillStyle = '#cbd5e1';
-          ctx.font = '10px sans-serif';
+          ctx.font = '9.5px sans-serif';
           const descMaxWidth = col2W - 24;
           const descHeight = CanvasText.drawWrappedText(
             ctx,
             def.description,
             col2X + 12,
-            detailY + 64,
+            descStartY,
             descMaxWidth,
-            14,
-            3
+            13,
+            maxDescLines
           );
 
           // Effect Tag
@@ -442,24 +452,20 @@ export class InventoryUI {
             ? `✨ Efek: +${def.effectValue} HP Pulih`
             : `✨ Tipe: ${catName}`;
           ctx.fillStyle = '#38bdf8';
-          ctx.font = 'bold 9.5px sans-serif';
+          ctx.font = 'bold 9px sans-serif';
+          const maxEffLines = (descStartY + descHeight + 18 < btnY) ? 2 : 1;
           CanvasText.drawWrappedText(
             ctx,
             effectText,
             col2X + 12,
-            detailY + 68 + descHeight,
+            descStartY + descHeight + 4,
             descMaxWidth,
-            13,
-            2
+            12.5,
+            maxEffLines
           );
 
-          // Action Button
+          // Action Button Render
           if (def.id === 'ADVENTURER_CARD') {
-            const btnX = col2X + 12;
-            const btnY = modalY + modalHeight - 44;
-            const btnWidth = col2W - 24;
-            const btnHeight = 32;
-
             ctx.fillStyle = '#1e3a8a';
             ctx.fillRect(btnX, btnY, btnWidth, btnHeight);
             ctx.strokeStyle = '#60a5fa';
@@ -467,16 +473,11 @@ export class InventoryUI {
             ctx.strokeRect(btnX, btnY, btnWidth, btnHeight);
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 11px sans-serif';
+            ctx.font = 'bold 10.5px sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText('🪪 CEK KARTU PETUALANG', btnX + btnWidth / 2, btnY + btnHeight / 2);
           } else if (def.category === 'consumable') {
-            const btnX = col2X + 12;
-            const btnY = modalY + modalHeight - 44;
-            const btnWidth = col2W - 24;
-            const btnHeight = 32;
-
             ctx.fillStyle = '#10b981';
             ctx.fillRect(btnX, btnY, btnWidth, btnHeight);
             ctx.strokeStyle = '#34d399';
@@ -484,7 +485,7 @@ export class InventoryUI {
             ctx.strokeRect(btnX, btnY, btnWidth, btnHeight);
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 11px sans-serif';
+            ctx.font = 'bold 10.5px sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText('GUNAKAN ITEM', btnX + btnWidth / 2, btnY + btnHeight / 2);

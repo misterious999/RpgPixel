@@ -589,8 +589,6 @@ export class Monster {
     }
 
     // 3. Collision with Map Walls & Village Safe Zone Protection
-    const nextX = this.x + moveX;
-    const nextY = this.y + moveY;
     const ts = CONSTANTS.TILE_SIZE;
     const isOverworld = this.type === 'FOREST_SLIME' || this.type === 'WILD_WOLF' || this.type === 'GOBLIN';
 
@@ -601,53 +599,64 @@ export class Monster {
       return tx >= 39 && tx <= 61 && ty >= 41 && ty <= 59;
     };
 
-    // Check X move
-    const leftTileX = Math.floor(nextX / ts);
-    const rightTileX = Math.floor((nextX + this.width) / ts);
-    const topTileY = Math.floor(this.y / ts);
-    const bottomTileY = Math.floor((this.y + this.height) / ts);
+    // Helper presisi kotak kaki/badan bawah monster
+    const canMonsterFitAt = (posX: number, posY: number): boolean => {
+      const footLeft = posX + 3;
+      const footRight = posX + this.width - 3;
+      const footTop = posY + Math.max(0, this.height - 18);
+      const footBottom = posY + this.height - 1;
 
-    let collidesX = false;
-    for (let ty = topTileY; ty <= bottomTileY; ty++) {
-      for (let tx = leftTileX; tx <= rightTileX; tx++) {
-        if (isTileSolid(tx, ty)) {
-          collidesX = true;
-          break;
+      const leftTile = Math.floor(footLeft / ts);
+      const rightTile = Math.floor((footRight - 0.01) / ts);
+      const topTile = Math.floor(footTop / ts);
+      const bottomTile = Math.floor((footBottom - 0.01) / ts);
+
+      for (let ty = topTile; ty <= bottomTile; ty++) {
+        for (let tx = leftTile; tx <= rightTile; tx++) {
+          if (isTileSolid(tx, ty)) return false;
         }
       }
-      if (collidesX) break;
-    }
 
-    // Larangan mutlak monster masuk pedesaan pada sumbu X
-    if (isOverworld && (isInsideVillage(nextX, this.y) || isInsideVillage(nextX + this.width, this.y + this.height))) {
-      collidesX = true;
-    }
-
-    if (!collidesX) this.x = nextX;
-
-    // Check Y move
-    const curLeftX = Math.floor(this.x / ts);
-    const curRightX = Math.floor((this.x + this.width) / ts);
-    const nextTopY = Math.floor(nextY / ts);
-    const nextBottomY = Math.floor((nextY + this.height) / ts);
-
-    let collidesY = false;
-    for (let ty = nextTopY; ty <= nextBottomY; ty++) {
-      for (let tx = curLeftX; tx <= curRightX; tx++) {
-        if (isTileSolid(tx, ty)) {
-          collidesY = true;
-          break;
+      if (isOverworld) {
+        if (isInsideVillage(footLeft, footTop) || isInsideVillage(footRight, footBottom)) {
+          return false;
         }
       }
-      if (collidesY) break;
+
+      return true;
+    };
+
+    // Fail-safe: jika monster tersangkut di dinding, kembalikan ke spawn yang valid
+    if (!canMonsterFitAt(this.x, this.y)) {
+      if (canMonsterFitAt(this.spawnX, this.spawnY)) {
+        this.x = this.spawnX;
+        this.y = this.spawnY;
+        this.knockbackX = 0;
+        this.knockbackY = 0;
+      }
     }
 
-    // Larangan mutlak monster masuk pedesaan pada sumbu Y
-    if (isOverworld && (isInsideVillage(this.x, nextY) || isInsideVillage(this.x + this.width, nextY + this.height))) {
-      collidesY = true;
+    // Gerak sumbu X dengan collision check
+    if (moveX !== 0) {
+      const nextX = this.x + moveX;
+      if (canMonsterFitAt(nextX, this.y)) {
+        this.x = nextX;
+      } else {
+        this.knockbackX = 0;
+        this.wanderVx = -this.wanderVx;
+      }
     }
 
-    if (!collidesY) this.y = nextY;
+    // Gerak sumbu Y dengan collision check
+    if (moveY !== 0) {
+      const nextY = this.y + moveY;
+      if (canMonsterFitAt(this.x, nextY)) {
+        this.y = nextY;
+      } else {
+        this.knockbackY = 0;
+        this.wanderVy = -this.wanderVy;
+      }
+    }
   }
 
   public render(ctx: CanvasRenderingContext2D): void {

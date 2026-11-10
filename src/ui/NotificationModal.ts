@@ -91,8 +91,8 @@ export class NotificationModal {
     ctx.fillRect(0, 0, screenWidth, screenHeight);
 
     // 2. Modal Dimensions (Landscape Optimized)
-    const modalWidth = Math.min(460, screenWidth - 32);
-    const modalHeight = Math.min(240, screenHeight - 24);
+    const modalWidth = Math.min(460, screenWidth - 28);
+    const modalHeight = Math.min(240, Math.max(180, screenHeight - 20));
     const modalX = (screenWidth - modalWidth) / 2;
     const modalY = (screenHeight - modalHeight) / 2;
 
@@ -156,19 +156,21 @@ export class NotificationModal {
     const safeTitle = CanvasText.truncate(ctx, modal.title, modalWidth - 70);
     ctx.fillText(safeTitle, modalX + 52, modalY + 26);
 
-    // Message Body (With Multi-Line Word Wrapping)
+    // Action Buttons
+    const btnHeight = 32;
+    const btnY = modalY + modalHeight - 44;
+
+    // Message Body (With Adaptive Max-Lines strictly avoiding buttons)
     ctx.fillStyle = '#e2e8f0';
-    ctx.font = '11px sans-serif';
+    ctx.font = '10.5px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
 
     const maxTextWidth = modalWidth - 44;
-    const startTextY = modalY + 54;
-    CanvasText.drawWrappedText(ctx, modal.message, modalX + 22, startTextY, maxTextWidth, 16, 5);
-
-    // Action Buttons
-    const btnHeight = 34;
-    const btnY = modalY + modalHeight - 48;
+    const startTextY = modalY + 52;
+    const availableTextHeight = btnY - startTextY - 8;
+    const maxLines = Math.max(1, Math.min(5, Math.floor(availableTextHeight / 15)));
+    CanvasText.drawWrappedText(ctx, modal.message, modalX + 22, startTextY, maxTextWidth, 15, maxLines);
 
     if (modal.type === 'confirm') {
       const btnWidth = (modalWidth - 60) / 2;

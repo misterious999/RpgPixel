@@ -36,7 +36,7 @@ export class ControlSettingsModal {
 
     // Landscape optimized modal dimensions
     const modalWidth = Math.min(540, screenWidth - 24);
-    const modalHeight = Math.min(300, screenHeight - 16);
+    const modalHeight = Math.min(300, Math.max(240, screenHeight - 16));
     const modalX = (screenWidth - modalWidth) / 2;
     const modalY = (screenHeight - modalHeight) / 2;
 
@@ -56,6 +56,14 @@ export class ControlSettingsModal {
     const col2X = modalX + 26 + colW;
     const optW = (colW - 8) / 3;
 
+    const stepY = Math.min(50, Math.max(42, Math.floor((modalHeight - 110) / 2)));
+    const sec1Y = modalY + 44;
+    const sec2Y = sec1Y + stepY;
+    const sec3Y = sec2Y + stepY;
+    const sec4Y = sec1Y;
+    const sec5Y = sec2Y;
+    const sec6Y = sec3Y;
+
     // Helper for touch on 3-button segments
     const checkSegmentTouch = (
       secX: number,
@@ -63,9 +71,10 @@ export class ControlSettingsModal {
       options: { val: number }[],
       onSelect: (val: number) => void
     ) => {
+      const btnY = secY + 15;
       for (let i = 0; i < options.length; i++) {
         const ox = secX + i * (optW + 4);
-        if (touchX >= ox && touchX <= ox + optW && touchY >= secY && touchY <= secY + 28) {
+        if (touchX >= ox && touchX <= ox + optW && touchY >= btnY && touchY <= btnY + 24) {
           onSelect(options[i].val);
           if (this.onConfigChange) this.onConfigChange();
           return true;
@@ -76,9 +85,8 @@ export class ControlSettingsModal {
 
     // --- KOLOM 1 (KIRI) ---
     // 1. Jarak Kamera (Luas 1.0 | Sedang 1.25 | Dekat 1.5)
-    const sec1Y = modalY + 54;
     if (
-      checkSegmentTouch(col1X, sec1Y + 16, [{ val: 1.0 }, { val: 1.25 }, { val: 1.5 }], (val) => {
+      checkSegmentTouch(col1X, sec1Y, [{ val: 1.0 }, { val: 1.25 }, { val: 1.5 }], (val) => {
         ControlSettingsManager.save({ cameraZoom: val });
       })
     ) {
@@ -86,9 +94,8 @@ export class ControlSettingsModal {
     }
 
     // 2. Ketinggian Tombol dari Bawah (45 | 58 | 80)
-    const sec2Y = sec1Y + 58;
     if (
-      checkSegmentTouch(col1X, sec2Y + 16, [{ val: 45 }, { val: 58 }, { val: 80 }], (val) => {
+      checkSegmentTouch(col1X, sec2Y, [{ val: 45 }, { val: 58 }, { val: 80 }], (val) => {
         ControlSettingsManager.save({ bottomOffset: val });
       })
     ) {
@@ -96,9 +103,8 @@ export class ControlSettingsModal {
     }
 
     // 3. Transparansi Tombol (0.5 | 0.85 | 1.0)
-    const sec3Y = sec2Y + 58;
     if (
-      checkSegmentTouch(col1X, sec3Y + 16, [{ val: 0.5 }, { val: 0.85 }, { val: 1.0 }], (val) => {
+      checkSegmentTouch(col1X, sec3Y, [{ val: 0.5 }, { val: 0.85 }, { val: 1.0 }], (val) => {
         ControlSettingsManager.save({ opacity: val });
       })
     ) {
@@ -107,9 +113,8 @@ export class ControlSettingsModal {
 
     // --- KOLOM 2 (KANAN) ---
     // 4. Ukuran Tombol (0.85 | 1.0 | 1.2)
-    const sec4Y = modalY + 54;
     if (
-      checkSegmentTouch(col2X, sec4Y + 16, [{ val: 0.85 }, { val: 1.0 }, { val: 1.2 }], (val) => {
+      checkSegmentTouch(col2X, sec4Y, [{ val: 0.85 }, { val: 1.0 }, { val: 1.2 }], (val) => {
         ControlSettingsManager.save({ buttonScale: val });
       })
     ) {
@@ -117,9 +122,8 @@ export class ControlSettingsModal {
     }
 
     // 5. Jarak dari Tepi Layar (45 | 58 | 75)
-    const sec5Y = sec4Y + 58;
     if (
-      checkSegmentTouch(col2X, sec5Y + 16, [{ val: 45 }, { val: 58 }, { val: 75 }], (val) => {
+      checkSegmentTouch(col2X, sec5Y, [{ val: 45 }, { val: 58 }, { val: 75 }], (val) => {
         ControlSettingsManager.save({ sideMargin: val });
       })
     ) {
@@ -127,9 +131,8 @@ export class ControlSettingsModal {
     }
 
     // 6. Audio Toggles (SFX & Musik Retro)
-    const sec6Y = sec5Y + 54;
     const audioBtnW = (colW - 8) / 2;
-    const audioBtnH = 28;
+    const audioBtnH = 24;
     const sfxBtnX = col2X;
     const bgmBtnX = col2X + audioBtnW + 8;
     const audioBtnY = sec6Y + 15;
@@ -172,8 +175,8 @@ export class ControlSettingsModal {
     const resetBtnX = modalX + 16;
     const logoutBtnX = resetBtnX + resetBtnW + footerGap;
     const saveBtnX = logoutBtnX + logoutBtnW + footerGap;
-    const footerBtnY = modalY + modalHeight - 44;
-    const footerBtnH = 32;
+    const footerBtnY = modalY + modalHeight - 38;
+    const footerBtnH = 28;
 
     // Reset Default Button
     if (
@@ -265,7 +268,7 @@ export class ControlSettingsModal {
 
     // 3. Modal Box (Landscape Optimized)
     const modalWidth = Math.min(540, screenWidth - 24);
-    const modalHeight = Math.min(300, screenHeight - 16);
+    const modalHeight = Math.min(300, Math.max(240, screenHeight - 16));
     const modalX = (screenWidth - modalWidth) / 2;
     const modalY = (screenHeight - modalHeight) / 2;
 
@@ -277,25 +280,33 @@ export class ControlSettingsModal {
 
     // Header
     ctx.fillStyle = '#1e293b';
-    ctx.fillRect(modalX, modalY, modalWidth, 36);
+    ctx.fillRect(modalX, modalY, modalWidth, 34);
     ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 12.5px sans-serif';
+    ctx.font = 'bold 12px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
     const safeTitle = CanvasText.truncate(ctx, '⚙️ PENGATURAN KONTROL & KAMERA', modalWidth - 48);
-    ctx.fillText(safeTitle, modalX + 16, modalY + 18);
+    ctx.fillText(safeTitle, modalX + 16, modalY + 17);
 
     // Close X
     ctx.fillStyle = '#ef4444';
     ctx.font = 'bold 16px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('✕', modalX + modalWidth - 18, modalY + 18);
+    ctx.fillText('✕', modalX + modalWidth - 18, modalY + 17);
 
     const cfg = ControlSettingsManager.get();
     const colW = (modalWidth - 42) / 2;
     const col1X = modalX + 16;
     const col2X = modalX + 26 + colW;
     const optW = (colW - 8) / 3;
+
+    const stepY = Math.min(50, Math.max(42, Math.floor((modalHeight - 110) / 2)));
+    const sec1Y = modalY + 44;
+    const sec2Y = sec1Y + stepY;
+    const sec3Y = sec2Y + stepY;
+    const sec4Y = sec1Y;
+    const sec5Y = sec2Y;
+    const sec6Y = sec3Y;
 
     // Helper for rendering segment buttons
     const renderSegment = (
@@ -306,7 +317,7 @@ export class ControlSettingsModal {
       activeVal: number
     ) => {
       ctx.fillStyle = '#94a3b8';
-      ctx.font = 'bold 10px sans-serif';
+      ctx.font = 'bold 9.5px sans-serif';
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       const safeLabel = CanvasText.truncate(ctx, label, colW - 4);
@@ -319,22 +330,21 @@ export class ControlSettingsModal {
         const isSelected = Math.abs(opt.val - activeVal) < 0.04;
 
         ctx.fillStyle = isSelected ? '#0284c7' : '#1e293b';
-        ctx.fillRect(ox, btnY, optW, 26);
+        ctx.fillRect(ox, btnY, optW, 24);
         ctx.strokeStyle = isSelected ? '#38bdf8' : '#334155';
         ctx.lineWidth = isSelected ? 2 : 1;
-        ctx.strokeRect(ox, btnY, optW, 26);
+        ctx.strokeRect(ox, btnY, optW, 24);
 
         ctx.fillStyle = isSelected ? '#ffffff' : '#cbd5e1';
         ctx.font = isSelected ? 'bold 9px sans-serif' : '9px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillText(opt.name, ox + optW / 2, btnY + 13);
+        ctx.fillText(opt.name, ox + optW / 2, btnY + 12);
       }
     };
 
     // --- KOLOM 1 (KIRI) ---
     // 1. Jarak Kamera (Solves user's issue: "kurasa itu terlalu dekat")
-    const sec1Y = modalY + 48;
     renderSegment(
       col1X,
       sec1Y,
@@ -348,7 +358,6 @@ export class ControlSettingsModal {
     );
 
     // 2. Ketinggian Tombol dari Bawah
-    const sec2Y = sec1Y + 54;
     renderSegment(
       col1X,
       sec2Y,
@@ -362,7 +371,6 @@ export class ControlSettingsModal {
     );
 
     // 3. Transparansi Tombol
-    const sec3Y = sec2Y + 54;
     renderSegment(
       col1X,
       sec3Y,
@@ -377,7 +385,6 @@ export class ControlSettingsModal {
 
     // --- KOLOM 2 (KANAN) ---
     // 4. Ukuran Tombol
-    const sec4Y = modalY + 48;
     renderSegment(
       col2X,
       sec4Y,
@@ -391,7 +398,6 @@ export class ControlSettingsModal {
     );
 
     // 5. Jarak Sisi Layar
-    const sec5Y = sec4Y + 54;
     renderSegment(
       col2X,
       sec5Y,
@@ -405,15 +411,14 @@ export class ControlSettingsModal {
     );
 
     // 6. Audio Toggles (SFX & Musik Retro)
-    const sec6Y = sec5Y + 54;
     ctx.fillStyle = '#94a3b8';
-    ctx.font = 'bold 10px sans-serif';
+    ctx.font = 'bold 9.5px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
     ctx.fillText('🔊 Efek Suara & Musik Retro:', col2X, sec6Y);
 
     const audioBtnW = (colW - 8) / 2;
-    const audioBtnH = 26;
+    const audioBtnH = 24;
     const sfxBtnX = col2X;
     const bgmBtnX = col2X + audioBtnW + 8;
     const audioBtnY = sec6Y + 15;
@@ -452,8 +457,8 @@ export class ControlSettingsModal {
     const resetBtnX = modalX + 16;
     const logoutBtnX = resetBtnX + resetBtnW + footerGap;
     const saveBtnX = logoutBtnX + logoutBtnW + footerGap;
-    const footerBtnY = modalY + modalHeight - 40;
-    const footerBtnH = 30;
+    const footerBtnY = modalY + modalHeight - 38;
+    const footerBtnH = 28;
 
     // 1. Reset Default Button
     ctx.fillStyle = '#1e293b';

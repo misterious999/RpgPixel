@@ -63,7 +63,7 @@ export class BlacksmithNPC {
     }
 
     const modalWidth = Math.min(540, screenWidth - 20);
-    const modalHeight = Math.min(310, screenHeight - 16);
+    const modalHeight = Math.min(320, Math.max(250, screenHeight - 14));
     const modalX = (screenWidth - modalWidth) / 2;
     const modalY = (screenHeight - modalHeight) / 2;
 
@@ -338,7 +338,7 @@ export class BlacksmithNPC {
 
     // 2. Main Modal Box (Landscape Optimized)
     const modalWidth = Math.min(540, screenWidth - 20);
-    const modalHeight = Math.min(310, screenHeight - 16);
+    const modalHeight = Math.min(320, Math.max(250, screenHeight - 14));
     const modalX = (screenWidth - modalWidth) / 2;
     const modalY = (screenHeight - modalHeight) / 2;
 

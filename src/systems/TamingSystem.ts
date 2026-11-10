@@ -61,10 +61,49 @@ export class Pet {
     deltaTime: number,
     player: Player,
     worldItems: WorldItem[],
-    floatingText: FloatingTextManager
+    floatingText: FloatingTextManager,
+    isTileSolid?: (tx: number, ty: number) => boolean
   ): void {
     this.animTimer += deltaTime;
     if (this.heartTimer > 0) this.heartTimer -= deltaTime;
+
+    const tileSize = 32;
+    const canMoveTo = (posX: number, posY: number): boolean => {
+      if (!isTileSolid) return true;
+      const footLeft = posX + 4;
+      const footRight = posX + this.width - 4;
+      const footTop = posY + this.height - 10;
+      const footBottom = posY + this.height - 1;
+
+      const leftTile = Math.floor(footLeft / tileSize);
+      const rightTile = Math.floor((footRight - 0.01) / tileSize);
+      const topTile = Math.floor(footTop / tileSize);
+      const bottomTile = Math.floor((footBottom - 0.01) / tileSize);
+
+      for (let ty = topTile; ty <= bottomTile; ty++) {
+        for (let tx = leftTile; tx <= rightTile; tx++) {
+          if (isTileSolid(tx, ty)) return false;
+        }
+      }
+      return true;
+    };
+
+    const moveStep = (dx: number, dy: number) => {
+      const nextX = this.x + dx;
+      if (canMoveTo(nextX, this.y)) {
+        this.x = nextX;
+      }
+      const nextY = this.y + dy;
+      if (canMoveTo(this.x, nextY)) {
+        this.y = nextY;
+      }
+    };
+
+    // Auto recover if pet gets stuck inside walls
+    if (isTileSolid && !canMoveTo(this.x, this.y) && canMoveTo(player.x, player.y)) {
+      this.x = player.x;
+      this.y = player.y;
+    }
 
     const myCenterX = this.x + this.width / 2;
     const myCenterY = this.y + this.height / 2;
@@ -92,8 +131,9 @@ export class Pet {
       const itemCenterX = nearestItem.x + nearestItem.width / 2;
       const itemCenterY = nearestItem.y + nearestItem.height / 2;
       const angle = Math.atan2(itemCenterY - myCenterY, itemCenterX - myCenterX);
-      this.x += Math.cos(angle) * (this.speed * 1.3) * deltaTime;
-      this.y += Math.sin(angle) * (this.speed * 1.3) * deltaTime;
+      const dx = Math.cos(angle) * (this.speed * 1.3) * deltaTime;
+      const dy = Math.sin(angle) * (this.speed * 1.3) * deltaTime;
+      moveStep(dx, dy);
       this.direction = itemCenterX < myCenterX ? 'left' : 'right';
 
       // Pick up item when reached
@@ -118,17 +158,27 @@ export class Pet {
         }
       }
     } else {
-      // 2. Follow Player
+      // 2. Follow Player smoothly without clipping walls
       const followOffsetX = player.direction === 'left' ? 22 : -22;
-      const targetX = playerCenterX + followOffsetX;
-      const targetY = playerCenterY + 12;
+      let targetX = playerCenterX + followOffsetX;
+      let targetY = playerCenterY + 12;
+
+      if (!canMoveTo(targetX, targetY)) {
+        targetX = playerCenterX;
+        targetY = playerCenterY;
+      }
+
       const distToPlayer = Math.hypot(this.x - targetX, this.y - targetY);
 
-      if (distToPlayer > 18) {
+      if (distToPlayer > 240 && canMoveTo(playerCenterX, playerCenterY)) {
+        this.x = playerCenterX;
+        this.y = playerCenterY;
+      } else if (distToPlayer > 18) {
         const speed = distToPlayer > 120 ? this.speed * 1.6 : this.speed;
         const angle = Math.atan2(targetY - this.y, targetX - this.x);
-        this.x += Math.cos(angle) * speed * deltaTime;
-        this.y += Math.sin(angle) * speed * deltaTime;
+        const dx = Math.cos(angle) * speed * deltaTime;
+        const dy = Math.sin(angle) * speed * deltaTime;
+        moveStep(dx, dy);
         this.direction = targetX < this.x ? 'left' : 'right';
       }
     }

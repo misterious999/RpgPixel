@@ -132,7 +132,8 @@ export class Companion {
     player: Player,
     monsters: Monster[],
     floatingText: FloatingTextManager,
-    onHitMonster?: (m: Monster, dmg: number) => void
+    onHitMonster?: (m: Monster, dmg: number) => void,
+    isTileSolid?: (tx: number, ty: number) => boolean
   ): void {
     this.animTimer += deltaTime;
     if (this.hurtTimer > 0) this.hurtTimer -= deltaTime;
@@ -145,6 +146,46 @@ export class Companion {
       if (this.speechTimer <= 0) {
         this.speechText = null;
       }
+    }
+
+    // Helper pemeriksaan tabrakan dinding & rintangan peta
+    const tileSize = 32;
+    const canMoveTo = (posX: number, posY: number): boolean => {
+      if (!isTileSolid) return true;
+      const footLeft = posX + 5;
+      const footRight = posX + this.width - 5;
+      const footTop = posY + this.height - 12;
+      const footBottom = posY + this.height - 1;
+
+      const leftTile = Math.floor(footLeft / tileSize);
+      const rightTile = Math.floor((footRight - 0.01) / tileSize);
+      const topTile = Math.floor(footTop / tileSize);
+      const bottomTile = Math.floor((footBottom - 0.01) / tileSize);
+
+      for (let ty = topTile; ty <= bottomTile; ty++) {
+        for (let tx = leftTile; tx <= rightTile; tx++) {
+          if (isTileSolid(tx, ty)) return false;
+        }
+      }
+      return true;
+    };
+
+    // Helper langkah gerak independen per sumbu (sliding di sepanjang dinding)
+    const moveStep = (dx: number, dy: number) => {
+      const nextX = this.x + dx;
+      if (canMoveTo(nextX, this.y)) {
+        this.x = nextX;
+      }
+      const nextY = this.y + dy;
+      if (canMoveTo(this.x, nextY)) {
+        this.y = nextY;
+      }
+    };
+
+    // Pemulihan otomatis jika posisi saat ini tersangkut di dalam dinding
+    if (isTileSolid && !canMoveTo(this.x, this.y) && canMoveTo(player.x, player.y)) {
+      this.x = player.x;
+      this.y = player.y;
     }
 
     // Passive regeneration out of intense battle (+3 HP / sec)
@@ -210,8 +251,9 @@ export class Companion {
 
       if (closestDist > desiredRange + 6) {
         const angle = Math.atan2(mCenterY - myCenterY, mCenterX - myCenterX);
-        this.x += Math.cos(angle) * this.speed * deltaTime;
-        this.y += Math.sin(angle) * this.speed * deltaTime;
+        const dx = Math.cos(angle) * this.speed * deltaTime;
+        const dy = Math.sin(angle) * this.speed * deltaTime;
+        moveStep(dx, dy);
       }
 
       // Attack Execution
@@ -237,20 +279,31 @@ export class Companion {
         }
       }
     } else {
-      // 4. Follow Player smoothly
-      // Desired position is slightly behind the player
-      const followOffsetX = player.direction === 'left' ? 28 : (player.direction === 'right' ? -28 : 22);
-      const followOffsetY = player.direction === 'up' ? 26 : (player.direction === 'down' ? -26 : 8);
+      // 4. Follow Player smoothly & strictly respect dungeon corridors
+      const followOffsetX = player.direction === 'left' ? 26 : (player.direction === 'right' ? -26 : 20);
+      const followOffsetY = player.direction === 'up' ? 24 : (player.direction === 'down' ? -24 : 8);
 
-      const targetX = player.x + followOffsetX;
-      const targetY = player.y + followOffsetY;
+      let targetX = player.x + followOffsetX;
+      let targetY = player.y + followOffsetY;
+
+      // Jika target offset menembus dinding, kembali ke jejak kaki player yang sah
+      if (!canMoveTo(targetX, targetY)) {
+        targetX = player.x;
+        targetY = player.y;
+      }
+
       const distToFollowTarget = Math.hypot(this.x - targetX, this.y - targetY);
 
-      if (distToFollowTarget > 18) {
+      if (distToFollowTarget > 260 && canMoveTo(player.x, player.y)) {
+        // Teleport aman ke samping player jika terpisah terlalu jauh
+        this.x = player.x;
+        this.y = player.y;
+      } else if (distToFollowTarget > 18) {
         const followSpeed = distToFollowTarget > 140 ? this.speed * 1.8 : this.speed;
         const angle = Math.atan2(targetY - this.y, targetX - this.x);
-        this.x += Math.cos(angle) * followSpeed * deltaTime;
-        this.y += Math.sin(angle) * followSpeed * deltaTime;
+        const dx = Math.cos(angle) * followSpeed * deltaTime;
+        const dy = Math.sin(angle) * followSpeed * deltaTime;
+        moveStep(dx, dy);
         this.direction = (playerCenterX < myCenterX) ? 'left' : 'right';
       }
     }

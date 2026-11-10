@@ -87,7 +87,7 @@ export class GuildNPC {
     }
 
     const modalWidth = Math.min(540, screenWidth - 20);
-    const modalHeight = Math.min(300, screenHeight - 16);
+    const modalHeight = Math.min(300, Math.max(250, screenHeight - 16));
     const modalX = (screenWidth - modalWidth) / 2;
     const modalY = (screenHeight - modalHeight) / 2;
 
@@ -294,7 +294,7 @@ export class GuildNPC {
 
     // 2. Modal Dimensions (Landscape 2-Column Layout)
     const modalWidth = Math.min(540, screenWidth - 20);
-    const modalHeight = Math.min(300, screenHeight - 16);
+    const modalHeight = Math.min(300, Math.max(250, screenHeight - 16));
     const modalX = (screenWidth - modalWidth) / 2;
     const modalY = (screenHeight - modalHeight) / 2;
 

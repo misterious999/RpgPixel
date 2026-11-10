@@ -975,7 +975,7 @@ export class Game {
       // East Crystal Grotto (Gua Batu Kristal Abisal)
       new Monster('f2_shadow_3', 'CRYPT_SHADOW', 31 * ts + 4, 19 * ts + 4),
       new Monster('f2_shadow_4', 'CRYPT_SHADOW', 33 * ts + 4, 22 * ts + 4),
-      new Monster('f2_golem_4', 'STONE_GOLEM', 30 * ts + 4, 24 * ts + 4),
+      new Monster('f2_golem_4', 'STONE_GOLEM', 30 * ts + 4, 21 * ts + 4),
       // Boss Arena: Altar Golem Titan (Utara)
       new Monster('f2_boss_titan', 'BOSS_TITAN_GOLEM', 20 * ts, 8 * ts)
     ];
@@ -992,13 +992,13 @@ export class Game {
       new Monster('f3_reaper_1', 'ABYSSAL_REAPER', 30 * ts, 18 * ts),
       new Monster('f3_reaper_2', 'ABYSSAL_REAPER', 33 * ts, 22 * ts),
       new Monster('f3_reaper_3', 'ABYSSAL_REAPER', 31 * ts, 24 * ts),
-      // Central Caldera Hall
-      new Monster('f3_hellhound_4', 'INFERNO_HELLHOUND', 16 * ts, 22 * ts),
-      new Monster('f3_reaper_4', 'ABYSSAL_REAPER', 24 * ts, 22 * ts),
+      // Central Caldera Hall - spawn aman di ubin lantai
+      new Monster('f3_hellhound_4', 'INFERNO_HELLHOUND', 17 * ts, 20 * ts),
+      new Monster('f3_reaper_4', 'ABYSSAL_REAPER', 23 * ts, 20 * ts),
       new Monster('f3_knight_1', 'INFERNAL_KNIGHT', 20 * ts, 19 * ts),
       // Molten Throne Corridor & Arena Guards (Utara)
-      new Monster('f3_knight_2', 'INFERNAL_KNIGHT', 15 * ts, 11 * ts),
-      new Monster('f3_knight_3', 'INFERNAL_KNIGHT', 25 * ts, 11 * ts),
+      new Monster('f3_knight_2', 'INFERNAL_KNIGHT', 19 * ts, 12 * ts),
+      new Monster('f3_knight_3', 'INFERNAL_KNIGHT', 21 * ts, 12 * ts),
       new Monster('f3_knight_4', 'INFERNAL_KNIGHT', 20 * ts, 14 * ts),
       // Boss: Raja Naga Api Ignis di Singgasana Magma (North Arena)
       new Monster('f3_boss_dragon', 'BOSS_INFERNAL_DRAGON', 20 * ts - 12, 6 * ts)
@@ -1177,9 +1177,9 @@ export class Game {
       new Monster('eld_treant_2', 'TREANT_WARRIOR', 15 * ts, 18 * ts),
       new Monster('eld_creeper_3', 'VINE_CREEPER', 21 * ts, 18 * ts),
       new Monster('eld_sprite_4', 'SYLVAN_SPRITE', 18 * ts, 22 * ts),
-      // North Sacred Grove: Boss Ancient Ent & Penjaga
-      new Monster('eld_treant_3', 'TREANT_WARRIOR', 15 * ts, 10 * ts),
-      new Monster('eld_treant_4', 'TREANT_WARRIOR', 21 * ts, 10 * ts),
+      // North Sacred Grove: Boss Ancient Ent & Penjaga (Lorong x:17..19 aman di ubin lantai)
+      new Monster('eld_treant_3', 'TREANT_WARRIOR', 17 * ts, 11 * ts),
+      new Monster('eld_treant_4', 'TREANT_WARRIOR', 19 * ts, 11 * ts),
       new Monster('eld_boss_ent', 'BOSS_ANCIENT_ENT', 18 * ts - 12, 6 * ts)
     ];
 
@@ -1219,9 +1219,9 @@ export class Game {
       new Monster('stone_golem_2', 'ARMORED_GOLEM', 15 * ts, 18 * ts),
       new Monster('stone_skel_3', 'IRONCLAD_SKELETON', 21 * ts, 18 * ts),
       new Monster('stone_spider_4', 'CRYSTAL_SPIDER', 18 * ts, 22 * ts),
-      // North Boss Foundry: Boss Obsidian Behemoth & Penjaga
-      new Monster('stone_golem_3', 'ARMORED_GOLEM', 15 * ts, 10 * ts),
-      new Monster('stone_golem_4', 'ARMORED_GOLEM', 21 * ts, 10 * ts),
+      // North Boss Foundry: Boss Obsidian Behemoth & Penjaga (Lorong x:17..19 aman di ubin lantai)
+      new Monster('stone_golem_3', 'ARMORED_GOLEM', 17 * ts, 11 * ts),
+      new Monster('stone_golem_4', 'ARMORED_GOLEM', 19 * ts, 11 * ts),
       new Monster('stone_boss_behemoth', 'BOSS_OBSIDIAN_BEHEMOTH', 18 * ts - 12, 6 * ts)
     ];
 
@@ -2110,6 +2110,17 @@ export class Game {
     this.player.equippedTitle = activeTitle.name;
     this.player.equippedTitleColor = activeTitle.color;
 
+    // Helper aktif pengecekan rintangan/dinding map saat ini
+    const getActiveIsTileSolid = (tx: number, ty: number): boolean => {
+      if (this.currentMap === 'OVERWORLD') return this.tileMap.isTileSolid(tx, ty);
+      if (this.currentMap === 'DUNGEON') return this.dungeonMap.isTileSolid(tx, ty);
+      if (this.currentMap === 'DUNGEON_FLOOR_2') return this.dungeonFloor2.isTileSolid(tx, ty);
+      if (this.currentMap === 'DUNGEON_FLOOR_3') return this.dungeonFloor3.isTileSolid(tx, ty);
+      if (this.currentMap === 'DUNGEON_ELDORIA') return this.dungeonEldoria.isTileSolid(tx, ty);
+      if (this.currentMap === 'DUNGEON_STONEWATCH') return this.dungeonStonewatch.isTileSolid(tx, ty);
+      return false;
+    };
+
     // Update Active Party Companion (Rodric, Lyra, Flora)
     if (this.companion) {
       const activeMonsters =
@@ -2125,9 +2136,16 @@ export class Game {
           ? this.eldoriaMonsters
           : this.stonewatchMonsters;
 
-      this.companion.update(deltaTime, this.player, activeMonsters, this.floatingText, (targetM) => {
-        if (targetM.isDead) this.handleMonsterDefeated(targetM);
-      });
+      this.companion.update(
+        deltaTime,
+        this.player,
+        activeMonsters,
+        this.floatingText,
+        (targetM) => {
+          if (targetM.isDead) this.handleMonsterDefeated(targetM);
+        },
+        getActiveIsTileSolid
+      );
     }
 
     // Update Active Pet Auto-Loot Magnet (Puni, Lobo)
@@ -2145,7 +2163,7 @@ export class Game {
           ? this.eldoriaWorldItems
           : this.stonewatchWorldItems;
 
-      this.pet.update(deltaTime, this.player, activeItems, this.floatingText);
+      this.pet.update(deltaTime, this.player, activeItems, this.floatingText, getActiveIsTileSolid);
     }
 
     // Update Blacksmith animations
@@ -4472,8 +4490,50 @@ export class Game {
     const playerCenterX = this.player.x + this.player.width / 2;
     const playerCenterY = this.player.y + this.player.height / 2;
 
+    const getActiveIsTileSolid = (tx: number, ty: number): boolean => {
+      if (this.currentMap === 'OVERWORLD') return this.tileMap.isTileSolid(tx, ty);
+      if (this.currentMap === 'DUNGEON') return this.dungeonMap.isTileSolid(tx, ty);
+      if (this.currentMap === 'DUNGEON_FLOOR_2') return this.dungeonFloor2.isTileSolid(tx, ty);
+      if (this.currentMap === 'DUNGEON_FLOOR_3') return this.dungeonFloor3.isTileSolid(tx, ty);
+      if (this.currentMap === 'DUNGEON_ELDORIA') return this.dungeonEldoria.isTileSolid(tx, ty);
+      if (this.currentMap === 'DUNGEON_STONEWATCH') return this.dungeonStonewatch.isTileSolid(tx, ty);
+      return false;
+    };
+
+    const tileSize = 32;
+    const canMinionMoveTo = (posX: number, posY: number): boolean => {
+      const leftTile = Math.floor((posX + 4) / tileSize);
+      const rightTile = Math.floor((posX + 12 - 0.01) / tileSize);
+      const topTile = Math.floor((posY + 6) / tileSize);
+      const bottomTile = Math.floor((posY + 16 - 0.01) / tileSize);
+
+      for (let ty = topTile; ty <= bottomTile; ty++) {
+        for (let tx = leftTile; tx <= rightTile; tx++) {
+          if (getActiveIsTileSolid(tx, ty)) return false;
+        }
+      }
+      return true;
+    };
+
+    const moveMinion = (minion: any, dx: number, dy: number) => {
+      const nextX = minion.x + dx;
+      if (canMinionMoveTo(nextX, minion.y)) {
+        minion.x = nextX;
+      }
+      const nextY = minion.y + dy;
+      if (canMinionMoveTo(minion.x, nextY)) {
+        minion.y = nextY;
+      }
+    };
+
     for (let i = minions.length - 1; i >= 0; i--) {
       const minion = minions[i];
+
+      // Auto recover if minion is stuck inside walls
+      if (!canMinionMoveTo(minion.x, minion.y) && canMinionMoveTo(playerCenterX - 14, playerCenterY)) {
+        minion.x = playerCenterX - 14;
+        minion.y = playerCenterY;
+      }
 
       // Update cooldowns & animations
       if (minion.attackCooldown > 0) minion.attackCooldown -= deltaTime;
@@ -4522,10 +4582,11 @@ export class Game {
         const reach = mRadius + (minion.type === 'bear' ? 24 : (minion.type === 'shadow' ? 20 : 18));
 
         if (closestDist > reach) {
-          // Rush to monster
+          // Rush to monster without passing through walls
           const moveSpeed = minion.speed * deltaTime;
-          minion.x += Math.cos(angle) * moveSpeed;
-          minion.y += Math.sin(angle) * moveSpeed;
+          const dx = Math.cos(angle) * moveSpeed;
+          const dy = Math.sin(angle) * moveSpeed;
+          moveMinion(minion, dx, dy);
         } else {
           // Inside attack reach! Attack!
           if (minion.attackCooldown <= 0) {
@@ -4555,20 +4616,27 @@ export class Game {
         // --- ESCORT / ORBITING FORMATION ---
         const angleOffset = (i * (Math.PI * 2 / Math.max(1, minions.length))) + (Date.now() * 0.0015);
         const formationDistance = 26 + (i * 6);
-        const targetX = playerCenterX + Math.cos(angleOffset) * formationDistance - 6;
-        const targetY = playerCenterY + Math.sin(angleOffset) * formationDistance - 6;
+        let targetX = playerCenterX + Math.cos(angleOffset) * formationDistance - 6;
+        let targetY = playerCenterY + Math.sin(angleOffset) * formationDistance - 6;
+
+        if (!canMinionMoveTo(targetX, targetY)) {
+          targetX = playerCenterX - 8;
+          targetY = playerCenterY;
+        }
 
         const distToFormation = Math.hypot(targetX - minion.x, targetY - minion.y);
         minion.direction = playerCenterX < minion.x ? 'left' : 'right';
 
-        if (distToFormation > 220) {
+        if (distToFormation > 220 && canMinionMoveTo(playerCenterX - 14, playerCenterY)) {
           minion.x = playerCenterX - 14;
           minion.y = playerCenterY;
         } else if (distToFormation > 14) {
           const followAngle = Math.atan2(targetY - minion.y, targetX - minion.x);
           const followSpeed = (minion.speed * 1.15) * deltaTime;
-          minion.x += Math.cos(followAngle) * Math.min(distToFormation, followSpeed);
-          minion.y += Math.sin(followAngle) * Math.min(distToFormation, followSpeed);
+          const stepDist = Math.min(distToFormation, followSpeed);
+          const dx = Math.cos(followAngle) * stepDist;
+          const dy = Math.sin(followAngle) * stepDist;
+          moveMinion(minion, dx, dy);
         }
       }
     }

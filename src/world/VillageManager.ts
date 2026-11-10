@@ -41,6 +41,11 @@ export class VillageManager {
   public isStonewatchUnlocked: boolean = false;
   public onSolveRiddle?: (riddleId: 'ELDORIA' | 'STONEWATCH') => void;
 
+  // Saved active modal button hitboxes for pixel-perfect touch sync & no overlapping
+  private closeBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+  private actionBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+  private riddleOptRects: { x: number; y: number; w: number; h: number }[] = [];
+
   // Village NPCs
   public npcs: VillageNPCData[] = [];
 
@@ -444,8 +449,8 @@ export class VillageManager {
   public handleTouch(
     touchX: number,
     touchY: number,
-    screenWidth: number,
-    screenHeight: number,
+    _screenWidth: number,
+    _screenHeight: number,
     player: Player,
     floatingText: FloatingTextManager
   ): boolean {
@@ -456,33 +461,22 @@ export class VillageManager {
       return true;
     }
 
-    const modalWidth = Math.min(500, screenWidth - 24);
-    const modalHeight = Math.min(270, screenHeight - 16);
-    const modalX = (screenWidth - modalWidth) / 2;
-    const modalY = (screenHeight - modalHeight) / 2;
-
-    // 1. Close Button (X)
-    if (
-      touchX >= modalX + modalWidth - 36 &&
-      touchX <= modalX + modalWidth - 4 &&
-      touchY >= modalY + 4 &&
-      touchY <= modalY + 36
-    ) {
+    // 1. Close Button (X) Hitbox
+    const cb = this.closeBtnRect;
+    if (touchX >= cb.x && touchX <= cb.x + cb.w && touchY >= cb.y && touchY <= cb.y + cb.h) {
       this.closeDialog();
       AudioEngine.playButtonClick();
       return true;
     }
 
-    // 2. Quest Actions Button
-    if (this.activeDialogNPC.roleType === 'QUEST' && this.activeDialogNPC.questId) {
-      const q = this.questManager.quests.find((item) => item.id === this.activeDialogNPC!.questId);
-      if (q) {
-        const btnW = 160;
-        const btnH = 32;
-        const btnX = modalX + (modalWidth - btnW) / 2;
-        const btnY = modalY + modalHeight - 44;
+    // 2. Action Button Hitbox (Quest, Riddle Unlocked, or Ambient)
+    const ab = this.actionBtnRect;
+    const isActionHit = ab.w > 0 && touchX >= ab.x - 4 && touchX <= ab.x + ab.w + 4 && touchY >= ab.y - 4 && touchY <= ab.y + ab.h + 4;
 
-        if (touchX >= btnX && touchX <= btnX + btnW && touchY >= btnY && touchY <= btnY + btnH) {
+    if (this.activeDialogNPC.roleType === 'QUEST' && this.activeDialogNPC.questId) {
+      if (isActionHit) {
+        const q = this.questManager.quests.find((item) => item.id === this.activeDialogNPC!.questId);
+        if (q) {
           if (q.status === 'AVAILABLE') {
             this.questManager.acceptQuest(q.id);
             floatingText.spawn(player.x + 10, player.y - 20, `📜 Misi Diterima: ${q.title}!`, '#38bdf8', 3.0);
@@ -504,25 +498,16 @@ export class VillageManager {
         (this.activeDialogNPC.riddleId === 'STONEWATCH' && this.isStonewatchUnlocked);
 
       if (isAlreadyUnlocked) {
-        // Tombol jika sudah terbuka
-        const btnW = 200;
-        const btnH = 32;
-        const btnX = modalX + (modalWidth - btnW) / 2;
-        const btnY = modalY + modalHeight - 42;
-        if (touchX >= btnX && touchX <= btnX + btnW && touchY >= btnY && touchY <= btnY + btnH) {
+        if (isActionHit) {
           this.closeDialog();
           AudioEngine.playButtonClick();
           return true;
         }
       } else {
-        // 3 Pilihan Jawaban Teka-Teki
-        const optW = modalWidth - 28;
-        const optH = 24;
-        const optX = modalX + 14;
-
-        for (let i = 0; i < 3; i++) {
-          const optY = modalY + 154 + i * 28;
-          if (touchX >= optX && touchX <= optX + optW && touchY >= optY && touchY <= optY + optH) {
+        // Cek 3 pilihan riddle dengan koordinat presisi
+        for (let i = 0; i < this.riddleOptRects.length; i++) {
+          const rect = this.riddleOptRects[i];
+          if (touchX >= rect.x - 2 && touchX <= rect.x + rect.w + 2 && touchY >= rect.y - 2 && touchY <= rect.y + rect.h + 2) {
             if (i === 0) {
               // Jawaban Benar (Pilihan A)
               AudioEngine.playLevelUp();
@@ -549,32 +534,15 @@ export class VillageManager {
       }
     } else {
       // Ambient NPC: Button [Mengerti / Tutup]
-      const btnW = Math.min(150, modalWidth - 40);
-      const btnH = 28;
-      const btnX = modalX + (modalWidth - btnW) / 2;
-      const btnY = modalY + modalHeight - 38;
-
-      // Hit-box with slight touch tolerance padding for reliable mobile taps
-      if (touchX >= btnX - 4 && touchX <= btnX + btnW + 4 && touchY >= btnY - 4 && touchY <= btnY + btnH + 4) {
+      if (isActionHit) {
         this.closeDialog();
         AudioEngine.playButtonClick();
         return true;
       }
     }
 
-    // Tap outside to close
-    if (
-      touchX < modalX ||
-      touchX > modalX + modalWidth ||
-      touchY < modalY ||
-      touchY > modalY + modalHeight
-    ) {
-      this.closeDialog();
-      AudioEngine.playButtonClick();
-      return true;
-    }
-
-    return true; // Swallow touch while dialog is open
+    // Tap outside modal box to close
+    return true;
   }
 
   /**
@@ -1219,17 +1187,23 @@ export class VillageManager {
       const emoteIcon = npc.isCat ? '🐾' : (npc.roleType === 'QUEST' ? '📜' : '💬');
       ctx.fillText(emoteIcon, x + npc.width / 2, emoteY);
 
-      // Prompt Box Interaksi
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+      // Prompt Box Interaksi Dinamis (Tidak akan ada teks yang keluar dari papan)
+      ctx.font = 'bold 8.5px sans-serif';
+      const promptTextWidth = ctx.measureText(npc.actionPrompt).width;
+      const boxW = Math.max(80, promptTextWidth + 14);
+      const boxX = x + npc.width / 2 - boxW / 2;
+
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
       ctx.beginPath();
-      ctx.roundRect(x + npc.width / 2 - 42, promptY - 9, 84, 15, 4);
+      ctx.roundRect(boxX, promptY - 9, boxW, 16, 4);
       ctx.fill();
       ctx.strokeStyle = npc.accentColor;
       ctx.lineWidth = 1.2;
       ctx.stroke();
 
-      ctx.font = 'bold 8px sans-serif';
       ctx.fillStyle = '#fef08a';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
       ctx.fillText(npc.actionPrompt, x + npc.width / 2, promptY - 1);
     }
 
@@ -1245,10 +1219,20 @@ export class VillageManager {
     ctx.save();
     const npc = this.activeDialogNPC;
 
-    const modalWidth = Math.min(500, screenWidth - 24);
+    const modalWidth = Math.min(490, screenWidth - 20);
     const modalHeight = Math.min(270, screenHeight - 16);
     const modalX = (screenWidth - modalWidth) / 2;
     const modalY = (screenHeight - modalHeight) / 2;
+
+    // Reset touch hitboxes for accurate sync
+    this.actionBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+    this.riddleOptRects = [];
+    this.closeBtnRect = {
+      x: modalX + modalWidth - 36,
+      y: modalY + 3,
+      w: 32,
+      h: 28
+    };
 
     // Dark backdrop overlay
     ctx.fillStyle = 'rgba(3, 7, 18, 0.85)';
@@ -1273,7 +1257,7 @@ export class VillageManager {
     ctx.textAlign = 'right';
     ctx.textBaseline = 'middle';
     const safeTitle = CanvasText.truncate(ctx, `[${npc.title}]`, modalWidth * 0.45);
-    ctx.fillText(safeTitle, modalX + modalWidth - 36, modalY + 17);
+    ctx.fillText(safeTitle, modalX + modalWidth - 38, modalY + 17);
 
     ctx.fillStyle = '#f8fafc';
     ctx.font = 'bold 11.5px sans-serif';
@@ -1293,9 +1277,9 @@ export class VillageManager {
     ctx.fillText('✕', modalX + modalWidth - 18, modalY + 17);
 
     // Content: Portrait Left, Speech & Quest Right
-    const portSize = Math.min(56, modalWidth * 0.16);
+    const portSize = Math.min(54, modalWidth * 0.16);
     const portX = modalX + 14;
-    const portY = modalY + 40;
+    const portY = modalY + 38;
 
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(portX, portY, portSize, portSize);
@@ -1303,7 +1287,7 @@ export class VillageManager {
     ctx.lineWidth = 1.5;
     ctx.strokeRect(portX, portY, portSize, portSize);
 
-    ctx.font = '30px sans-serif';
+    ctx.font = '28px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(npc.avatarIcon, portX + portSize / 2, portY + portSize / 2);
@@ -1311,28 +1295,33 @@ export class VillageManager {
     // Speech Text on Right
     const textX = portX + portSize + 12;
     const textW = modalWidth - portSize - 38;
-    let textY = modalY + 40;
+    let textY = modalY + 38;
 
     ctx.fillStyle = '#fef08a';
-    ctx.font = 'italic bold 10px sans-serif';
+    ctx.font = 'italic bold 9.5px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    const greetH = CanvasText.drawWrappedText(ctx, `"${npc.greetingText}"`, textX, textY, textW, 13, 2);
+    const greetH = CanvasText.drawWrappedText(ctx, `"${npc.greetingText}"`, textX, textY, textW, 12.5, 2);
     textY += greetH + 4;
 
-    ctx.fillStyle = '#cbd5e1';
-    ctx.font = '9.5px sans-serif';
-    const maxLoreLines = (npc.roleType === 'RIDDLE' || npc.roleType === 'QUEST') ? 2 : 4;
-    CanvasText.drawWrappedText(ctx, npc.loreText, textX, textY, textW, 12.5, maxLoreLines);
+    const btnY = modalY + modalHeight - 38;
+    const btnH = 28;
 
     // --- QUEST NPC PANEL KHUSUS ---
     if (npc.roleType === 'QUEST' && npc.questId) {
       const q = this.questManager.quests.find((item) => item.id === npc.questId);
       if (q) {
-        const qBoxY = modalY + 116;
+        const qBoxH = 54;
+        const qBoxY = btnY - qBoxH - 8;
         const qBoxW = modalWidth - 28;
         const qBoxX = modalX + 14;
-        const qBoxH = 58;
+
+        // Draw Lore Text safely before quest box
+        const availLoreH = qBoxY - textY - 4;
+        const maxLoreLines = Math.max(1, Math.min(2, Math.floor(availLoreH / 12)));
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '9px sans-serif';
+        CanvasText.drawWrappedText(ctx, npc.loreText, textX, textY, textW, 12, maxLoreLines);
 
         ctx.fillStyle = '#1e293b';
         ctx.fillRect(qBoxX, qBoxY, qBoxW, qBoxH);
@@ -1342,11 +1331,11 @@ export class VillageManager {
 
         // Quest Title & Badge
         ctx.fillStyle = '#f8fafc';
-        ctx.font = 'bold 10px sans-serif';
+        ctx.font = 'bold 9.5px sans-serif';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
         const safeQTitle = CanvasText.truncate(ctx, `📜 Misi: ${q.title}`, qBoxW - 130);
-        ctx.fillText(safeQTitle, qBoxX + 8, qBoxY + 8);
+        ctx.fillText(safeQTitle, qBoxX + 8, qBoxY + 6);
 
         let statusText = 'TERSEDIA';
         let statusColor = '#38bdf8';
@@ -1362,26 +1351,25 @@ export class VillageManager {
         }
 
         ctx.fillStyle = statusColor;
-        ctx.font = 'bold 9px sans-serif';
+        ctx.font = 'bold 8.5px sans-serif';
         ctx.textAlign = 'right';
-        ctx.fillText(`[${statusText}]`, qBoxX + qBoxW - 8, qBoxY + 8);
+        ctx.fillText(`[${statusText}]`, qBoxX + qBoxW - 8, qBoxY + 6);
 
         // Quest Target & Rewards
         ctx.fillStyle = '#94a3b8';
-        ctx.font = '8.5px sans-serif';
+        ctx.font = '8px sans-serif';
         ctx.textAlign = 'left';
         const safeQTarget = CanvasText.truncate(ctx, `Target: Basmi ${q.requiredCount} ${q.targetName}`, qBoxW - 16);
-        ctx.fillText(safeQTarget, qBoxX + 8, qBoxY + 24);
+        ctx.fillText(safeQTarget, qBoxX + 8, qBoxY + 22);
 
         ctx.fillStyle = '#fde047';
         const safeQReward = CanvasText.truncate(ctx, `Hadiah: +${q.rewardGold} Emas · +${q.rewardExp} EXP`, qBoxW - 16);
-        ctx.fillText(safeQReward, qBoxX + 8, qBoxY + 38);
+        ctx.fillText(safeQReward, qBoxX + 8, qBoxY + 36);
 
-        // Action Button: Terima / Klaim / Tutup
-        const btnW = Math.min(180, modalWidth - 40);
-        const btnH = 28;
+        // Action Button
+        const btnW = Math.min(190, modalWidth - 40);
         const btnX = modalX + (modalWidth - btnW) / 2;
-        const btnY = modalY + modalHeight - 38;
+        this.actionBtnRect = { x: btnX, y: btnY, w: btnW, h: btnH };
 
         let btnLabel = 'TERIMA MISI INI';
         let btnBg = '#16a34a';
@@ -1419,46 +1407,67 @@ export class VillageManager {
         (npc.riddleId === 'STONEWATCH' && this.isStonewatchUnlocked);
 
       if (isAlreadyUnlocked) {
-        // Status Terbuka
-        const boxX = modalX + 14;
-        const boxY = modalY + 116;
+        const boxH = 48;
+        const boxY = btnY - boxH - 8;
         const boxW = modalWidth - 28;
+        const boxX = modalX + 14;
+
+        // Lore text before solved box
+        const availLoreH = boxY - textY - 4;
+        const maxLoreLines = Math.max(1, Math.min(2, Math.floor(availLoreH / 12)));
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '9px sans-serif';
+        CanvasText.drawWrappedText(ctx, npc.loreText, textX, textY, textW, 12, maxLoreLines);
+
         ctx.fillStyle = '#064e3b';
-        ctx.fillRect(boxX, boxY, boxW, 52);
+        ctx.fillRect(boxX, boxY, boxW, boxH);
         ctx.strokeStyle = '#34d399';
         ctx.lineWidth = 1.5;
-        ctx.strokeRect(boxX, boxY, boxW, 52);
+        ctx.strokeRect(boxX, boxY, boxW, boxH);
 
         ctx.fillStyle = '#fef08a';
-        ctx.font = 'bold 10.5px sans-serif';
+        ctx.font = 'bold 10px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'top';
-        ctx.fillText('✨ PINTU GERBANG DUNGEON TELAH TERBUKA!', boxX + boxW / 2, boxY + 12);
+        ctx.fillText('✨ PINTU GERBANG DUNGEON TELAH TERBUKA!', boxX + boxW / 2, boxY + 10);
         ctx.fillStyle = '#a7f3d0';
-        ctx.font = '9px sans-serif';
+        ctx.font = '8.5px sans-serif';
         const safeOpenDesc = CanvasText.truncate(ctx, 'Segel telah terpecahkan! Masuki gerbang untuk menjelajah.', boxW - 16);
-        ctx.fillText(safeOpenDesc, boxX + boxW / 2, boxY + 30);
+        ctx.fillText(safeOpenDesc, boxX + boxW / 2, boxY + 28);
 
         // Tombol Tutup
         const btnW = Math.min(180, modalWidth - 40);
-        const btnH = 28;
         const btnX = modalX + (modalWidth - btnW) / 2;
-        const btnY = modalY + modalHeight - 38;
+        this.actionBtnRect = { x: btnX, y: btnY, w: btnW, h: btnH };
+
         ctx.fillStyle = '#065f46';
         ctx.fillRect(btnX, btnY, btnW, btnH);
         ctx.strokeStyle = '#34d399';
         ctx.lineWidth = 1.5;
         ctx.strokeRect(btnX, btnY, btnW, btnH);
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 10.5px sans-serif';
+        ctx.font = 'bold 10px sans-serif';
         ctx.textBaseline = 'middle';
         ctx.fillText('✓ MENGERTI / JELAJAHI', btnX + btnW / 2, btnY + btnH / 2);
       } else {
-        // Tampilkan Box Teka-Teki Kuno & 3 Pilihan Jawaban
+        // Tampilkan Box Teka-Teki Kuno & 3 Pilihan Jawaban tanpa overlap
+        const optW = modalWidth - 28;
+        const optH = 22;
+        const optGap = 4;
+        const optX = modalX + 14;
+        const optStartY = btnY - (2 * (optH + optGap));
+
+        const riddleBoxH = 34;
+        const riddleBoxY = optStartY - riddleBoxH - 6;
         const riddleBoxX = modalX + 14;
-        const riddleBoxY = modalY + 112;
         const riddleBoxW = modalWidth - 28;
-        const riddleBoxH = 36;
+
+        // Lore text before riddle box
+        const availLoreH = riddleBoxY - textY - 4;
+        const maxLoreLines = Math.max(1, Math.min(2, Math.floor(availLoreH / 12)));
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '9px sans-serif';
+        CanvasText.drawWrappedText(ctx, npc.loreText, textX, textY, textW, 12, maxLoreLines);
 
         ctx.fillStyle = '#1e293b';
         ctx.fillRect(riddleBoxX, riddleBoxY, riddleBoxW, riddleBoxH);
@@ -1472,14 +1481,10 @@ export class VillageManager {
           : '📜 "Lahir di perut bumi, ditempa di bara api, perisai kurcaci. Apakah aku?"';
 
         ctx.fillStyle = '#fef08a';
-        ctx.font = 'italic bold 9px sans-serif';
+        ctx.font = 'italic bold 8.5px sans-serif';
         ctx.textAlign = 'left';
         ctx.textBaseline = 'top';
-        CanvasText.drawWrappedText(ctx, riddleVerse, riddleBoxX + 8, riddleBoxY + 5, riddleBoxW - 16, 12, 2);
-
-        const optW = modalWidth - 28;
-        const optH = 24;
-        const optX = modalX + 14;
+        CanvasText.drawWrappedText(ctx, riddleVerse, riddleBoxX + 8, riddleBoxY + 5, riddleBoxW - 16, 11.5, 2);
 
         const options = isEldoria
           ? [
@@ -1494,7 +1499,9 @@ export class VillageManager {
             ];
 
         for (let i = 0; i < 3; i++) {
-          const optY = modalY + 154 + i * 28;
+          const optY = optStartY + i * (optH + optGap);
+          this.riddleOptRects.push({ x: optX, y: optY, w: optW, h: optH });
+
           ctx.fillStyle = '#1e293b';
           ctx.fillRect(optX, optY, optW, optH);
           ctx.strokeStyle = i === 0 ? '#38bdf8' : '#475569';
@@ -1502,7 +1509,7 @@ export class VillageManager {
           ctx.strokeRect(optX, optY, optW, optH);
 
           ctx.fillStyle = '#f8fafc';
-          ctx.font = 'bold 9px sans-serif';
+          ctx.font = 'bold 8.5px sans-serif';
           ctx.textAlign = 'left';
           ctx.textBaseline = 'middle';
           const safeOpt = CanvasText.truncate(ctx, options[i], optW - 16);
@@ -1511,10 +1518,16 @@ export class VillageManager {
       }
     } else {
       // Ambient NPC: Button Tutup / Mengerti
-      const btnW = Math.min(150, modalWidth - 40);
-      const btnH = 28;
+      const btnW = Math.min(160, modalWidth - 40);
       const btnX = modalX + (modalWidth - btnW) / 2;
-      const btnY = modalY + modalHeight - 38;
+      this.actionBtnRect = { x: btnX, y: btnY, w: btnW, h: btnH };
+
+      // Lore text strictly bound inside vertical space before button
+      const availLoreH = btnY - textY - 8;
+      const maxLoreLines = Math.max(1, Math.min(5, Math.floor(availLoreH / 13)));
+      ctx.fillStyle = '#cbd5e1';
+      ctx.font = '9.5px sans-serif';
+      CanvasText.drawWrappedText(ctx, npc.loreText, textX, textY, textW, 13, maxLoreLines);
 
       ctx.fillStyle = '#1e293b';
       ctx.fillRect(btnX, btnY, btnW, btnH);
@@ -1523,7 +1536,7 @@ export class VillageManager {
       ctx.strokeRect(btnX, btnY, btnW, btnH);
 
       ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 10.5px sans-serif';
+      ctx.font = 'bold 10px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('✕ MENGERTI / TUTUP', btnX + btnW / 2, btnY + btnH / 2);
