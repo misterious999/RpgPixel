@@ -40,6 +40,7 @@ import { CookingSystem } from '../systems/CookingSystem.ts';
 import { Pet } from '../systems/TamingSystem.ts';
 import { TitleSystem } from '../systems/TitleSystem.ts';
 import { BankSystem } from '../systems/BankSystem.ts';
+import { MarketSystem } from '../systems/MarketSystem.ts';
 import { LeaderboardUI } from '../ui/LeaderboardUI.ts';
 import { CanvasText } from '../utils/CanvasText.ts';
 
@@ -126,6 +127,7 @@ export class Game {
   private cookingSystem: CookingSystem = new CookingSystem();
   private titleSystem: TitleSystem = new TitleSystem();
   public bankSystem: BankSystem = new BankSystem();
+  public marketSystem: MarketSystem = new MarketSystem();
   private bankInterestTimer: number = 0;
   private leaderboardUI: LeaderboardUI = new LeaderboardUI();
 
@@ -214,6 +216,7 @@ export class Game {
         !this.guildNPC.isAppraisalOpen &&
         !this.blacksmithNPC.isWorkshopOpen &&
         !this.bankSystem.isOpen &&
+        !this.marketSystem.isOpen &&
         !this.controlSettingsModal.isOpen &&
         !NotificationModal.isOpen
       );
@@ -228,6 +231,9 @@ export class Game {
     AudioEngine.init();
     this.questManager = new QuestManager();
     this.villageManager = new VillageManager(this.questManager);
+    this.villageManager.onOpenMarket = () => {
+      this.marketSystem.open();
+    };
     this.miniMapUI = new MiniMapUI();
     this.quickPotionUI = new QuickPotionUI(this.player, this.floatingText);
     this.atmosphereEngine = new AtmosphereEngine();
@@ -410,8 +416,13 @@ export class Game {
         return true;
       }
 
-      // 0.1 Bank Royal Val Modal (Pertukaran, Tabungan & Belanja)
+      // 0.1 Bank Royal Val Modal (Pertukaran, Tabungan & Bunga)
       if (this.bankSystem.handleTouch(touchX, touchY, this.player, this.floatingText)) {
+        return true;
+      }
+
+      // 0.2 Market System Modal (Pasar Raya Oakhaven)
+      if (this.marketSystem.handleTouch(touchX, touchY, this.player, this.floatingText)) {
         return true;
       }
 
@@ -875,7 +886,7 @@ export class Game {
         { itemId: 'DARK_IRON_ORE', count: 6 }
       ]),
       // Peti 3: Harta Karun Legendaris di Belakang Altar Bos (North Chamber)
-      new Chest(20 * ts + 5, 3 * ts + 6, [
+      new Chest(24 * ts + 5, 4 * ts + 6, [
         { itemId: 'SILVER_COIN', count: 15 },
         { itemId: 'GOLD_COIN', count: 5 },
         { itemId: 'PLATINUM_COIN', count: 1 },
@@ -1063,7 +1074,7 @@ export class Game {
         { itemId: 'DUNGEON_GEM', count: 6 },
         { itemId: 'MANA_POTION', count: 5 }
       ]),
-      new Chest(20 * ts + 8, 5 * ts + 8, [
+      new Chest(27 * ts + 8, 4 * ts + 8, [
         { itemId: 'SILVER_COIN', count: 30 },
         { itemId: 'GOLD_COIN', count: 15 },
         { itemId: 'PLATINUM_COIN', count: 3 },
@@ -1245,7 +1256,7 @@ export class Game {
         { itemId: 'MANA_POTION', count: 5 },
         { itemId: 'DUNGEON_GEM', count: 4 }
       ]),
-      new Chest(18 * ts + 8, 6 * ts + 8, [
+      new Chest(24 * ts + 8, 5 * ts + 8, [
         { itemId: 'SILVER_COIN', count: 35 },
         { itemId: 'GOLD_COIN', count: 15 },
         { itemId: 'PLATINUM_COIN', count: 2 },
@@ -1292,7 +1303,7 @@ export class Game {
         { itemId: 'DARK_IRON_ORE', count: 20 },
         { itemId: 'DUNGEON_GEM', count: 5 }
       ]),
-      new Chest(18 * ts + 8, 6 * ts + 8, [
+      new Chest(24 * ts + 8, 5 * ts + 8, [
         { itemId: 'SILVER_COIN', count: 40 },
         { itemId: 'GOLD_COIN', count: 20 },
         { itemId: 'PLATINUM_COIN', count: 3 },
@@ -2167,8 +2178,8 @@ export class Game {
       return false;
     };
 
-    // Freeze player if inventory, village dialog, guild dialog, blacksmith workshop, control settings, or notification modal is open
-    const activeInput = (this.inventoryUI.isOpen || this.villageManager.isDialogOpen || this.guildNPC.isAppraisalOpen || this.blacksmithNPC.isWorkshopOpen || this.bankSystem.isOpen || this.controlSettingsModal.isOpen || NotificationModal.isOpen || this.cookingSystem.isOpen || this.titleSystem.isOpen || this.leaderboardUI.isOpen)
+    // Freeze player if inventory, village dialog, guild dialog, blacksmith workshop, bank, market, control settings, or notification modal is open
+    const activeInput = (this.inventoryUI.isOpen || this.villageManager.isDialogOpen || this.guildNPC.isAppraisalOpen || this.blacksmithNPC.isWorkshopOpen || this.bankSystem.isOpen || this.marketSystem.isOpen || this.controlSettingsModal.isOpen || NotificationModal.isOpen || this.cookingSystem.isOpen || this.titleSystem.isOpen || this.leaderboardUI.isOpen)
       ? { axisX: 0, axisY: 0, isAction: false, isSprint: false }
       : this.input.state;
 
@@ -2284,8 +2295,17 @@ export class Game {
         }
       }
 
+      // Market Stall Interaction (Belanja Pasar Raya Oakhaven)
+      if (!this.villageManager.isDialogOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen && !this.bankSystem.isOpen && !this.marketSystem.isOpen) {
+        if (this.villageManager.isNearMarketStall(playerCenterX, playerCenterY) && (this.input.isActionJustPressed || this.input.state.isAction)) {
+          this.input.consumeAction();
+          this.marketSystem.open();
+          return;
+        }
+      }
+
       // Village NPC Interaction (Quest & Ambient Warga Luar Ruangan)
-      if (!this.villageManager.isDialogOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen && !this.bankSystem.isOpen) {
+      if (!this.villageManager.isDialogOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen && !this.bankSystem.isOpen && !this.marketSystem.isOpen) {
         const nearNPC = this.villageManager.isNearAnyNPC(playerCenterX, playerCenterY);
         if (nearNPC && (this.input.isActionJustPressed || this.input.state.isAction)) {
           this.input.consumeAction();
@@ -3236,7 +3256,7 @@ export class Game {
         }
         return;
       }
-      if (this.guildNPC.isAppraisalOpen || this.blacksmithNPC.isWorkshopOpen || this.bankSystem.isOpen) {
+      if (this.guildNPC.isAppraisalOpen || this.blacksmithNPC.isWorkshopOpen || this.bankSystem.isOpen || this.marketSystem.isOpen) {
         return;
       }
 
@@ -3350,6 +3370,9 @@ export class Game {
         }
       }
     }
+
+    // 9.95 Update Market System Animations
+    this.marketSystem.update(deltaTime);
 
     // 10. Update Floating Text Notifications
     this.floatingText.update(deltaTime);
@@ -3781,7 +3804,7 @@ export class Game {
     // --- SCREEN SPACE 1:1 RENDERING ---
     if (this.onboardingUI.state === 'PLAYING') {
       // 8. Mobile Touch D-Pad & Action Buttons
-      if (!this.inventoryUI.isOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen && !this.bankSystem.isOpen && !this.controlSettingsModal.isOpen) {
+      if (!this.inventoryUI.isOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen && !this.bankSystem.isOpen && !this.marketSystem.isOpen && !this.controlSettingsModal.isOpen) {
         this.input.renderTouchUI(ctx, screenWidth, screenHeight);
         // Mobile Skill Bar
         this.skillBarUI.renderTouchSkillBar(ctx, screenWidth, screenHeight);
@@ -3804,8 +3827,11 @@ export class Game {
       // 12.0 Village NPC Dialog Modal (Quest & Ambient)
       this.villageManager.renderDialogModal(ctx, screenWidth, screenHeight);
 
-      // 12.01 Royal Bank Modal (Exchange, Savings & Shop)
+      // 12.01 Royal Bank Modal (Exchange & Savings)
       this.bankSystem.renderModal(ctx, screenWidth, screenHeight, this.player);
+
+      // 12.02 Market System Modal (Pasar Raya Oakhaven)
+      this.marketSystem.renderModal(ctx, screenWidth, screenHeight, this.player);
 
       // 12. Control Settings Modal (Gear ⚙️ & customization)
       this.controlSettingsModal.render(ctx, screenWidth, screenHeight);
@@ -4027,6 +4053,8 @@ export class Game {
 
         if (nearDoor) {
           this.renderBottomActionPrompt(ctx, `Tekan [A] Masuk ${nearDoor.name} ${nearDoor.icon}`, nearDoor.accentColor, nearDoor.accentColor);
+        } else if (this.villageManager.isNearMarketStall(playerCenterX, playerCenterY)) {
+          this.renderBottomActionPrompt(ctx, 'Tekan [A] Belanja di Pasar Oakhaven 🛒', '#4ade80', '#bbf7d0');
         } else if (eldEntDist < 38) {
           this.renderBottomActionPrompt(
             ctx,
@@ -4044,7 +4072,7 @@ export class Game {
         }
       } else if (this.isCurrentMapInterior()) {
         const interiorId = this.getInteriorIdFromCurrentMap();
-        if (interiorId && !this.villageManager.isDialogOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen && !this.bankSystem.isOpen) {
+        if (interiorId && !this.villageManager.isDialogOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen && !this.bankSystem.isOpen && !this.marketSystem.isOpen) {
           const action = this.buildingInteriors.getNearbyAction(interiorId, playerCenterX, playerCenterY);
           if (action) {
             this.renderBottomActionPrompt(ctx, action.prompt, action.color || '#facc15', action.color || '#fef08a');

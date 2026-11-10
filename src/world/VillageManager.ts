@@ -40,10 +40,12 @@ export class VillageManager {
   public isEldoriaUnlocked: boolean = false;
   public isStonewatchUnlocked: boolean = false;
   public onSolveRiddle?: (riddleId: 'ELDORIA' | 'STONEWATCH') => void;
+  public onOpenMarket?: () => void;
 
   // Saved active modal button hitboxes for pixel-perfect touch sync & no overlapping
   private closeBtnRect = { x: 0, y: 0, w: 0, h: 0 };
   private actionBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+  private marketBtnRect = { x: 0, y: 0, w: 0, h: 0 };
   private riddleOptRects: { x: number; y: number; w: number; h: number }[] = [];
 
   // Village NPCs
@@ -320,6 +322,25 @@ export class VillageManager {
         greetingText: 'Ayunkan senjatamu tanpa ragu! Latihan keras adalah kunci kemenangan!',
         loreText: 'Silakan gunakan boneka latihan kayu di lapangan pasir ini untuk menguji kombo serangan dan skill peranmu sebelum terjun ke dungeon!',
         actionPrompt: '🥊 [A] Latihan'
+      },
+
+      // --- NPC PASAR RAYA OAKHAVEN ---
+      {
+        id: 'marco_merchant',
+        name: 'Pedagang Marco',
+        title: 'Saudagar Pasar Raya',
+        roleType: 'AMBIENT',
+        x: 47.2 * ts + 10,
+        y: 48.8 * ts + 6,
+        width: 32,
+        height: 32,
+        hairColor: '#b45309',
+        outfitColor: '#15803d',
+        accentColor: '#facc15',
+        avatarIcon: '🧑‍🌾',
+        greetingText: 'Selamat datang di Pasar Raya Oakhaven, petualang terhormat!',
+        loreText: 'Kios pasarku menyediakan pasokan dungeon paling komplit: Ramuan HP/MP, Elixir Pemulih Penuh, Gulungan Teleportasi Portal, hingga bahan masakan lezat! Belanjalah dengan uang Val (𝒱) hasil petualanganmu!',
+        actionPrompt: '🛒 [A] Belanja di Pasar'
       }
     ];
   }
@@ -357,6 +378,16 @@ export class VillageManager {
   public closeDialog(): void {
     this.activeDialogNPC = null;
     this.isDialogOpen = false;
+    this.actionBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+    this.marketBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+    this.riddleOptRects = [];
+  }
+
+  public isNearMarketStall(playerCenterX: number, playerCenterY: number): boolean {
+    const ts = CONSTANTS.TILE_SIZE;
+    const stallCenterX = 47.2 * ts + 26;
+    const stallCenterY = 48.8 * ts + 20;
+    return Math.hypot(stallCenterX - playerCenterX, stallCenterY - playerCenterY) < 42;
   }
 
   /**
@@ -404,6 +435,13 @@ export class VillageManager {
       if (box.x >= doorLeft && box.x + box.width <= doorRight + 16 && box.y >= bsY + bsH - 14) {
         return false;
       }
+      return true;
+    }
+
+    // 3.8 Kios Pasar Raya Oakhaven (Barat Alun-Alun: 47.2*ts, 48.8*ts, w=52, h=30)
+    const msX = 47.2 * ts;
+    const msY = 48.8 * ts;
+    if (box.x < msX + 52 && box.x + box.width > msX && box.y < msY + 30 && box.y + box.height > msY + 12) {
       return true;
     }
 
@@ -533,7 +571,19 @@ export class VillageManager {
         }
       }
     } else {
-      // Ambient NPC: Button [Mengerti / Tutup]
+      // Ambient NPC: Button [Mengerti / Tutup] or Marco [Buka Pasar]
+      if (this.activeDialogNPC.id === 'marco_merchant') {
+        const mb = this.marketBtnRect;
+        if (mb.w > 0 && touchX >= mb.x - 4 && touchX <= mb.x + mb.w + 4 && touchY >= mb.y - 4 && touchY <= mb.y + mb.h + 4) {
+          this.closeDialog();
+          AudioEngine.playButtonClick();
+          if (this.onOpenMarket) {
+            this.onOpenMarket();
+          }
+          return true;
+        }
+      }
+
       if (isActionHit) {
         this.closeDialog();
         AudioEngine.playButtonClick();
@@ -661,6 +711,9 @@ export class VillageManager {
     const bsX = 44.8 * ts;
     const bsY = 47.5 * ts;
     this.drawBlacksmithWorkshop(ctx, bsX, bsY, 76, 64);
+
+    // 3.8 KIOS PASAR RAYA OAKHAVEN (Barat Alun-Alun: 47.2*ts, 48.8*ts)
+    this.drawMarketStall(ctx, 47.2 * ts, 48.8 * ts);
 
     // 4. TOKO BUNGA LILY (Timur Laut: 56*ts, 43*ts)
     const h2x = 56 * ts;
@@ -1169,6 +1222,94 @@ export class VillageManager {
     ctx.fillText('⚒️ BENGKEL TEMPA BROKK', x + w / 2, y + h + 4);
   }
 
+  /**
+   * Render Kios Pedagang Pasar Raya Oakhaven (Tenda Kanopi Belang Merah-Kuning, Meja Kayu & Display Barang)
+   */
+  private drawMarketStall(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    const w = 52;
+    const h = 32;
+
+    // Wooden vertical posts (kiri & kanan)
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(x + 2, y + 4, 4, h - 4);
+    ctx.fillRect(x + w - 6, y + 4, 4, h - 4);
+
+    // Striped Awning (Kain Kanopi Belang Merah-Kuning Pasar)
+    const stripes = 6;
+    const stripeW = w / stripes;
+    for (let i = 0; i < stripes; i++) {
+      ctx.fillStyle = i % 2 === 0 ? '#dc2626' : '#fef08a';
+      ctx.beginPath();
+      ctx.moveTo(x + i * stripeW, y + 4);
+      ctx.lineTo(x + (i + 1) * stripeW, y + 4);
+      ctx.lineTo(x + (i + 1) * stripeW - 2, y + 14);
+      ctx.lineTo(x + i * stripeW - 2, y + 14);
+      ctx.closePath();
+      ctx.fill();
+
+      // Scalloped ruffle bottom edge
+      ctx.beginPath();
+      ctx.arc(x + i * stripeW + stripeW / 2 - 1, y + 14, stripeW / 2, 0, Math.PI);
+      ctx.fill();
+    }
+
+    // Wooden Counter Table
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(x + 2, y + 16, w - 4, 12);
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(x + 4, y + 16, w - 8, 3); // Meja atas meja counter
+
+    // Display Items di atas meja
+    // 1. Ramuan HP Merah
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(x + 8, y + 18, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    // 2. Ramuan MP Biru
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.arc(x + 16, y + 18, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    // 3. Gulungan Kertas / Scroll
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(x + 24, y + 16, 7, 3);
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(x + 27, y + 16, 1.5, 3);
+    // 4. Keranjang Buah / Bahan
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(x + 35, y + 17, 10, 4);
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath();
+    ctx.arc(x + 38, y + 16, 2, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ea580c';
+    ctx.beginPath();
+    ctx.arc(x + 42, y + 16, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Peti kecil di bawah meja
+    ctx.fillStyle = '#5c2d16';
+    ctx.fillRect(x + 10, y + 23, 12, 7);
+    ctx.strokeStyle = '#ca8a04';
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(x + 10, y + 23, 12, 7);
+
+    // Signboard Atas: "🛒 PASAR RAYA"
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.roundRect(x + 8, y - 4, w - 16, 9, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#fef08a';
+    ctx.font = 'bold 6px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🛒 PASAR RAYA', x + w / 2, y + 0.5);
+  }
+
   private drawStreetlamp(ctx: CanvasRenderingContext2D, x: number, y: number): void {
     // Lamp pole
     ctx.fillStyle = '#334155';
@@ -1351,6 +1492,7 @@ export class VillageManager {
 
     // Reset touch hitboxes for accurate sync
     this.actionBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+    this.marketBtnRect = { x: 0, y: 0, w: 0, h: 0 };
     this.riddleOptRects = [];
     this.closeBtnRect = {
       x: modalX + modalWidth - 36,
@@ -1642,29 +1784,69 @@ export class VillageManager {
         }
       }
     } else {
-      // Ambient NPC: Button Tutup / Mengerti
-      const btnW = Math.min(160, modalWidth - 40);
-      const btnX = modalX + (modalWidth - btnW) / 2;
-      this.actionBtnRect = { x: btnX, y: btnY, w: btnW, h: btnH };
+      // Ambient NPC: Button Tutup / Mengerti (Khusus Marco Saudagar ada tombol Buka Pasar)
+      if (npc.id === 'marco_merchant') {
+        const gap = 8;
+        const btnW = Math.min(130, Math.floor((modalWidth - 40 - gap) / 2));
+        const marketX = modalX + Math.floor((modalWidth - (btnW * 2 + gap)) / 2);
+        const closeX = marketX + btnW + gap;
 
-      // Lore text strictly bound inside vertical space before button
-      const availLoreH = btnY - textY - 8;
-      const maxLoreLines = Math.max(1, Math.min(5, Math.floor(availLoreH / 13)));
-      ctx.fillStyle = '#cbd5e1';
-      ctx.font = '9.5px sans-serif';
-      CanvasText.drawWrappedText(ctx, npc.loreText, textX, textY, textW, 13, maxLoreLines);
+        this.marketBtnRect = { x: marketX, y: btnY, w: btnW, h: btnH };
+        this.actionBtnRect = { x: closeX, y: btnY, w: btnW, h: btnH };
 
-      ctx.fillStyle = '#1e293b';
-      ctx.fillRect(btnX, btnY, btnW, btnH);
-      ctx.strokeStyle = npc.accentColor;
-      ctx.lineWidth = 1.5;
-      ctx.strokeRect(btnX, btnY, btnW, btnH);
+        const availLoreH = btnY - textY - 8;
+        const maxLoreLines = Math.max(1, Math.min(5, Math.floor(availLoreH / 13)));
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '9.5px sans-serif';
+        CanvasText.drawWrappedText(ctx, npc.loreText, textX, textY, textW, 13, maxLoreLines);
 
-      ctx.fillStyle = '#f8fafc';
-      ctx.font = 'bold 10px sans-serif';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText('✕ MENGERTI / TUTUP', btnX + btnW / 2, btnY + btnH / 2);
+        // Tombol Buka Pasar
+        ctx.fillStyle = '#15803d';
+        ctx.fillRect(marketX, btnY, btnW, btnH);
+        ctx.strokeStyle = '#4ade80';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(marketX, btnY, btnW, btnH);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 9.5px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🛒 BUKA PASAR', marketX + btnW / 2, btnY + btnH / 2);
+
+        // Tombol Tutup
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(closeX, btnY, btnW, btnH);
+        ctx.strokeStyle = '#64748b';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(closeX, btnY, btnW, btnH);
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillText('✕ TUTUP', closeX + btnW / 2, btnY + btnH / 2);
+      } else {
+        const btnW = Math.min(160, modalWidth - 40);
+        const btnX = modalX + (modalWidth - btnW) / 2;
+        this.actionBtnRect = { x: btnX, y: btnY, w: btnW, h: btnH };
+        this.marketBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+
+        // Lore text strictly bound inside vertical space before button
+        const availLoreH = btnY - textY - 8;
+        const maxLoreLines = Math.max(1, Math.min(5, Math.floor(availLoreH / 13)));
+        ctx.fillStyle = '#cbd5e1';
+        ctx.font = '9.5px sans-serif';
+        CanvasText.drawWrappedText(ctx, npc.loreText, textX, textY, textW, 13, maxLoreLines);
+
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(btnX, btnY, btnW, btnH);
+        ctx.strokeStyle = npc.accentColor;
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(btnX, btnY, btnW, btnH);
+
+        ctx.fillStyle = '#f8fafc';
+        ctx.font = 'bold 10px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('✕ MENGERTI / TUTUP', btnX + btnW / 2, btnY + btnH / 2);
+      }
     }
 
     ctx.restore();
