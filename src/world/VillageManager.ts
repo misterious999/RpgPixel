@@ -177,8 +177,8 @@ export class VillageManager {
         name: 'Penyair Bucky',
         title: 'Petualang Santai di Bangku',
         roleType: 'AMBIENT',
-        x: 56 * ts + 10,
-        y: 53 * ts + 4,
+        x: 52 * ts + 6,
+        y: 53 * ts + 8,
         width: 32,
         height: 32,
         hairColor: '#b45309', // Orange-brown bard cap
@@ -186,7 +186,7 @@ export class VillageManager {
         accentColor: '#fde047',
         avatarIcon: '🪕',
         greetingText: 'Tra-la-la~ Pedang boleh tajam, tapi istirahat itu wajib, kawan!',
-        loreText: 'Setelah menantang dungeon kemarin lusa, duduk santai di bangku kayu dekat kedai sambil menikmati teh hangat adalah surga dunia sejati!',
+        loreText: 'Setelah menantang dungeon kemarin lusa, duduk santai di bangku taman dekat air mancur sambil menikmati teh hangat adalah surga dunia sejati!',
         actionPrompt: '🪕 [A] Ngobrol'
       },
       {
@@ -194,8 +194,8 @@ export class VillageManager {
         name: 'Pengawal Rolf',
         title: 'Penjaga Gerbang Selatan',
         roleType: 'AMBIENT',
-        x: 48 * ts + 16,
-        y: 56 * ts,
+        x: 46 * ts + 16,
+        y: 56 * ts + 6,
         width: 32,
         height: 32,
         hairColor: '#334155', // Steel kettle helm
@@ -667,12 +667,12 @@ export class VillageManager {
     const h3y = 51 * ts;
     this.drawCottage(ctx, h3x, h3y, 78, 66, '#78350f', '#ca8a04', 'Dapur & Kedai Petualang');
 
-    // Bangku santai luar kedai di mana Bucky duduk
+    // Bangku santai taman di tepi air mancur tempat Bucky duduk
     ctx.fillStyle = '#92400e';
-    ctx.fillRect(55 * ts + 4, 53 * ts + 10, 24, 7);
+    ctx.fillRect(52 * ts, 53 * ts + 14, 24, 7);
     ctx.fillStyle = '#78350f';
-    ctx.fillRect(55 * ts + 6, 53 * ts + 17, 3, 5);
-    ctx.fillRect(55 * ts + 23, 53 * ts + 17, 3, 5);
+    ctx.fillRect(52 * ts + 2, 53 * ts + 21, 3, 5);
+    ctx.fillRect(52 * ts + 19, 53 * ts + 21, 3, 5);
 
     // 6. GERBANG SELATAN DESA (South Village Gate: 50*ts, 56*ts)
     const gxGate = 50 * ts - 18;
@@ -712,7 +712,7 @@ export class VillageManager {
 
     // 9. RAMBU PENUNJUK ARAH JALAN RAYA (Crossroad Signposts)
     this.drawSignpost(ctx, 45 * ts + 16, 50 * ts - 8, '⬅️ Desa Eldoria (Rimba Peri)');
-    this.drawSignpost(ctx, 54 * ts + 16, 50 * ts - 8, 'Desa Stonewatch (Tambang) ➡️');
+    this.drawSignpost(ctx, 58 * ts, 49 * ts, 'Desa Stonewatch (Tambang) ➡️');
     this.drawSignpost(ctx, 50 * ts + 16, 44 * ts, '⬆️ Goa Kripta Kuno (Dungeon)');
 
     // 10. ARSITEKTUR DESA ELDORIA (DESA PERI HUTAN KUNO - BARAT LAUT)

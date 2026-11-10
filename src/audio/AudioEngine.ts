@@ -181,6 +181,32 @@ export class AudioEngine {
   }
 
   /**
+   * Suara cipratan & desiran air saat pemain berenang
+   */
+  public static playWaterSplash(): void {
+    if (!this.isSoundEnabled) return;
+    const ctx = this.ensureContext();
+    if (!ctx || !this.sfxGain) return;
+
+    const t = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const gain = ctx.createGain();
+
+    osc.type = 'sine';
+    osc.frequency.setValueAtTime(340, t);
+    osc.frequency.exponentialRampToValueAtTime(140, t + 0.11);
+
+    gain.gain.setValueAtTime(0.22, t);
+    gain.gain.linearRampToValueAtTime(0.01, t + 0.11);
+    gain.gain.setValueAtTime(0, t + 0.12);
+
+    osc.connect(gain);
+    gain.connect(this.sfxGain);
+    osc.start(t);
+    osc.stop(t + 0.13);
+  }
+
+  /**
    * Suara benturan saat monster terkena serangan
    */
   public static playHit(isCrit: boolean = false): void {

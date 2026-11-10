@@ -99,6 +99,10 @@ export class Player {
   public equippedTitle: string = '« Petualang Pemula »';
   public equippedTitleColor: string = '#94a3b8';
 
+  // Swimming Mechanics (Berenang di Danau Overworld & Kolam Suci Eldoria)
+  public isSwimming: boolean = false;
+  private swimAnimTimer: number = 0;
+
   // Minions
   public minions: Minion[] = [];
 
@@ -540,6 +544,21 @@ export class Player {
     if (this.foodBuffMpTimer > 0) this.foodBuffMpTimer -= deltaTime;
     if (this.foodBuffExpSpeedTimer > 0) this.foodBuffExpSpeedTimer -= deltaTime;
 
+    // Swimming State Detection (Cek apakah ubin di bawah pemain adalah air)
+    const playerCenterX = this.x + this.width / 2;
+    const playerFootY = this.y + this.height * 0.75;
+    const curTileX = Math.floor(playerCenterX / CONSTANTS.TILE_SIZE);
+    const curTileY = Math.floor(playerFootY / CONSTANTS.TILE_SIZE);
+    const isWaterHere = typeof (tileMap as any).isTileWater === 'function' && (tileMap as any).isTileWater(curTileX, curTileY);
+
+    if (isWaterHere && !this.isSwimming) {
+      AudioEngine.playWaterSplash();
+    }
+    this.isSwimming = isWaterHere;
+    if (this.isSwimming) {
+      this.swimAnimTimer += deltaTime * 3.5;
+    }
+
     this.isMoving = Math.abs(axisX) > 0.05 || Math.abs(axisY) > 0.05;
 
     if (this.isMoving) {
@@ -557,12 +576,18 @@ export class Player {
       if (this.isBerserk) speed *= 1.6;
       if (this.godspeedTimer > 0) speed *= 1.8;
       if (this.foodBuffExpSpeedTimer > 0) speed *= 1.25; // Sup Bunga Mistis +25% Speed
+      if (this.isSwimming) speed *= 0.72; // Reduksi kecepatan berenang secara natural
 
       const moveX = axisX * speed * deltaTime;
       const moveY = axisY * speed * deltaTime;
 
       const collides = (box: { x: number; y: number; width: number; height: number }) => {
-        if (tileMap.checkCollision(box)) return true;
+        // canSwim=true agar pemain bisa berenang melintasi ubin air (WATER & SACRED_WATER)
+        if (typeof (tileMap as any).checkCollision === 'function') {
+          if ((tileMap as any).checkCollision(box, true)) return true;
+        } else if (tileMap.checkCollision(box)) {
+          return true;
+        }
         if (obstacleChecker && obstacleChecker(box)) return true;
         return false;
       };
@@ -659,16 +684,49 @@ export class Player {
       }
     }
 
-    // 1. Soft Multi-Layer Shadow with dynamic height scaling
-    const shadowScale = castYOffset < 0 ? Math.max(0.42, 1 + castYOffset / 28) : 1;
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
-    ctx.beginPath();
-    ctx.ellipse(px + 12, py + 29, 11 * shadowScale, 5 * shadowScale, 0, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
-    ctx.beginPath();
-    ctx.ellipse(px + 12, py + 29, 8 * shadowScale, 3.5 * shadowScale, 0, 0, Math.PI * 2);
-    ctx.fill();
+    // 1. Soft Multi-Layer Shadow or Swimming Water Ripple Effect
+    if (this.isSwimming) {
+      // Efek air & bayangan lembut bawah air saat berenang
+      ctx.fillStyle = 'rgba(12, 74, 110, 0.42)';
+      ctx.beginPath();
+      ctx.ellipse(px + 12, py + 26, 12, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Animasi riak konsentris air melingkari badan
+      const ripple1 = (Math.sin(this.swimAnimTimer * 2.5) + 1) * 0.5;
+      const ripple2 = (Math.cos(this.swimAnimTimer * 2.5) + 1) * 0.5;
+
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.75)';
+      ctx.lineWidth = 1.5;
+      ctx.beginPath();
+      ctx.ellipse(px + 12, py + 23, 14 + ripple1 * 4, 6 + ripple1 * 1.8, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      ctx.strokeStyle = 'rgba(125, 211, 252, 0.45)';
+      ctx.lineWidth = 1.0;
+      ctx.beginPath();
+      ctx.ellipse(px + 12, py + 23, 18 + ripple2 * 5, 8 + ripple2 * 2.2, 0, 0, Math.PI * 2);
+      ctx.stroke();
+
+      // Busa & gelembung cipratan air saat bergerak
+      if (this.isMoving) {
+        ctx.fillStyle = 'rgba(255, 255, 255, 0.8)';
+        const splashSin = Math.sin(this.swimAnimTimer * 5);
+        ctx.fillRect(px + 6 + splashSin * 3, py + 21, 2.5, 2.5);
+        ctx.fillRect(px + 17 - splashSin * 3, py + 22, 2.5, 2.5);
+        ctx.fillRect(px + 12, py + 25 + splashSin * 2, 2, 2);
+      }
+    } else {
+      const shadowScale = castYOffset < 0 ? Math.max(0.42, 1 + castYOffset / 28) : 1;
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.2)';
+      ctx.beginPath();
+      ctx.ellipse(px + 12, py + 29, 11 * shadowScale, 5 * shadowScale, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = 'rgba(0, 0, 0, 0.45)';
+      ctx.beginPath();
+      ctx.ellipse(px + 12, py + 29, 8 * shadowScale, 3.5 * shadowScale, 0, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // 2. Barrier Aura
     if (this.hasBarrier) {
@@ -720,7 +778,8 @@ export class Player {
     }
 
     const renderX = px + punchLeanX;
-    const renderY = py + idleBob + castYOffset + punchLeanY;
+    const waterBob = this.isSwimming ? Math.sin(this.swimAnimTimer * 1.5) * 2.0 : 0;
+    const renderY = py + idleBob + castYOffset + punchLeanY + waterBob;
 
     // Angel Wings (Drawn behind back for Healer during cast)
     if (activeRole === 'HEALER' && isCasting) {
@@ -791,6 +850,21 @@ export class Player {
     }
     ctx.fillStyle = '#0f172a'; // Sole
     ctx.fillRect(renderX + 14 + legSpreadR, renderY + 28 + legOffset2, 6, 2);
+
+    // Efek celupan air bergelombang yang menutupi kaki saat berenang
+    if (this.isSwimming) {
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.55)';
+      ctx.beginPath();
+      ctx.ellipse(renderX + 12, renderY + 24, 13, 6, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+      ctx.beginPath();
+      ctx.arc(renderX + 6, renderY + 23, 2, 0, Math.PI * 2);
+      ctx.arc(renderX + 17, renderY + 23, 2, 0, Math.PI * 2);
+      ctx.arc(renderX + 12, renderY + 25, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
 
     // 6. Torso & Outfit / Armor
     ctx.fillStyle = this.costume.outfitColor;
@@ -1138,6 +1212,15 @@ export class Player {
     ctx.globalAlpha = 1.0;
     ctx.textAlign = 'center';
     ctx.textBaseline = 'alphabetic';
+
+    if (this.isSwimming) {
+      ctx.font = 'bold 7px sans-serif';
+      ctx.fillStyle = '#38bdf8';
+      ctx.strokeStyle = '#000000';
+      ctx.lineWidth = 2.0;
+      ctx.strokeText('🏊 Berenang', px + 12, renderY - 33);
+      ctx.fillText('🏊 Berenang', px + 12, renderY - 33);
+    }
 
     if (this.equippedTitle) {
       ctx.font = 'bold 7.5px sans-serif';

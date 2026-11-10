@@ -383,18 +383,28 @@ export class TileMap {
     return this.tiles[tileY]?.[tileX] ?? TileType.GRASS;
   }
 
-  public isTileSolid(tileX: number, tileY: number): boolean {
+  public isTileWater(tileX: number, tileY: number): boolean {
+    if (tileX < 0 || tileX >= this.width || tileY < 0 || tileY >= this.height) {
+      return false;
+    }
+    return this.tiles[tileY]?.[tileX] === TileType.WATER;
+  }
+
+  public isTileSolid(tileX: number, tileY: number, canSwim: boolean = false): boolean {
     if (tileX < 0 || tileX >= this.width || tileY < 0 || tileY >= this.height) {
       return true; // Outside bounds is solid
     }
     const tile = this.tiles[tileY][tileX];
+    if (tile === TileType.WATER) {
+      // Jika bisa berenang, air tidak memblokir pergerakan
+      return !canSwim;
+    }
     // Batu tidak lagi padat (tidak menghalangi jalan petualang)
-    return tile === TileType.WATER ||
-           tile === TileType.TREE ||
+    return tile === TileType.TREE ||
            tile === TileType.CLIFF;
   }
 
-  public checkCollision(rect: { x: number; y: number; width: number; height: number }): boolean {
+  public checkCollision(rect: { x: number; y: number; width: number; height: number }, canSwim: boolean = false): boolean {
     const leftTile = Math.floor(rect.x / this.tileSize);
     const rightTile = Math.floor((rect.x + rect.width - 0.01) / this.tileSize);
     const topTile = Math.floor(rect.y / this.tileSize);
@@ -402,7 +412,7 @@ export class TileMap {
 
     for (let ty = topTile; ty <= bottomTile; ty++) {
       for (let tx = leftTile; tx <= rightTile; tx++) {
-        if (this.isTileSolid(tx, ty)) {
+        if (this.isTileSolid(tx, ty, canSwim)) {
           return true;
         }
       }

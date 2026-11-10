@@ -65,14 +65,28 @@ export class WorldItem {
     const iconSize = 14;
     def.renderIcon(ctx, this.x - iconSize / 2, renderY - iconSize / 2, iconSize);
 
-    // If count > 1, show small count tag
+    // If count > 1, show small count tag in an elegant pill badge
     if (this.count > 1) {
-      ctx.font = 'bold 8px sans-serif';
-      ctx.fillStyle = '#ffffff';
-      ctx.strokeStyle = '#000000';
-      ctx.lineWidth = 2;
-      ctx.strokeText(`x${this.count}`, this.x + 8, renderY + 6);
-      ctx.fillText(`x${this.count}`, this.x + 8, renderY + 6);
+      ctx.font = 'bold 7px sans-serif';
+      const countStr = `x${this.count}`;
+      const cw = ctx.measureText(countStr).width;
+      const bx = this.x + 4;
+      const by = renderY + 1;
+      const bw = cw + 6;
+      const bh = 9;
+
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+      ctx.beginPath();
+      ctx.roundRect(bx, by, bw, bh, 2.5);
+      ctx.fill();
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+
+      ctx.fillStyle = '#fef08a';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(countStr, bx + bw / 2, by + bh / 2 + 0.5);
     }
 
     ctx.restore();

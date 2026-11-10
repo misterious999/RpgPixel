@@ -145,13 +145,22 @@ export class DungeonEldoria {
     return this.isNearLadder(playerCenterX, playerCenterY);
   }
 
-  public isTileSolid(tx: number, ty: number): boolean {
-    if (tx < 0 || tx >= this.width || ty < 0 || ty >= this.height) return true;
-    const t = this.tiles[ty][tx];
-    return t === EldoriaTileType.WALL || t === EldoriaTileType.ROOT_PILLAR || t === EldoriaTileType.SACRED_WATER;
+  public isTileWater(tx: number, ty: number): boolean {
+    if (tx < 0 || tx >= this.width || ty < 0 || ty >= this.height) return false;
+    return this.tiles[ty][tx] === EldoriaTileType.SACRED_WATER;
   }
 
-  public checkCollision(rect: { x: number; y: number; width: number; height: number }): boolean {
+  public isTileSolid(tx: number, ty: number, canSwim: boolean = false): boolean {
+    if (tx < 0 || tx >= this.width || ty < 0 || ty >= this.height) return true;
+    const t = this.tiles[ty][tx];
+    if (t === EldoriaTileType.SACRED_WATER) {
+      // Jika canSwim=true, air suci bisa direnangi
+      return !canSwim;
+    }
+    return t === EldoriaTileType.WALL || t === EldoriaTileType.ROOT_PILLAR;
+  }
+
+  public checkCollision(rect: { x: number; y: number; width: number; height: number }, canSwim: boolean = false): boolean {
     const leftTile = Math.floor(rect.x / this.tileSize);
     const rightTile = Math.floor((rect.x + rect.width - 0.01) / this.tileSize);
     const topTile = Math.floor(rect.y / this.tileSize);
@@ -159,7 +168,7 @@ export class DungeonEldoria {
 
     for (let ty = topTile; ty <= bottomTile; ty++) {
       for (let tx = leftTile; tx <= rightTile; tx++) {
-        if (this.isTileSolid(tx, ty)) {
+        if (this.isTileSolid(tx, ty, canSwim)) {
           return true;
         }
       }

@@ -1016,7 +1016,7 @@ export class Game {
         { itemId: 'DUNGEON_GEM', count: 6 },
         { itemId: 'MANA_POTION', count: 5 }
       ]),
-      new Chest(20 * ts + 5, 3 * ts + 6, [
+      new Chest(20 * ts + 8, 5 * ts + 8, [
         { itemId: 'GOLD_COIN', count: 1200 },
         { itemId: 'DUNGEON_GEM', count: 10 },
         { itemId: 'DARK_IRON_ORE', count: 20 },
@@ -1165,18 +1165,18 @@ export class Game {
   private initEldoriaDungeon(): void {
     const ts = CONSTANTS.TILE_SIZE;
     this.eldoriaMonsters = [
-      // West Sylvan Grove (Desa Eldoria Barat)
-      new Monster('eld_sprite_1', 'SYLVAN_SPRITE', 8 * ts, 16 * ts),
+      // West Sylvan Grove (Desa Eldoria Barat) - Ruang x:4..12, y:18..26
+      new Monster('eld_sprite_1', 'SYLVAN_SPRITE', 8 * ts, 21 * ts),
       new Monster('eld_creeper_1', 'VINE_CREEPER', 10 * ts, 20 * ts),
-      new Monster('eld_sprite_2', 'SYLVAN_SPRITE', 6 * ts, 18 * ts),
-      // East Sylvan Arboretum (Desa Eldoria Timur)
-      new Monster('eld_sprite_3', 'SYLVAN_SPRITE', 27 * ts, 16 * ts),
+      new Monster('eld_sprite_2', 'SYLVAN_SPRITE', 6 * ts, 22 * ts),
+      // East Sylvan Arboretum (Desa Eldoria Timur) - Ruang x:24..32, y:18..26
+      new Monster('eld_sprite_3', 'SYLVAN_SPRITE', 27 * ts, 21 * ts),
       new Monster('eld_treant_1', 'TREANT_WARRIOR', 25 * ts, 20 * ts),
-      new Monster('eld_creeper_2', 'VINE_CREEPER', 29 * ts, 18 * ts),
-      // Central Sacred Spring (Mata Air Suci Tengah)
-      new Monster('eld_treant_2', 'TREANT_WARRIOR', 15 * ts, 18 * ts),
-      new Monster('eld_creeper_3', 'VINE_CREEPER', 21 * ts, 18 * ts),
-      new Monster('eld_sprite_4', 'SYLVAN_SPRITE', 18 * ts, 22 * ts),
+      new Monster('eld_creeper_2', 'VINE_CREEPER', 29 * ts, 22 * ts),
+      // Central Corridors & Sacred Spring (Koridor Barat x:14 & Koridor Timur x:22 aman)
+      new Monster('eld_treant_2', 'TREANT_WARRIOR', 14 * ts, 22 * ts),
+      new Monster('eld_creeper_3', 'VINE_CREEPER', 22 * ts, 22 * ts),
+      new Monster('eld_sprite_4', 'SYLVAN_SPRITE', 18 * ts, 22 * ts), // Monster air suci (dapat dilawan dengan berenang!)
       // North Sacred Grove: Boss Ancient Ent & Penjaga (Lorong x:17..19 aman di ubin lantai)
       new Monster('eld_treant_3', 'TREANT_WARRIOR', 17 * ts, 11 * ts),
       new Monster('eld_treant_4', 'TREANT_WARRIOR', 19 * ts, 11 * ts),
@@ -1184,17 +1184,17 @@ export class Game {
     ];
 
     this.eldoriaChests = [
-      new Chest(6 * ts + 5, 15 * ts + 6, [
+      new Chest(7 * ts + 8, 21 * ts + 8, [
         { itemId: 'GOLD_COIN', count: 450 },
         { itemId: 'MAGIC_FLOWER', count: 12 },
         { itemId: 'HEALTH_POTION', count: 4 }
       ]),
-      new Chest(29 * ts + 5, 15 * ts + 6, [
+      new Chest(28 * ts + 8, 21 * ts + 8, [
         { itemId: 'GOLD_COIN', count: 550 },
         { itemId: 'MANA_POTION', count: 5 },
         { itemId: 'DUNGEON_GEM', count: 4 }
       ]),
-      new Chest(18 * ts + 5, 4 * ts + 6, [
+      new Chest(18 * ts + 8, 6 * ts + 8, [
         { itemId: 'GOLD_COIN', count: 1500 },
         { itemId: 'DUNGEON_GEM', count: 8 },
         { itemId: 'MAGIC_FLOWER', count: 20 },
@@ -1207,17 +1207,17 @@ export class Game {
   private initStonewatchDungeon(): void {
     const ts = CONSTANTS.TILE_SIZE;
     this.stonewatchMonsters = [
-      // West Crystal Shaft (Lorong Tambang Kristal Barat)
-      new Monster('stone_spider_1', 'CRYSTAL_SPIDER', 8 * ts, 16 * ts),
+      // West Crystal Shaft (Lorong Tambang Kristal Barat) - Ruang x:4..12, y:18..26
+      new Monster('stone_spider_1', 'CRYSTAL_SPIDER', 8 * ts, 21 * ts),
       new Monster('stone_spider_2', 'CRYSTAL_SPIDER', 6 * ts, 20 * ts),
-      new Monster('stone_skel_1', 'IRONCLAD_SKELETON', 10 * ts, 18 * ts),
-      // East Smelting Cavern (Gua Peleburan Besi Timur)
-      new Monster('stone_skel_2', 'IRONCLAD_SKELETON', 26 * ts, 16 * ts),
+      new Monster('stone_skel_1', 'IRONCLAD_SKELETON', 10 * ts, 22 * ts),
+      // East Smelting Cavern (Gua Peleburan Besi Timur) - Ruang x:24..32, y:18..26
+      new Monster('stone_skel_2', 'IRONCLAD_SKELETON', 26 * ts, 21 * ts),
       new Monster('stone_golem_1', 'ARMORED_GOLEM', 28 * ts, 20 * ts),
-      new Monster('stone_spider_3', 'CRYSTAL_SPIDER', 29 * ts, 17 * ts),
-      // Central Quarry Depot (Depo Tambang Tengah)
-      new Monster('stone_golem_2', 'ARMORED_GOLEM', 15 * ts, 18 * ts),
-      new Monster('stone_skel_3', 'IRONCLAD_SKELETON', 21 * ts, 18 * ts),
+      new Monster('stone_spider_3', 'CRYSTAL_SPIDER', 29 * ts, 22 * ts),
+      // Central Quarry Corridors (Koridor Barat x:14 & Koridor Timur x:22 aman)
+      new Monster('stone_golem_2', 'ARMORED_GOLEM', 14 * ts, 22 * ts),
+      new Monster('stone_skel_3', 'IRONCLAD_SKELETON', 22 * ts, 22 * ts),
       new Monster('stone_spider_4', 'CRYSTAL_SPIDER', 18 * ts, 22 * ts),
       // North Boss Foundry: Boss Obsidian Behemoth & Penjaga (Lorong x:17..19 aman di ubin lantai)
       new Monster('stone_golem_3', 'ARMORED_GOLEM', 17 * ts, 11 * ts),
@@ -1226,17 +1226,17 @@ export class Game {
     ];
 
     this.stonewatchChests = [
-      new Chest(6 * ts + 5, 15 * ts + 6, [
+      new Chest(7 * ts + 8, 21 * ts + 8, [
         { itemId: 'GOLD_COIN', count: 600 },
         { itemId: 'DARK_IRON_ORE', count: 15 },
         { itemId: 'HEALTH_POTION', count: 5 }
       ]),
-      new Chest(29 * ts + 5, 15 * ts + 6, [
+      new Chest(27 * ts + 8, 20 * ts + 8, [
         { itemId: 'GOLD_COIN', count: 700 },
         { itemId: 'DARK_IRON_ORE', count: 20 },
         { itemId: 'DUNGEON_GEM', count: 5 }
       ]),
-      new Chest(18 * ts + 5, 4 * ts + 6, [
+      new Chest(18 * ts + 8, 6 * ts + 8, [
         { itemId: 'GOLD_COIN', count: 2000 },
         { itemId: 'DUNGEON_GEM', count: 12 },
         { itemId: 'DARK_IRON_ORE', count: 35 },
@@ -2110,13 +2110,13 @@ export class Game {
     this.player.equippedTitle = activeTitle.name;
     this.player.equippedTitleColor = activeTitle.color;
 
-    // Helper aktif pengecekan rintangan/dinding map saat ini
+    // Helper aktif pengecekan rintangan/dinding map saat ini (mendukung renang companion & pet)
     const getActiveIsTileSolid = (tx: number, ty: number): boolean => {
-      if (this.currentMap === 'OVERWORLD') return this.tileMap.isTileSolid(tx, ty);
+      if (this.currentMap === 'OVERWORLD') return this.tileMap.isTileSolid(tx, ty, this.player.isSwimming);
       if (this.currentMap === 'DUNGEON') return this.dungeonMap.isTileSolid(tx, ty);
       if (this.currentMap === 'DUNGEON_FLOOR_2') return this.dungeonFloor2.isTileSolid(tx, ty);
       if (this.currentMap === 'DUNGEON_FLOOR_3') return this.dungeonFloor3.isTileSolid(tx, ty);
-      if (this.currentMap === 'DUNGEON_ELDORIA') return this.dungeonEldoria.isTileSolid(tx, ty);
+      if (this.currentMap === 'DUNGEON_ELDORIA') return this.dungeonEldoria.isTileSolid(tx, ty, this.player.isSwimming);
       if (this.currentMap === 'DUNGEON_STONEWATCH') return this.dungeonStonewatch.isTileSolid(tx, ty);
       return false;
     };
@@ -2888,13 +2888,13 @@ export class Game {
         }
       }
 
-      // Eldoria Monsters AI & Boss Telegraph Hook
+      // Eldoria Monsters AI & Boss Telegraph Hook (Sprite air suci dapat berenang/mengambang di SACRED_WATER)
       for (const monster of this.eldoriaMonsters) {
         monster.update(
           deltaTime,
           playerCenterX,
           playerCenterY,
-          (tx, ty) => this.dungeonEldoria.isTileSolid(tx, ty),
+          (tx, ty) => this.dungeonEldoria.isTileSolid(tx, ty, monster.type === 'SYLVAN_SPRITE'),
           (atk) => {
             const died = this.player.takeDamage(atk);
             this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `-${atk} HP`, '#ef4444');
@@ -3748,10 +3748,10 @@ export class Game {
       const timeWidth = ctx.measureText(timeStr).width + 16;
       const timeX = (screenWidth - timeWidth) / 2;
       const timeY = 10;
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.98)';
       ctx.fillRect(timeX, timeY, timeWidth, 22);
       ctx.strokeStyle = this.timeWeatherEngine.isNight() ? '#a855f7' : '#38bdf8';
-      ctx.lineWidth = 1.2;
+      ctx.lineWidth = 1.4;
       ctx.strokeRect(timeX, timeY, timeWidth, 22);
       ctx.fillStyle = '#f8fafc';
       ctx.textAlign = 'center';
@@ -4491,11 +4491,11 @@ export class Game {
     const playerCenterY = this.player.y + this.player.height / 2;
 
     const getActiveIsTileSolid = (tx: number, ty: number): boolean => {
-      if (this.currentMap === 'OVERWORLD') return this.tileMap.isTileSolid(tx, ty);
+      if (this.currentMap === 'OVERWORLD') return this.tileMap.isTileSolid(tx, ty, this.player.isSwimming);
       if (this.currentMap === 'DUNGEON') return this.dungeonMap.isTileSolid(tx, ty);
       if (this.currentMap === 'DUNGEON_FLOOR_2') return this.dungeonFloor2.isTileSolid(tx, ty);
       if (this.currentMap === 'DUNGEON_FLOOR_3') return this.dungeonFloor3.isTileSolid(tx, ty);
-      if (this.currentMap === 'DUNGEON_ELDORIA') return this.dungeonEldoria.isTileSolid(tx, ty);
+      if (this.currentMap === 'DUNGEON_ELDORIA') return this.dungeonEldoria.isTileSolid(tx, ty, this.player.isSwimming);
       if (this.currentMap === 'DUNGEON_STONEWATCH') return this.dungeonStonewatch.isTileSolid(tx, ty);
       return false;
     };
