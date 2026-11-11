@@ -363,11 +363,18 @@ export class GuildNPC {
       ? '🏛️ SERIKAT PETUALANG ELAINE'
       : '🔮 UPACARA KEBANGKITAN TAKDIR JIWA (ACAK)';
 
+    const maxHeaderW = modalWidth - 52;
+    let hFSize = 12.5;
+    ctx.font = `bold ${hFSize}px sans-serif`;
+    while (ctx.measureText(headerTitle).width > maxHeaderW && hFSize > 8.5) {
+      hFSize -= 0.5;
+      ctx.font = `bold ${hFSize.toFixed(1)}px sans-serif`;
+    }
+    const safeHeaderTitle = CanvasText.truncate(ctx, headerTitle, maxHeaderW);
     ctx.fillStyle = '#facc15';
-    ctx.font = 'bold 12.5px sans-serif';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'middle';
-    ctx.fillText(headerTitle, modalX + 16, modalY + 17);
+    ctx.fillText(safeHeaderTitle, modalX + 16, modalY + 17);
 
     // Close button (X)
     ctx.fillStyle = '#ef4444';

@@ -776,12 +776,7 @@ export class VillageManager {
     ctx.stroke();
 
     // Guild Royal Emblem Ribbon
-    ctx.fillStyle = '#ca8a04';
-    ctx.fillRect(gx + 12, gy + 14, gw - 24, 7);
-    ctx.fillStyle = '#fef08a';
-    ctx.font = 'bold 6.5px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('★ SERIKAT GUILD OAKHAVEN ★', gx + gw / 2, gy + 19.5);
+    this.drawFittedSignboard(ctx, gx + gw / 2, gy + 17.5, gw - 16, 11, '★ SERIKAT GUILD OAKHAVEN ★', '#ca8a04', '#fef08a', '#1e293b');
 
     // Papan Pengumuman Misi Serikat (Notice Board) di kanan
     const nbX = 53 * ts + 18;
@@ -877,13 +872,8 @@ export class VillageManager {
     ctx.fillStyle = '#78350f';
     ctx.fillRect(gxGate - 6, gyGate, 8, 38);
     ctx.fillRect(gxGate + 54, gyGate, 8, 38);
-    // Arch Beam
-    ctx.fillStyle = '#92400e';
-    ctx.fillRect(gxGate - 8, gyGate - 4, 72, 8);
-    ctx.fillStyle = '#fef08a';
-    ctx.font = 'bold 6px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('GERBANG DESA OAKHAVEN', gxGate + 28, gyGate + 2);
+    // Arch Beam Signboard
+    this.drawFittedSignboard(ctx, gxGate + 28, gyGate, 76, 11, 'GERBANG DESA OAKHAVEN', '#78350f', '#ca8a04', '#fef08a');
 
     // 7. LENTERA JALAN ALUN-ALUN (4 Plaza Streetlamps dengan ambient glow)
     const lamps = [
@@ -971,6 +961,47 @@ export class VillageManager {
     ctx.restore();
   }
 
+  /**
+   * Helper untuk merender plang nama / banner toko dengan teks yang pas dan tidak meluap keluar
+   */
+  private drawFittedSignboard(
+    ctx: CanvasRenderingContext2D,
+    centerX: number,
+    centerY: number,
+    boardW: number,
+    boardH: number,
+    text: string,
+    bgColor: string,
+    borderColor: string,
+    textColor: string
+  ): void {
+    ctx.save();
+    // 1. Gambar Background Plang / Board
+    ctx.fillStyle = bgColor;
+    ctx.beginPath();
+    ctx.roundRect(centerX - boardW / 2, centerY - boardH / 2, boardW, boardH, 2.5);
+    ctx.fill();
+    ctx.strokeStyle = borderColor;
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // 2. Skala Teks agar PAS di dalam boardW dengan padding aman
+    const maxTextW = Math.max(10, boardW - 6);
+    let fontSize = Math.min(8.0, Math.max(5.0, boardH - 3.5));
+    ctx.font = `bold ${fontSize.toFixed(1)}px sans-serif`;
+    while (ctx.measureText(text).width > maxTextW && fontSize > 3.0) {
+      fontSize -= 0.2;
+      ctx.font = `bold ${fontSize.toFixed(1)}px sans-serif`;
+    }
+
+    ctx.fillStyle = textColor;
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    const safeText = CanvasText.truncate(ctx, text, maxTextW);
+    ctx.fillText(safeText, centerX, centerY + 0.3);
+    ctx.restore();
+  }
+
   private drawTrainingDummy(ctx: CanvasRenderingContext2D, x: number, y: number): void {
     // Wooden post base
     ctx.fillStyle = '#451a03';
@@ -993,23 +1024,30 @@ export class VillageManager {
   }
 
   private drawSignpost(ctx: CanvasRenderingContext2D, x: number, y: number, text: string): void {
+    ctx.save();
+    ctx.font = 'bold 5px sans-serif';
+    const textW = ctx.measureText(text).width;
+    const boardW = Math.max(76, textW + 14);
+
     // Post
     ctx.fillStyle = '#78350f';
     ctx.fillRect(x - 2, y, 4, 18);
+
     // Board
     ctx.fillStyle = '#451a03';
     ctx.beginPath();
-    ctx.roundRect(x - 38, y - 8, 76, 12, 3);
+    ctx.roundRect(x - boardW / 2, y - 8, boardW, 12, 3);
     ctx.fill();
     ctx.strokeStyle = '#fde047';
     ctx.lineWidth = 1;
     ctx.stroke();
+
     // Text
     ctx.fillStyle = '#fef08a';
-    ctx.font = 'bold 5.5px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText(text, x, y - 2);
+    ctx.restore();
   }
 
   private drawSylvanLantern(ctx: CanvasRenderingContext2D, x: number, y: number): void {
@@ -1091,14 +1129,7 @@ export class VillageManager {
     ctx.fill();
 
     // Signpost Plaque
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
-    ctx.fillRect(x + 6, y + h - 4, w - 12, 12);
-    ctx.strokeStyle = '#ca8a04';
-    ctx.strokeRect(x + 6, y + h - 4, w - 12, 12);
-    ctx.fillStyle = '#fef08a';
-    ctx.font = 'bold 7px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText(nameTag, x + w / 2, y + h + 4);
+    this.drawFittedSignboard(ctx, x + w / 2, y + h + 2, w - 8, 12, nameTag, 'rgba(15, 23, 42, 0.88)', '#ca8a04', '#fef08a');
   }
 
   /**
@@ -1203,22 +1234,7 @@ export class VillageManager {
     ctx.fillText('𝒱', crestX, crestY + 0.5);
 
     // 8. Plakat Papan Nama Bank Emas di Atas Pintu
-    const badgeW = 68;
-    const badgeH = 11;
-    const badgeX = x + w / 2 - badgeW / 2;
-    const badgeY = doorY - 14;
-
-    ctx.fillStyle = '#0f172a';
-    ctx.beginPath();
-    ctx.roundRect(badgeX, badgeY, badgeW, badgeH, 3);
-    ctx.fill();
-    ctx.strokeStyle = '#facc15';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-
-    ctx.fillStyle = '#fef08a';
-    ctx.font = 'bold 6px sans-serif';
-    ctx.fillText('🏛️ BANK KERAJAAN VAL', x + w / 2, badgeY + badgeH / 2 + 0.5);
+    this.drawFittedSignboard(ctx, x + w / 2, doorY - 8.5, w - 8, 11, '🏛️ BANK KERAJAAN VAL', '#0f172a', '#facc15', '#fef08a');
   }
 
   /**
@@ -1350,15 +1366,7 @@ export class VillageManager {
     ctx.fillRect(x - 3, y + h - 14, 6, 4);
 
     // 9. Signpost Plaque: "BENGKEL TEMPA BROKK"
-    ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
-    ctx.fillRect(x + 4, y + h - 4, w - 8, 12);
-    ctx.strokeStyle = '#f97316';
-    ctx.lineWidth = 1;
-    ctx.strokeRect(x + 4, y + h - 4, w - 8, 12);
-    ctx.fillStyle = '#fdba74';
-    ctx.font = 'bold 7px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('⚒️ BENGKEL TEMPA BROKK', x + w / 2, y + h + 4);
+    this.drawFittedSignboard(ctx, x + w / 2, y + h + 2, w - 4, 12, '⚒️ BENGKEL TEMPA BROKK', 'rgba(15, 23, 42, 0.95)', '#f97316', '#fdba74');
   }
 
   /**
@@ -1425,19 +1433,7 @@ export class VillageManager {
     ctx.fillRect(x - 6, botY + 2, 12, 10);
 
     // Papan Gerbang Atas
-    ctx.fillStyle = '#0f172a';
-    ctx.beginPath();
-    ctx.roundRect(x - 68, topY - 14, 136, 16, 4);
-    ctx.fill();
-    ctx.strokeStyle = '#f59e0b';
-    ctx.lineWidth = 1.8;
-    ctx.stroke();
-
-    ctx.fillStyle = '#fef08a';
-    ctx.font = 'bold 7px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('🎪 DISTRIK PASAR RAYA (GRAND BAZAAR)', x, topY - 6);
+    this.drawFittedSignboard(ctx, x, topY - 6, 144, 16, '🎪 DISTRIK PASAR RAYA (GRAND BAZAAR)', '#0f172a', '#f59e0b', '#fef08a');
 
     // Bendera Segitiga Menggantung di Gerbang
     const flags = ['#ef4444', '#facc15', '#22c55e', '#38bdf8', '#c084fc'];
@@ -1569,19 +1565,7 @@ export class VillageManager {
     ctx.fillRect(x + 28, y + 16, 8, 3); // Scroll
 
     // Signboard
-    ctx.fillStyle = '#1e293b';
-    ctx.beginPath();
-    ctx.roundRect(x + 6, y - 4, w - 12, 9, 2);
-    ctx.fill();
-    ctx.strokeStyle = '#facc15';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    ctx.fillStyle = '#fef08a';
-    ctx.font = 'bold 6.5px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('🛒 SERBA ADA MARCO', x + w / 2, y + 0.5);
+    this.drawFittedSignboard(ctx, x + w / 2, y + 0.5, w - 4, 10, '🛒 SERBA ADA MARCO', '#1e293b', '#facc15', '#fef08a');
   }
 
   /**
@@ -1676,19 +1660,7 @@ export class VillageManager {
     ctx.fill();
 
     // Signboard
-    ctx.fillStyle = '#1e293b';
-    ctx.beginPath();
-    ctx.roundRect(x + 6, y - 4, w - 12, 9, 2);
-    ctx.fill();
-    ctx.strokeStyle = '#ea580c';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    ctx.fillStyle = '#fed7aa';
-    ctx.font = 'bold 6.5px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('🍲 KEDAI KULINER GASTON', x + w / 2, y + 0.5);
+    this.drawFittedSignboard(ctx, x + w / 2, y + 0.5, w - 4, 10, '🍲 KEDAI KULINER GASTON', '#1e293b', '#ea580c', '#fed7aa');
   }
 
   /**
@@ -1779,19 +1751,7 @@ export class VillageManager {
     ctx.fillRect(x + 26, y + 16, 8, 3); // Portal Scroll
 
     // Signboard
-    ctx.fillStyle = '#0f172a';
-    ctx.beginPath();
-    ctx.roundRect(x + 6, y - 4, w - 12, 9, 2);
-    ctx.fill();
-    ctx.strokeStyle = '#c084fc';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    ctx.fillStyle = '#e9d5ff';
-    ctx.font = 'bold 6.5px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('🔮 ARKANA LUNA', x + w / 2, y + 0.5);
+    this.drawFittedSignboard(ctx, x + w / 2, y + 0.5, w - 4, 10, '🔮 ARKANA LUNA', '#0f172a', '#c084fc', '#e9d5ff');
   }
 
   /**
@@ -1874,19 +1834,7 @@ export class VillageManager {
     ctx.fillRect(x + 22, y + 16.5, 3, 3);
 
     // Signboard
-    ctx.fillStyle = '#0f172a';
-    ctx.beginPath();
-    ctx.roundRect(x + 6, y - 4, w - 12, 9, 2);
-    ctx.fill();
-    ctx.strokeStyle = '#94a3b8';
-    ctx.lineWidth = 1;
-    ctx.stroke();
-
-    ctx.fillStyle = '#cbd5e1';
-    ctx.font = 'bold 6.5px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('⚔️ SENJATA GARETH', x + w / 2, y + 0.5);
+    this.drawFittedSignboard(ctx, x + w / 2, y + 0.5, w - 4, 10, '⚔️ SENJATA GARETH', '#0f172a', '#94a3b8', '#cbd5e1');
   }
 
   /**
@@ -2025,19 +1973,7 @@ export class VillageManager {
     ctx.fill();
 
     // Signboard Atas
-    ctx.fillStyle = '#0f172a';
-    ctx.beginPath();
-    ctx.roundRect(cX - 6, cY - 24, cW + 12, 10, 2);
-    ctx.fill();
-    ctx.strokeStyle = '#34d399';
-    ctx.lineWidth = 1.2;
-    ctx.stroke();
-
-    ctx.fillStyle = '#a7f3d0';
-    ctx.font = 'bold 6.5px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.textBaseline = 'middle';
-    ctx.fillText('🐾 SUAKA SATWA MIA', cX + cW / 2, cY - 19);
+    this.drawFittedSignboard(ctx, cX + cW / 2, cY - 19, cW + 16, 11, '🐾 SUAKA SATWA MIA', '#0f172a', '#34d399', '#a7f3d0');
   }
 
   private drawStreetlamp(ctx: CanvasRenderingContext2D, x: number, y: number): void {

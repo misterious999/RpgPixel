@@ -1,5 +1,6 @@
 import { CONSTANTS } from '../core/Constants.ts';
 import { Camera } from '../core/Camera.ts';
+import { CanvasText } from '../utils/CanvasText.ts';
 
 export type InteriorId =
   | 'GUILD_HALL'
@@ -863,14 +864,29 @@ export class BuildingInteriors {
       ctx.fillText('⚔️', 14 * ts + 12, 28);
 
       // 2. Banner Emas Serikat di Tengah Atas
+      const bW = 6 * ts;
+      const bX = 6 * ts;
+      const bY = 12;
+      const bH = 20;
       ctx.fillStyle = '#ca8a04';
-      ctx.fillRect(6 * ts, 12, 6 * ts, 20);
+      ctx.fillRect(bX, bY, bW, bH);
       ctx.strokeStyle = '#fef08a';
       ctx.lineWidth = 1.2;
-      ctx.strokeRect(6 * ts, 12, 6 * ts, 20);
+      ctx.strokeRect(bX, bY, bW, bH);
+
+      const guildBannerText = '★ BALAI SERIKAT GUILD OAKHAVEN ★';
+      const maxBannerW = bW - 12;
+      let gFSize = 8.5;
+      ctx.font = `bold ${gFSize}px sans-serif`;
+      while (ctx.measureText(guildBannerText).width > maxBannerW && gFSize > 6.0) {
+        gFSize -= 0.5;
+        ctx.font = `bold ${gFSize.toFixed(1)}px sans-serif`;
+      }
+      const safeGuildText = CanvasText.truncate(ctx, guildBannerText, maxBannerW);
       ctx.fillStyle = '#0f172a';
-      ctx.font = 'bold 8.5px sans-serif';
-      ctx.fillText('★ BALAI SERIKAT GUILD OAKHAVEN ★', 9 * ts, 23);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(safeGuildText, bX + bW / 2, bY + bH / 2);
 
       // 3. Meja Resepsionis Kayu Mahoni
       const cx = 5.5 * ts;

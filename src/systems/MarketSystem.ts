@@ -592,18 +592,28 @@ export class MarketSystem {
       ctx.fillRect(sx, modalY + 3, stripeW, 4);
     }
 
-    // Judul & Ikon Toko
-    ctx.font = 'bold 11px sans-serif';
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'left';
-    ctx.textBaseline = 'middle';
-    ctx.fillText(`${meta.icon} ${meta.name}`, modalX + 10, modalY + 3 + headerH / 2);
-
     // Saldo Dompet Val di Kanan Header
     ctx.font = 'bold 10px sans-serif';
+    const valText = `👛 ${player.val.toLocaleString()} 𝒱`;
+    const valW = ctx.measureText(valText).width;
     ctx.fillStyle = '#facc15';
     ctx.textAlign = 'right';
-    ctx.fillText(`👛 ${player.val.toLocaleString()} 𝒱`, modalX + modalW - 36, modalY + 3 + headerH / 2);
+    ctx.textBaseline = 'middle';
+    ctx.fillText(valText, modalX + modalW - 36, modalY + 3 + headerH / 2);
+
+    // Judul & Ikon Toko (Auto-fit agar tidak nabrak saldo val / tombol close)
+    const maxTitleW = modalW - valW - 56;
+    let titleFontSize = 11;
+    ctx.font = `bold ${titleFontSize}px sans-serif`;
+    const fullTitle = `${meta.icon} ${meta.name}`;
+    while (ctx.measureText(fullTitle).width > maxTitleW && titleFontSize > 8) {
+      titleFontSize -= 0.5;
+      ctx.font = `bold ${titleFontSize.toFixed(1)}px sans-serif`;
+    }
+    const safeTitle = CanvasText.truncate(ctx, fullTitle, maxTitleW);
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'left';
+    ctx.fillText(safeTitle, modalX + 10, modalY + 3 + headerH / 2);
 
     // Tombol Tutup [✕]
     const closeX = modalX + modalW - 30;
@@ -632,6 +642,24 @@ export class MarketSystem {
     this.buyModeTabRect = { x: bTabX, y: modeTabY, w: modeTabW, h: modeTabH };
     this.sellModeTabRect = { x: sTabX, y: modeTabY, w: modeTabW, h: modeTabH };
 
+    // Helper untuk merender teks tab yang pas dan tidak keluar dari kotak tab
+    const renderFittedTabText = (
+      label: string,
+      cx: number,
+      cy: number,
+      maxW: number,
+      isBold: boolean
+    ) => {
+      let fSize = isBold ? 9 : 8.5;
+      ctx.font = `${isBold ? 'bold ' : ''}${fSize}px sans-serif`;
+      while (ctx.measureText(label).width > maxW && fSize > 6.0) {
+        fSize -= 0.3;
+        ctx.font = `${isBold ? 'bold ' : ''}${fSize.toFixed(1)}px sans-serif`;
+      }
+      const textToDraw = CanvasText.truncate(ctx, label, maxW);
+      ctx.fillText(textToDraw, cx, cy);
+    };
+
     if (this.activeShopId === 'PET') {
       const isAdoptActive = this.activeMode === 'BUY';
       const isStatusActive = this.activeMode === 'PET_STATUS';
@@ -645,11 +673,10 @@ export class MarketSystem {
       ctx.lineWidth = isAdoptActive ? 1.8 : 0.8;
       ctx.stroke();
 
-      ctx.font = isAdoptActive ? 'bold 9px sans-serif' : '8.5px sans-serif';
       ctx.fillStyle = isAdoptActive ? '#ffffff' : '#94a3b8';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('🐾 ADOPSI HEWAN PELIHARAAN', bTabX + modeTabW / 2, modeTabY + modeTabH / 2);
+      renderFittedTabText('🐾 ADOPSI PET', bTabX + modeTabW / 2, modeTabY + modeTabH / 2, modeTabW - 8, isAdoptActive);
 
       // Tab Status & Jual / Lepas
       ctx.fillStyle = isStatusActive ? '#d97706' : 'rgba(30, 41, 59, 0.7)';
@@ -660,10 +687,9 @@ export class MarketSystem {
       ctx.lineWidth = isStatusActive ? 1.8 : 0.8;
       ctx.stroke();
 
-      ctx.font = isStatusActive ? 'bold 9px sans-serif' : '8.5px sans-serif';
       ctx.fillStyle = isStatusActive ? '#ffffff' : '#94a3b8';
       const petLabel = currentPet ? `💖 PET AKTIF (${currentPet.name})` : '💖 STATUS PET / LEPAS';
-      ctx.fillText(petLabel, sTabX + modeTabW / 2, modeTabY + modeTabH / 2);
+      renderFittedTabText(petLabel, sTabX + modeTabW / 2, modeTabY + modeTabH / 2, modeTabW - 8, isStatusActive);
 
       // Render Body Pet Shop
       if (this.activeMode === 'BUY') {
@@ -684,11 +710,10 @@ export class MarketSystem {
       ctx.lineWidth = isBuyActive ? 1.8 : 0.8;
       ctx.stroke();
 
-      ctx.font = isBuyActive ? 'bold 9px sans-serif' : '8.5px sans-serif';
       ctx.fillStyle = isBuyActive ? '#ffffff' : '#94a3b8';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('🛒 BELI DARI TOKO', bTabX + modeTabW / 2, modeTabY + modeTabH / 2);
+      renderFittedTabText('🛒 BELI DARI TOKO', bTabX + modeTabW / 2, modeTabY + modeTabH / 2, modeTabW - 8, isBuyActive);
 
       const usedSlots = player.inventory.slots.filter((s) => s !== null).length;
       ctx.fillStyle = isSellActive ? '#d97706' : 'rgba(30, 41, 59, 0.7)';
@@ -699,9 +724,8 @@ export class MarketSystem {
       ctx.lineWidth = isSellActive ? 1.8 : 0.8;
       ctx.stroke();
 
-      ctx.font = isSellActive ? 'bold 9px sans-serif' : '8.5px sans-serif';
       ctx.fillStyle = isSellActive ? '#ffffff' : '#94a3b8';
-      ctx.fillText(`💰 JUAL DARI TAS (${usedSlots}/16)`, sTabX + modeTabW / 2, modeTabY + modeTabH / 2);
+      renderFittedTabText(`💰 JUAL DARI TAS (${usedSlots}/16)`, sTabX + modeTabW / 2, modeTabY + modeTabH / 2, modeTabW - 8, isSellActive);
 
       if (this.activeMode === 'BUY') {
         this.renderBuyModeBody(ctx, modalX, modalY, modalW, modalH, modeTabY + modeTabH + 4, player);
@@ -1201,7 +1225,8 @@ export class MarketSystem {
       ctx.font = 'bold 8.5px sans-serif';
       ctx.fillStyle = isSelected ? '#ffffff' : '#f8fafc';
       ctx.textAlign = 'left';
-      ctx.fillText(`${pInfo.name} - ${pInfo.species}`, cx + 32, cy + 8);
+      const safePetName = CanvasText.truncate(ctx, `${pInfo.name} - ${pInfo.species}`, cw - 36);
+      ctx.fillText(safePetName, cx + 32, cy + 8);
 
       // Price or Status
       ctx.font = 'bold 7.5px sans-serif';
@@ -1230,13 +1255,15 @@ export class MarketSystem {
     ctx.fillStyle = '#fef08a';
     ctx.textAlign = 'left';
     ctx.textBaseline = 'top';
-    ctx.fillText(`${selectedInfo.avatarIcon} ${selectedInfo.name} (${selectedInfo.species})`, col2X + 8, contentY + 8);
+    const safeDetailTitle = CanvasText.truncate(ctx, `${selectedInfo.avatarIcon} ${selectedInfo.name} (${selectedInfo.species})`, col2W - 16);
+    ctx.fillText(safeDetailTitle, col2X + 8, contentY + 8);
 
     // Specialty Badge
     ctx.font = '7.5px sans-serif';
     ctx.fillStyle = '#34d399';
     const spec = this.selectedPetType === 'FAIRY_PET' ? '🌟 Jangkauan Magnetik Luas (165px) & Berkah Hutan' : this.selectedPetType === 'DRAGON_PET' ? '🔥 Gerak Cepat (80 SPD) & Pengumpul Harta Abisal' : '🐾 Auto-Loot Koin & Drop Item Otomatis';
-    ctx.fillText(spec, col2X + 8, contentY + 24);
+    const safeSpec = CanvasText.truncate(ctx, spec, col2W - 16);
+    ctx.fillText(safeSpec, col2X + 8, contentY + 24);
 
     ctx.strokeStyle = '#334155';
     ctx.lineWidth = 0.8;
@@ -1288,12 +1315,18 @@ export class MarketSystem {
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    ctx.font = 'bold 8.5px sans-serif';
+    let adoptFSize = 8.5;
+    ctx.font = `bold ${adoptFSize}px sans-serif`;
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     const btnLabel = isOwned ? '✨ Pet Ini Sudah Aktif' : currentPet ? '⚠️ Lepas Pet Aktif Terlebih Dahulu' : canAdopt ? `🐾 Adopsi ${selectedInfo.name} (${selectedInfo.costVal} 𝒱)` : '❌ Val Tidak Cukup';
-    ctx.fillText(btnLabel, btnX + btnW / 2, btnAreaY + btnH / 2);
+    while (ctx.measureText(btnLabel).width > btnW - 8 && adoptFSize > 6.5) {
+      adoptFSize -= 0.5;
+      ctx.font = `bold ${adoptFSize.toFixed(1)}px sans-serif`;
+    }
+    const safeBtnLabel = CanvasText.truncate(ctx, btnLabel, btnW - 8);
+    ctx.fillText(safeBtnLabel, btnX + btnW / 2, btnAreaY + btnH / 2);
   }
 
   /**
@@ -1330,11 +1363,12 @@ export class MarketSystem {
 
       ctx.font = 'bold 10px sans-serif';
       ctx.fillStyle = '#fef08a';
-      ctx.fillText('Kamu Belum Memiliki Hewan Peliharaan Aktif', colX + colW / 2, contentY + contentH / 2);
+      const safeNoPet = CanvasText.truncate(ctx, 'Kamu Belum Memiliki Hewan Peliharaan Aktif', colW - 20);
+      ctx.fillText(safeNoPet, colX + colW / 2, contentY + contentH / 2);
 
       ctx.font = '8px sans-serif';
       ctx.fillStyle = '#94a3b8';
-      ctx.fillText('Kunjungi tab "🐾 ADOPSI HEWAN PELIHARAAN" untuk memilih kawan setia petualanganmu!', colX + colW / 2, contentY + contentH / 2 + 16);
+      CanvasText.drawWrappedText(ctx, 'Kunjungi tab "🐾 ADOPSI PET" untuk memilih kawan setia petualanganmu!', colX + 16, contentY + contentH / 2 + 10, colW - 32, 11);
       return;
     }
 
@@ -1357,23 +1391,30 @@ export class MarketSystem {
     ctx.font = 'bold 11px sans-serif';
     ctx.fillStyle = '#fef08a';
     ctx.textAlign = 'left';
-    ctx.fillText(`🐾 ${currentPet.name} - ${info.species}`, colX + 54, contentY + 24);
+    const safeCardTitle = CanvasText.truncate(ctx, `🐾 ${currentPet.name} - ${info.species}`, colW - 74);
+    ctx.fillText(safeCardTitle, colX + 54, contentY + 24);
 
     ctx.font = '8px sans-serif';
     ctx.fillStyle = '#4ade80';
-    ctx.fillText(`Status: Aktif mengawalmu & auto-loot magnet koin/item!`, colX + 54, contentY + 38);
+    const safeCardStatus = CanvasText.truncate(ctx, 'Status: Aktif mengawalmu & auto-loot magnet koin/item!', colW - 74);
+    ctx.fillText(safeCardStatus, colX + 54, contentY + 38);
 
     ctx.fillStyle = '#cbd5e1';
-    ctx.fillText(`Kecepatan Lari: ${currentPet.speed} SPD | Afeksi: 💖 Penuh Kebahagiaan`, colX + 54, contentY + 52);
+    const safeCardSpeed = CanvasText.truncate(ctx, `Kecepatan Lari: ${currentPet.speed} SPD | Afeksi: 💖 Penuh Kebahagiaan`, colW - 74);
+    ctx.fillText(safeCardSpeed, colX + 54, contentY + 52);
 
-    // Penjelasan Titip / Jual Pet
-    const explY = contentY + 86;
+    // Penjelasan Titip / Jual Pet (Wrapped text agar tidak overflow)
+    let explY = contentY + 84;
+    const wrapW = colW - 24;
     ctx.font = '8px sans-serif';
     ctx.fillStyle = '#94a3b8';
     ctx.textAlign = 'left';
-    ctx.fillText('Ingin berganti hewan peliharaan? Kamu bisa:', colX + 12, explY);
-    ctx.fillText(`• Menitipkan / Menjual ${currentPet.name} kembali ke Suaka dan menerima pengembalian +${info.sellVal.toLocaleString()} 𝒱.`, colX + 12, explY + 14);
-    ctx.fillText(`• Melepas ${currentPet.name} dengan damai ke alam rimba bebas tanpa kompensasi Val.`, colX + 12, explY + 28);
+    ctx.textBaseline = 'top';
+    explY += CanvasText.drawWrappedText(ctx, 'Ingin berganti hewan peliharaan? Kamu bisa:', colX + 12, explY, wrapW, 11) + 2;
+    ctx.fillStyle = '#fde047';
+    explY += CanvasText.drawWrappedText(ctx, `• Menitipkan / Menjual ${currentPet.name} kembali ke Suaka dan menerima pengembalian +${info.sellVal.toLocaleString()} 𝒱.`, colX + 12, explY, wrapW, 11) + 2;
+    ctx.fillStyle = '#94a3b8';
+    CanvasText.drawWrappedText(ctx, `• Melepas ${currentPet.name} dengan damai ke alam rimba bebas tanpa kompensasi Val.`, colX + 12, explY, wrapW, 11);
 
     // Tombol Aksi: Titip/Jual vs Lepas
     const btnAreaY = contentY + contentH - 34;
@@ -1400,7 +1441,8 @@ export class MarketSystem {
     ctx.fillStyle = '#ffffff';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText(`💰 Titip ke Suaka (+${info.sellVal.toLocaleString()} 𝒱)`, bSellX + bW / 2, btnAreaY + btnH / 2);
+    const safeSellLabel = CanvasText.truncate(ctx, `💰 Titip ke Suaka (+${info.sellVal.toLocaleString()} 𝒱)`, bW - 6);
+    ctx.fillText(safeSellLabel, bSellX + bW / 2, btnAreaY + btnH / 2);
 
     // Tombol Lepas Damai
     ctx.fillStyle = '#334155';
@@ -1410,6 +1452,10 @@ export class MarketSystem {
     ctx.strokeStyle = '#64748b';
     ctx.lineWidth = 1;
     ctx.stroke();
+
+    ctx.fillStyle = '#e2e8f0';
+    const safeRelLabel = CanvasText.truncate(ctx, '🕊️ Lepas ke Alam Rimba', bW - 6);
+    ctx.fillText(safeRelLabel, bRelX + bW / 2, btnAreaY + btnH / 2);
 
     ctx.fillStyle = '#e2e8f0';
     ctx.fillText(`🕊️ Lepas ke Alam Rimba`, bRelX + bW / 2, btnAreaY + btnH / 2);

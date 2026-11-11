@@ -4615,19 +4615,34 @@ export class Game {
       ctx.stroke();
     }
 
-    // Role tag & Skill Name typography
+    // Role tag & Skill Name typography (Auto-fit agar tidak keluar dari layar/banner)
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    ctx.font = 'bold 9.5px sans-serif';
+    const maxCutInW = screenWidth - 36;
+    const roleTag = `【 ${banner.role} · SKILL ACTIVATION 】`;
+    let roleFSize = 9.5;
+    ctx.font = `bold ${roleFSize}px sans-serif`;
+    while (ctx.measureText(roleTag).width > maxCutInW && roleFSize > 6.5) {
+      roleFSize -= 0.5;
+      ctx.font = `bold ${roleFSize.toFixed(1)}px sans-serif`;
+    }
+    const safeRoleTag = CanvasText.truncate(ctx, roleTag, maxCutInW);
     ctx.fillStyle = '#f8fafc';
-    ctx.fillText(`【 ${banner.role} · SKILL ACTIVATION 】`, screenWidth / 2, centerY - 9);
+    ctx.fillText(safeRoleTag, screenWidth / 2, centerY - 9);
 
-    ctx.font = '900 15px sans-serif';
+    const skillTitle = banner.name.toUpperCase();
+    let skillFSize = 15;
+    ctx.font = `900 ${skillFSize}px sans-serif`;
+    while (ctx.measureText(skillTitle).width > maxCutInW && skillFSize > 9) {
+      skillFSize -= 0.5;
+      ctx.font = `900 ${skillFSize.toFixed(1)}px sans-serif`;
+    }
+    const safeSkillTitle = CanvasText.truncate(ctx, skillTitle, maxCutInW);
     ctx.fillStyle = '#ffffff';
     ctx.shadowColor = banner.color;
     ctx.shadowBlur = 10;
-    ctx.fillText(banner.name.toUpperCase(), screenWidth / 2, centerY + 9);
+    ctx.fillText(safeSkillTitle, screenWidth / 2, centerY + 9);
 
     ctx.restore();
   }
@@ -4693,20 +4708,33 @@ export class Game {
     drawDiamond(cardX + 7, cardY + cardH / 2);
     drawDiamond(cardX + cardW - 7, cardY + cardH / 2);
 
-    // Title & Subtitle with anime fantasy flair
+    // Title & Subtitle with anime fantasy flair (Auto-fit di dalam kartu)
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    ctx.font = 'bold 12.5px sans-serif';
+    const maxCardTextW = cardW - 24;
+    let titleFSize = 12.5;
+    ctx.font = `bold ${titleFSize}px sans-serif`;
+    while (ctx.measureText(this.mapTransitionTitle).width > maxCardTextW && titleFSize > 8.5) {
+      titleFSize -= 0.5;
+      ctx.font = `bold ${titleFSize.toFixed(1)}px sans-serif`;
+    }
+    const safeTitle = CanvasText.truncate(ctx, this.mapTransitionTitle, maxCardTextW);
     ctx.fillStyle = subTheme;
     ctx.shadowColor = mainTheme;
     ctx.shadowBlur = 8;
-    ctx.fillText(this.mapTransitionTitle, cardX + cardW / 2, cardY + 18);
+    ctx.fillText(safeTitle, cardX + cardW / 2, cardY + 18);
 
     ctx.shadowBlur = 0;
-    ctx.font = 'italic 9.5px sans-serif';
+    let subFSize = 9.5;
+    ctx.font = `italic ${subFSize}px sans-serif`;
+    while (ctx.measureText(this.mapTransitionSubtitle).width > maxCardTextW && subFSize > 7) {
+      subFSize -= 0.5;
+      ctx.font = `italic ${subFSize.toFixed(1)}px sans-serif`;
+    }
+    const safeSub = CanvasText.truncate(ctx, this.mapTransitionSubtitle, maxCardTextW);
     ctx.fillStyle = '#cbd5e1';
-    ctx.fillText(this.mapTransitionSubtitle, cardX + cardW / 2, cardY + 35);
+    ctx.fillText(safeSub, cardX + cardW / 2, cardY + 35);
 
     ctx.restore();
   }
