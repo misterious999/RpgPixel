@@ -753,46 +753,13 @@ export class VillageManager {
     ctx.fillStyle = '#78350f';
     ctx.fillRect(gx - 2, gy + 16, gw + 4, gh - 14);
 
-    // Carved Guild Stone Pillars
-    const pillY = gy + 14;
-    ctx.fillStyle = '#334155';
-    ctx.fillRect(gx - 2, pillY, 8, gh - 14);
-    ctx.fillRect(gx + gw - 6, pillY, 8, gh - 14);
-    ctx.fillStyle = '#64748b';
-    ctx.fillRect(gx, pillY, 4, gh - 14);
-    ctx.fillRect(gx + gw - 4, pillY, 4, gh - 14);
-
-    // Guild Roof Eaves & Canopy (Royal Blue with Golden Trim)
-    ctx.fillStyle = '#1e3a8a';
-    ctx.beginPath();
-    ctx.moveTo(gx - 8, gy + 18);
-    ctx.lineTo(gx + gw / 2, gy - 6);
-    ctx.lineTo(gx + gw + 8, gy + 18);
-    ctx.closePath();
-    ctx.fill();
-
-    ctx.strokeStyle = '#ca8a04';
-    ctx.lineWidth = 2;
-    ctx.stroke();
-
-    // Guild Royal Emblem Ribbon
-    this.drawFittedSignboard(ctx, gx + gw / 2, gy + 17.5, gw - 16, 11, '★ SERIKAT GUILD OAKHAVEN ★', '#ca8a04', '#fef08a', '#1e293b');
+    // Carved Guild Stone Pillars, Canopy, Roof & Ribbon
+    this.drawGuildPillarsAndRoof(ctx, gx, gy, gw, gh);
 
     // Papan Pengumuman Misi Serikat (Notice Board) di kanan
     const nbX = 53 * ts + 18;
     const nbY = 48 * ts + 4;
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(nbX, nbY, 18, 22);
-    ctx.fillStyle = '#b45309';
-    ctx.fillRect(nbX + 2, nbY + 2, 14, 14);
-    ctx.fillStyle = '#fef08a';
-    ctx.fillRect(nbX + 4, nbY + 4, 4, 5); // Quest paper 1
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillRect(nbX + 9, nbY + 4, 5, 5); // Quest paper 2
-    ctx.fillStyle = '#f43f5e';
-    ctx.fillRect(nbX + 4, nbY + 10, 8, 4); // Boss notice
-    ctx.fillStyle = '#451a03';
-    ctx.fillRect(nbX + 7, nbY + 16, 4, 10); // Wooden leg
+    this.drawNoticeBoardStructure(ctx, nbX, nbY);
 
     // 2. AIR MANCUR ALUN-ALUN PUSAT DESA (Central Village Fountain: 50*ts, 52*ts)
     const fx = 50 * ts + 16;
@@ -869,11 +836,7 @@ export class VillageManager {
     // 6. GERBANG SELATAN DESA (South Village Gate: 50*ts, 56*ts)
     const gxGate = 50 * ts - 18;
     const gyGate = 56 * ts - 6;
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(gxGate - 6, gyGate, 8, 38);
-    ctx.fillRect(gxGate + 54, gyGate, 8, 38);
-    // Arch Beam Signboard
-    this.drawFittedSignboard(ctx, gxGate + 28, gyGate, 76, 11, 'GERBANG DESA OAKHAVEN', '#78350f', '#ca8a04', '#fef08a');
+    this.drawSouthVillageGate(ctx, gxGate, gyGate);
 
     // 7. LENTERA JALAN ALUN-ALUN (4 Plaza Streetlamps dengan ambient glow)
     const lamps = [
@@ -959,6 +922,278 @@ export class VillageManager {
     }
 
     ctx.restore();
+  }
+
+  /**
+   * Foreground & Y-sorting Occlusion Layer:
+   * Merender tiang, pilar, balok gerbang atas, kanopi toko, dan atap DI DEPAN pemain
+   * saat pemain berada di belakang tiang/bangunan atau melintas di bawah gerbang.
+   * Ini memastikan pemain melewati BELAKANG tiang, bukan menginjak tiang ("nginjek tiang").
+   */
+  public renderForegroundEnvironment(
+    ctx: CanvasRenderingContext2D,
+    playerX: number,
+    playerY: number,
+    playerW: number,
+    playerH: number
+  ): void {
+    const ts = CONSTANTS.TILE_SIZE;
+    const playerFeetY = playerY + playerH;
+
+    ctx.save();
+
+    // 1. GERBANG LENGKUNG DISTRIK PASAR RAYA (Grand Bazaar Archway: 59.5*ts, 49*ts)
+    // Saat pemain melintas gerbang atau berada di dekat tiang/balok gerbang:
+    const gArchX = 59.5 * ts;
+    const gArchTopY = 49 * ts - 2.5 * ts;
+    const gArchBotY = 49 * ts + 3.5 * ts;
+    if (
+      playerX + playerW >= gArchX - 24 &&
+      playerX <= gArchX + 24 &&
+      playerFeetY >= gArchTopY - 14 &&
+      playerY <= gArchBotY + 18
+    ) {
+      this.drawBazaarArchway(ctx, gArchX, 49 * ts);
+    }
+
+    // 2. TALI BENDERA FESTIVAL PASAR (Grand Bazaar Garland Bunting)
+    // Menggantung di udara melintasi jalan pasar di atas kepala pemain
+    if (playerX >= 60 * ts - 20 && playerX <= 76 * ts + 20 && playerFeetY >= 44 * ts && playerY <= 56 * ts) {
+      this.drawBazaarBunting(ctx, 60 * ts, 76 * ts, 45 * ts, 53 * ts);
+    }
+
+    // 3. GERBANG SELATAN DESA (South Village Gate: 50*ts - 18, 56*ts - 6)
+    const gxGate = 50 * ts - 18;
+    const gyGate = 56 * ts - 6;
+    if (
+      playerX + playerW >= gxGate - 16 &&
+      playerX <= gxGate + 70 &&
+      playerFeetY >= gyGate - 14 &&
+      playerFeetY <= gyGate + 42
+    ) {
+      this.drawSouthVillageGate(ctx, gxGate, gyGate);
+    }
+
+    // 4. BALAI BESAR SERIKAT GUILD (Pilar batu, atap kanopi, plang & papan misi)
+    const gx = 50 * ts - 24;
+    const gy = 47 * ts - 8;
+    const gw = 80;
+    const gh = 52;
+    if (
+      playerX + playerW >= gx - 16 &&
+      playerX <= gx + gw + 16 &&
+      playerFeetY >= gy - 10 &&
+      playerFeetY <= gy + gh + 4
+    ) {
+      this.drawGuildPillarsAndRoof(ctx, gx, gy, gw, gh);
+    }
+
+    // 4.1 PAPAN MISI GUILD OAKHAVEN
+    const nbX = 53 * ts + 18;
+    const nbY = 48 * ts + 4;
+    if (
+      playerX + playerW >= nbX - 8 &&
+      playerX <= nbX + 26 &&
+      playerFeetY >= nbY - 10 &&
+      playerFeetY <= nbY + 28
+    ) {
+      this.drawNoticeBoardStructure(ctx, nbX, nbY);
+    }
+
+    // 5. TOKO-TOKO PASAR RAYA (Tiang kayu depan, kanopi awning, meja counter & plang)
+    // 5.1 Toko Serba Ada Marco (x: 62*ts, y: 44.5*ts, w: 58, h: 32)
+    if (this.isPlayerBehindStructure(playerX, playerW, playerFeetY, 62 * ts, 44.5 * ts, 58, 34)) {
+      this.drawGeneralStoreMarco(ctx, 62 * ts, 44.5 * ts);
+    }
+    // 5.2 Kedai Kuliner Gaston (x: 68*ts, y: 44.5*ts, w: 62, h: 32)
+    if (this.isPlayerBehindStructure(playerX, playerW, playerFeetY, 68 * ts, 44.5 * ts, 62, 34)) {
+      this.drawFoodTavernGaston(ctx, 68 * ts, 44.5 * ts);
+    }
+    // 5.3 Paviliun Arkana Luna (x: 74*ts, y: 44.5*ts, w: 58, h: 32)
+    if (this.isPlayerBehindStructure(playerX, playerW, playerFeetY, 74 * ts, 44.5 * ts, 58, 34)) {
+      this.drawArcanePavilionLuna(ctx, 74 * ts, 44.5 * ts);
+    }
+    // 5.4 Kios Senjata Gareth (x: 62*ts, y: 53.5*ts, w: 58, h: 32)
+    if (this.isPlayerBehindStructure(playerX, playerW, playerFeetY, 62 * ts, 53.5 * ts, 58, 34)) {
+      this.drawArmoryGareth(ctx, 62 * ts, 53.5 * ts);
+    }
+    // 5.5 Suaka Satwa Mia (x: 68*ts, y: 53*ts)
+    if (this.isPlayerBehindStructure(playerX, playerW, playerFeetY, 68 * ts, 53 * ts - 10, 7 * ts, 4 * ts)) {
+      this.drawPetSanctuaryMia(ctx, 68 * ts, 53 * ts);
+    }
+
+    // 6. BANK KERAJAAN VAL (Pilar Marmer Romawi & Pedimen Atas)
+    const bkX = 44.8 * ts;
+    const bkY = 41.5 * ts;
+    if (this.isPlayerBehindStructure(playerX, playerW, playerFeetY, bkX, bkY, 78, 64)) {
+      this.drawBankBuilding(ctx, bkX, bkY, 78, 64);
+    }
+
+    // 7. BENGKEL PANDAI BESI BROKK (Pilar Sudut Batu, Cerobong & Plang Anvil)
+    const bsX = 44.8 * ts;
+    const bsY = 47.5 * ts;
+    if (this.isPlayerBehindStructure(playerX, playerW, playerFeetY, bsX, bsY, 76, 64)) {
+      this.drawBlacksmithWorkshop(ctx, bsX, bsY, 76, 64);
+    }
+
+    // 8. RUMAH & BALAI DESA (Aldrich, Lily, Dapur Petualang, Eldoria, Stonewatch)
+    const cottages = [
+      { x: 41.5 * ts, y: 43 * ts, w: 74, h: 64, r: '#991b1b', wall: '#b45309', name: 'Balai Desa Aldrich' },
+      { x: 56 * ts, y: 43 * ts, w: 74, h: 64, r: '#15803d', wall: '#d97706', name: 'Toko Bunga Lily' },
+      { x: 56 * ts, y: 51 * ts, w: 78, h: 66, r: '#78350f', wall: '#ca8a04', name: 'Dapur & Kedai Petualang' },
+      { x: 19 * ts, y: 15 * ts, w: 74, h: 56, r: '#047857', wall: '#065f46', name: 'Paviliun Roh Eldoria' },
+      { x: 82.5 * ts, y: 61 * ts, w: 80, h: 58, r: '#1e1b4b', wall: '#334155', name: 'Benteng Tambang Stonewatch' }
+    ];
+    for (const c of cottages) {
+      if (this.isPlayerBehindStructure(playerX, playerW, playerFeetY, c.x, c.y, c.w, c.h)) {
+        this.drawCottage(ctx, c.x, c.y, c.w, c.h, c.r, c.wall, c.name);
+      }
+    }
+
+    // 9. SELURUH TIANG LENTERA JALAN (Streetlamps)
+    const streetlamps = [
+      { x: 47 * ts + 8, y: 46 * ts },
+      { x: 53 * ts + 24, y: 46 * ts },
+      { x: 47 * ts + 8, y: 54 * ts },
+      { x: 53 * ts + 24, y: 54 * ts },
+      { x: 61 * ts, y: 47.8 * ts },
+      { x: 67 * ts, y: 47.8 * ts },
+      { x: 73 * ts, y: 47.8 * ts },
+      { x: 61 * ts, y: 52.2 * ts },
+      { x: 67 * ts, y: 52.2 * ts },
+      { x: 81 * ts, y: 65 * ts },
+      { x: 88 * ts, y: 65 * ts }
+    ];
+    for (const l of streetlamps) {
+      if (
+        playerX + playerW >= l.x - 14 &&
+        playerX <= l.x + 14 &&
+        playerFeetY >= l.y - 12 &&
+        playerFeetY <= l.y + 24
+      ) {
+        this.drawStreetlamp(ctx, l.x, l.y);
+      }
+    }
+
+    // 10. RAMBU PENUNJUK JALAN (Signposts)
+    const signposts = [
+      { x: 45 * ts + 16, y: 50 * ts - 8, text: '⬅️ Desa Eldoria (Rimba Peri)' },
+      { x: 58 * ts, y: 49 * ts, text: '🎪 Distrik Pasar Raya ➡️ | Tambang Stonewatch ➡️' },
+      { x: 50 * ts + 16, y: 44 * ts, text: '⬆️ Goa Kripta Kuno (Dungeon)' }
+    ];
+    for (const s of signposts) {
+      if (
+        playerX + playerW >= s.x - 70 &&
+        playerX <= s.x + 70 &&
+        playerFeetY >= s.y - 14 &&
+        playerFeetY <= s.y + 20
+      ) {
+        this.drawSignpost(ctx, s.x, s.y, s.text);
+      }
+    }
+
+    // 11. LENTERA PERI ELDORIA
+    const sylvanLamps = [
+      { x: 17 * ts, y: 18 * ts },
+      { x: 23 * ts, y: 24 * ts }
+    ];
+    for (const sl of sylvanLamps) {
+      if (
+        playerX + playerW >= sl.x &&
+        playerX <= sl.x + 24 &&
+        playerFeetY >= sl.y - 10 &&
+        playerFeetY <= sl.y + 22
+      ) {
+        this.drawSylvanLantern(ctx, sl.x, sl.y);
+      }
+    }
+
+    // 12. DUMMY LATIHAN ARENA SERENA
+    const tAx = 41 * ts;
+    const tAy = 55 * ts;
+    for (const dx of [tAx - 6, tAx + 32]) {
+      if (
+        playerX + playerW >= dx - 10 &&
+        playerX <= dx + 24 &&
+        playerFeetY >= tAy - 4 &&
+        playerFeetY <= tAy + 28
+      ) {
+        this.drawTrainingDummy(ctx, dx, tAy + 4);
+      }
+    }
+
+    ctx.restore();
+  }
+
+  private isPlayerBehindStructure(
+    playerX: number,
+    playerW: number,
+    playerFeetY: number,
+    structX: number,
+    structY: number,
+    structW: number,
+    structH: number
+  ): boolean {
+    const structBaseY = structY + structH;
+    return (
+      playerX + playerW >= structX - 12 &&
+      playerX <= structX + structW + 12 &&
+      playerFeetY >= structY - 14 &&
+      playerFeetY <= structBaseY + 6
+    );
+  }
+
+  private drawGuildPillarsAndRoof(ctx: CanvasRenderingContext2D, gx: number, gy: number, gw: number, gh: number): void {
+    const pillY = gy + 14;
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(gx - 2, pillY, 8, gh - 14);
+    ctx.fillRect(gx + gw - 6, pillY, 8, gh - 14);
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(gx, pillY, 4, gh - 14);
+    ctx.fillRect(gx + gw - 4, pillY, 4, gh - 14);
+
+    // Guild Roof Eaves & Canopy (Royal Blue with Golden Trim)
+    ctx.fillStyle = '#1e3a8a';
+    ctx.beginPath();
+    ctx.moveTo(gx - 8, gy + 18);
+    ctx.lineTo(gx + gw / 2, gy - 6);
+    ctx.lineTo(gx + gw + 8, gy + 18);
+    ctx.closePath();
+    ctx.fill();
+
+    ctx.strokeStyle = '#ca8a04';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Guild Royal Emblem Ribbon
+    this.drawFittedSignboard(ctx, gx + gw / 2, gy + 17.5, gw - 16, 11, '★ SERIKAT GUILD OAKHAVEN ★', '#ca8a04', '#fef08a', '#1e293b');
+  }
+
+  private drawNoticeBoardStructure(ctx: CanvasRenderingContext2D, nbX: number, nbY: number): void {
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(nbX, nbY, 18, 22);
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(nbX + 2, nbY + 2, 14, 14);
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(nbX + 4, nbY + 4, 4, 5); // Quest paper 1
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(nbX + 9, nbY + 4, 5, 5); // Quest paper 2
+    ctx.fillStyle = '#f43f5e';
+    ctx.fillRect(nbX + 4, nbY + 10, 8, 4); // Boss notice
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(nbX + 7, nbY + 16, 4, 10); // Wooden leg
+  }
+
+  private drawSouthVillageGate(ctx: CanvasRenderingContext2D, gxGate: number, gyGate: number): void {
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(gxGate - 6, gyGate, 8, 38);
+    ctx.fillRect(gxGate + 54, gyGate, 8, 38);
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(gxGate - 6, gyGate, 8, 38);
+    ctx.strokeRect(gxGate + 54, gyGate, 8, 38);
+    // Arch Beam Signboard
+    this.drawFittedSignboard(ctx, gxGate + 28, gyGate, 76, 11, 'GERBANG DESA OAKHAVEN', '#78350f', '#ca8a04', '#fef08a');
   }
 
   /**

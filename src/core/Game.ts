@@ -3593,6 +3593,10 @@ export class Game {
       // 6. Render Player
       this.player.render(ctx);
 
+      // 6.1 Render Village Foreground Occlusion Layer (Pillars, Posts, Roofs, Archways & Overhead Structures)
+      this.villageManager.renderForegroundEnvironment(ctx, this.player.x, this.player.y, this.player.width, this.player.height);
+      this.renderForegroundProps(ctx, this.player.x, this.player.y, this.player.width, this.player.height);
+
       // 7. Render Spell Effects
       this.skillBarUI.renderWorldEffects(ctx);
 
@@ -4286,6 +4290,67 @@ export class Game {
       ctx.textBaseline = 'middle';
       ctx.fillStyle = '#bae6fd';
       ctx.fillText(prompt, px + 16, py - 11);
+    }
+  }
+
+  private renderForegroundProps(
+    ctx: CanvasRenderingContext2D,
+    playerX: number,
+    playerY: number,
+    playerW: number,
+    playerH: number
+  ): void {
+    const ts = CONSTANTS.TILE_SIZE;
+    const playerFeetY = playerY + playerH;
+    const pcx = playerX + playerW / 2;
+    const pcy = playerY + playerH / 2;
+
+    // 1. Notice Board Kehormatan (53*ts, 48*ts)
+    const nbX = 53 * ts;
+    const nbY = 48 * ts;
+    if (
+      playerX + playerW >= nbX - 8 &&
+      playerX <= nbX + 36 &&
+      playerFeetY >= nbY - 10 &&
+      playerFeetY <= nbY + 34
+    ) {
+      this.renderNoticeBoard(ctx, nbX, nbY, pcx, pcy);
+    }
+
+    // 2. Pet Pen Pagar (54*ts, 52*ts)
+    const ppX = 54 * ts;
+    const ppY = 52 * ts;
+    if (
+      playerX + playerW >= ppX - 8 &&
+      playerX <= ppX + 40 &&
+      playerFeetY >= ppY - 8 &&
+      playerFeetY <= ppY + 28
+    ) {
+      this.renderPetPen(ctx, ppX, ppY, pcx, pcy);
+    }
+
+    // 3. Kuil Hutan Eldoria (21*ts, 13*ts)
+    const elX = 21 * ts;
+    const elY = 13 * ts;
+    if (
+      playerX + playerW >= elX - 8 &&
+      playerX <= elX + 44 &&
+      playerFeetY >= elY - 10 &&
+      playerFeetY <= elY + 36
+    ) {
+      this.renderEldoriaEntrance(ctx, pcx, pcy);
+    }
+
+    // 4. Tambang Stonewatch (85*ts, 58*ts)
+    const swX = 85 * ts;
+    const swY = 58 * ts;
+    if (
+      playerX + playerW >= swX - 8 &&
+      playerX <= swX + 44 &&
+      playerFeetY >= swY - 10 &&
+      playerFeetY <= swY + 36
+    ) {
+      this.renderStonewatchEntrance(ctx, pcx, pcy);
     }
   }
 
