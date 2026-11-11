@@ -4,7 +4,7 @@ import { FloatingTextManager } from '../ui/FloatingText.ts';
 import { AudioEngine } from '../audio/AudioEngine.ts';
 import { ITEM_DEFINITIONS } from '../items/ItemTypes.ts';
 
-export type PetType = 'SLIME_PET' | 'WOLF_PET';
+export type PetType = 'SLIME_PET' | 'WOLF_PET' | 'FAIRY_PET' | 'DRAGON_PET';
 
 export interface PetInfo {
   type: PetType;
@@ -13,6 +13,9 @@ export interface PetInfo {
   description: string;
   tameItem: string;
   tameCount: number;
+  costVal: number;
+  sellVal: number;
+  avatarIcon: string;
 }
 
 export const PET_DATA: Record<PetType, PetInfo> = {
@@ -20,9 +23,12 @@ export const PET_DATA: Record<PetType, PetInfo> = {
     type: 'SLIME_PET',
     name: 'Puni',
     species: 'Slime Kristal Mungil',
-    description: 'Slime mini yang sangat setia. Mengumpulkan koin dan item drop di sekitarmu secara otomatis!',
+    description: 'Slime mini kenyal yang sangat setia. Mengumpulkan koin dan drop item di sekitarmu secara otomatis!',
     tameItem: 'SLIME_JELLY',
-    tameCount: 2
+    tameCount: 2,
+    costVal: 350,
+    sellVal: 175,
+    avatarIcon: '🫧'
   },
   WOLF_PET: {
     type: 'WOLF_PET',
@@ -30,7 +36,32 @@ export const PET_DATA: Record<PetType, PetInfo> = {
     species: 'Anak Serigala Rimba',
     description: 'Anak serigala berbulu lebat dan lincah yang rajin mengendus dan memungut jarahan monster.',
     tameItem: 'MAGIC_FLOWER',
-    tameCount: 2
+    tameCount: 2,
+    costVal: 500,
+    sellVal: 250,
+    avatarIcon: '🐺'
+  },
+  FAIRY_PET: {
+    type: 'FAIRY_PET',
+    name: 'Sylph',
+    species: 'Peri Cahaya Mungil',
+    description: 'Peri mungil berkilau berkah hutan. Memungut koin & item dengan jangkauan magnetik lebih jauh (165px)!',
+    tameItem: 'DUNGEON_GEM',
+    tameCount: 1,
+    costVal: 1200,
+    sellVal: 600,
+    avatarIcon: '✨'
+  },
+  DRAGON_PET: {
+    type: 'DRAGON_PET',
+    name: 'Ignis',
+    species: 'Bayi Naga Merah',
+    description: 'Naga kerdil bersayap lucu dan berani. Mengendus dan memungut seluruh jarahan dungeon dengan gesit!',
+    tameItem: 'ANCIENT_BONE',
+    tameCount: 2,
+    costVal: 2500,
+    sellVal: 1250,
+    avatarIcon: '🐉'
   }
 };
 
@@ -55,6 +86,13 @@ export class Pet {
     this.name = PET_DATA[type].name;
     this.x = x;
     this.y = y;
+    if (type === 'FAIRY_PET') {
+      this.speed = 88;
+    } else if (type === 'DRAGON_PET') {
+      this.speed = 80;
+    } else {
+      this.speed = 72;
+    }
   }
 
   public update(
@@ -111,9 +149,9 @@ export class Pet {
     const playerCenterY = player.y + player.height / 2;
 
     // 1. Auto-Loot Magnet AI
-    // Find closest item within 135px radius
+    // Find closest item within magnetic radius (Fairy has widest reach 170px)
     let nearestItem: WorldItem | null = null;
-    let nearestDist = 135;
+    let nearestDist = this.type === 'FAIRY_PET' ? 170 : this.type === 'DRAGON_PET' ? 150 : 135;
 
     for (const item of worldItems) {
       if (item.isCollected) continue;
@@ -224,7 +262,7 @@ export class Pet {
       ctx.fillStyle = '#f472b6';
       ctx.fillRect(x + eyeOffset - 1, y + 8 + bob, 1.5, 1);
       ctx.fillRect(x + eyeOffset + 5, y + 8 + bob, 1.5, 1);
-    } else {
+    } else if (this.type === 'WOLF_PET') {
       // Lobo: Fluffy Wolf Pup
       // Body
       ctx.fillStyle = '#94a3b8';
@@ -256,6 +294,90 @@ export class Pet {
       ctx.fillStyle = '#64748b';
       ctx.fillRect(x + 4, y + 11 + bob, 2.5, 3);
       ctx.fillRect(x + 9, y + 11 + bob, 2.5, 3);
+    } else if (this.type === 'FAIRY_PET') {
+      // Sylph: Cute Glowing Fairy
+      const fairyBob = Math.sin(this.animTimer * 12) * 2.5;
+      const wingFlutter = Math.sin(this.animTimer * 26) * 4;
+
+      // Sparkling Fairy Aura Glow
+      ctx.fillStyle = 'rgba(254, 240, 138, 0.35)';
+      ctx.beginPath();
+      ctx.arc(x + 8, y + 6 + fairyBob, 9, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Translucent Wings
+      ctx.fillStyle = 'rgba(186, 230, 253, 0.75)';
+      ctx.beginPath();
+      ctx.ellipse(x + (isLeft ? 12 : 4), y + 4 + fairyBob, 5 + Math.abs(wingFlutter) * 0.5, 3, isLeft ? -0.4 : 0.4, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Tiny Fairy Body
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath();
+      ctx.ellipse(x + 8, y + 8 + fairyBob, 3, 4, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Glowing Head & Tiara
+      ctx.fillStyle = '#fed7aa';
+      ctx.beginPath();
+      ctx.arc(x + 8, y + 4 + fairyBob, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(x + 7, y + 1 + fairyBob, 2, 2); // Gem on forehead
+
+      // Tiny Cute Eyes
+      ctx.fillStyle = '#0f172a';
+      const eyeX = isLeft ? x + 6.5 : x + 8.5;
+      ctx.fillRect(eyeX, y + 3.5 + fairyBob, 1, 1.5);
+    } else if (this.type === 'DRAGON_PET') {
+      // Ignis: Cute Baby Wyrm / Dragon
+      const dragonBob = Math.sin(this.animTimer * 9) * 1.5;
+      const flap = Math.sin(this.animTimer * 18) * 3;
+
+      // Chubby Crimson Body
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.ellipse(x + 8, y + 8 + dragonBob, 6, 5, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Yellow Scales Belly
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath();
+      ctx.ellipse(x + (isLeft ? 7 : 9), y + 9 + dragonBob, 3, 3, 0, 0, Math.PI * 2);
+      ctx.fill();
+
+      // Dragon Head
+      ctx.fillStyle = '#ef4444';
+      const headX = isLeft ? x + 3 : x + 9;
+      ctx.fillRect(headX, y + 2 + dragonBob, 6, 6);
+
+      // Cute Little Dragon Horns
+      ctx.fillStyle = '#ca8a04';
+      ctx.fillRect(headX + 1, y - 1 + dragonBob, 1.5, 3);
+      ctx.fillRect(headX + 4, y - 1 + dragonBob, 1.5, 3);
+
+      // Tiny Bat/Dragon Wings
+      ctx.fillStyle = '#991b1b';
+      const wingX = isLeft ? x + 11 : x + 2;
+      ctx.beginPath();
+      ctx.moveTo(wingX, y + 6 + dragonBob);
+      ctx.lineTo(wingX + (isLeft ? 4 : -4), y + 1 + dragonBob + flap * 0.5);
+      ctx.lineTo(wingX + (isLeft ? 2 : -2), y + 7 + dragonBob);
+      ctx.fill();
+
+      // Big Sparkly Dragon Eye
+      ctx.fillStyle = '#fef08a';
+      const eyeX = isLeft ? headX + 1 : headX + 3.5;
+      ctx.fillRect(eyeX, y + 3.5 + dragonBob, 2, 2);
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(eyeX + (isLeft ? 0.5 : 1), y + 4 + dragonBob, 1, 1.5);
+
+      // Curled Tail with tiny spade tip
+      ctx.fillStyle = '#dc2626';
+      const tailX = isLeft ? x + 13 : x + 1;
+      ctx.fillRect(tailX, y + 8 + dragonBob, 3, 2);
+      ctx.fillStyle = '#ca8a04';
+      ctx.fillRect(tailX + (isLeft ? 2 : -1), y + 7 + dragonBob, 2, 2);
     }
 
     // Floating Heart when happy

@@ -4,6 +4,19 @@ import { QuestManager } from './QuestManager.ts';
 import { FloatingTextManager } from '../ui/FloatingText.ts';
 import { CanvasText } from '../utils/CanvasText.ts';
 import { AudioEngine } from '../audio/AudioEngine.ts';
+import { MarketShopId } from '../systems/MarketSystem.ts';
+
+export interface MarketShopLocation {
+  id: MarketShopId;
+  name: string;
+  merchantName: string;
+  icon: string;
+  bannerColor: string;
+  accentColor: string;
+  x: number;
+  y: number;
+  prompt: string;
+}
 
 export interface VillageNPCData {
   id: string;
@@ -48,12 +61,75 @@ export class VillageManager {
   private marketBtnRect = { x: 0, y: 0, w: 0, h: 0 };
   private riddleOptRects: { x: number; y: number; w: number; h: number }[] = [];
 
-  // Village NPCs
+  // Village NPCs & Market Shops
   public npcs: VillageNPCData[] = [];
+  public marketShops: MarketShopLocation[] = [];
 
   constructor(questManager: QuestManager) {
     this.questManager = questManager;
     this.initNPCs();
+    this.initMarketShops();
+  }
+
+  private initMarketShops(): void {
+    const ts = CONSTANTS.TILE_SIZE;
+    this.marketShops = [
+      {
+        id: 'GENERAL',
+        name: 'Toko Serba Ada Saudagar Marco',
+        merchantName: 'Saudagar Marco',
+        icon: '🛒',
+        bannerColor: '#dc2626',
+        accentColor: '#facc15',
+        x: 62 * ts + 28,
+        y: 44.5 * ts + 20,
+        prompt: 'Tekan [A] Belanja di Toko Serba Ada Marco 🛒'
+      },
+      {
+        id: 'FOOD',
+        name: 'Kedai Kuliner Chef Gaston',
+        merchantName: 'Chef Gaston',
+        icon: '🍲',
+        bannerColor: '#ea580c',
+        accentColor: '#fb923c',
+        x: 68 * ts + 28,
+        y: 44.5 * ts + 20,
+        prompt: 'Tekan [A] Masuk Kedai Kuliner Chef Gaston 🍲'
+      },
+      {
+        id: 'ARCANE',
+        name: 'Paviliun Arkana Sorceress Luna',
+        merchantName: 'Sorceress Luna',
+        icon: '🔮',
+        bannerColor: '#9333ea',
+        accentColor: '#c084fc',
+        x: 74 * ts + 28,
+        y: 44.5 * ts + 20,
+        prompt: 'Tekan [A] Kunjungi Paviliun Arkana Luna 🔮'
+      },
+      {
+        id: 'ARMORY',
+        name: 'Kios Persenjataan Gareth',
+        merchantName: 'Pengrajin Gareth',
+        icon: '⚔️',
+        bannerColor: '#475569',
+        accentColor: '#94a3b8',
+        x: 62 * ts + 28,
+        y: 53.5 * ts + 20,
+        prompt: 'Tekan [A] Belanja di Kios Senjata Gareth ⚔️'
+      },
+      {
+        id: 'PET',
+        name: 'Suaka & Toko Hewan Penjinak Mia',
+        merchantName: 'Penjinak Mia',
+        icon: '🐾',
+        bannerColor: '#059669',
+        accentColor: '#34d399',
+        x: 70 * ts + 20,
+        y: 53 * ts + 16,
+        prompt: 'Tekan [A] Kunjungi Suaka & Toko Pet Mia 🐾'
+      }
+    ];
   }
 
   private initNPCs(): void {
@@ -383,15 +459,21 @@ export class VillageManager {
     this.riddleOptRects = [];
   }
 
+  public getNearbyMarketShop(playerCenterX: number, playerCenterY: number): MarketShopLocation | null {
+    for (const shop of this.marketShops) {
+      if (Math.hypot(shop.x - playerCenterX, shop.y - playerCenterY) < 46) {
+        return shop;
+      }
+    }
+    return null;
+  }
+
   public isNearMarketStall(playerCenterX: number, playerCenterY: number): boolean {
-    const ts = CONSTANTS.TILE_SIZE;
-    const stallCenterX = 42.5 * ts + 26;
-    const stallCenterY = 53.5 * ts + 20;
-    return Math.hypot(stallCenterX - playerCenterX, stallCenterY - playerCenterY) < 46;
+    return this.getNearbyMarketShop(playerCenterX, playerCenterY) !== null;
   }
 
   /**
-   * Cek collision terhadap bangunan fisik desa (Rumah, Balai, Kedai, Air Mancur)
+   * Cek collision terhadap bangunan fisik desa (Rumah, Balai, Kedai, Air Mancur, Distrik Pasar)
    */
   public checkCollision(box: { x: number; y: number; width: number; height: number }): boolean {
     const ts = CONSTANTS.TILE_SIZE;
@@ -438,13 +520,6 @@ export class VillageManager {
       return true;
     }
 
-    // 3.8 Kios Pasar Raya Oakhaven (Barat Daya Alun-Alun: 42.5*ts, 53.5*ts, w=56, h=32)
-    const msX = 42.5 * ts;
-    const msY = 53.5 * ts;
-    if (box.x < msX + 56 && box.x + box.width > msX && box.y < msY + 32 && box.y + box.height > msY + 12) {
-      return true;
-    }
-
     // 4. Kedai Petualang Oakhaven (Tenggara: 56*ts, 51.5*ts)
     const h3x = 56 * ts;
     const h3y = 51 * ts;
@@ -453,6 +528,47 @@ export class VillageManager {
     if (box.x < h3x + h3w && box.x + box.width > h3x && box.y < h3y + h3h && box.y + box.height > h3y + 24) {
       return true;
     }
+
+    // ========================================================
+    // --- DISTRIK PASAR RAYA OAKHAVEN (GRAND BAZAAR DISTRICT) ---
+    // ========================================================
+    // A. Gerbang Utama Pasar (Pilar Utara & Pilar Selatan di x=59.5*ts)
+    const gArchX = 59.5 * ts;
+    if (box.x < gArchX + 10 && box.x + box.width > gArchX - 2 && box.y < 48 * ts && box.y + box.height > 46.5 * ts) return true;
+    if (box.x < gArchX + 10 && box.x + box.width > gArchX - 2 && box.y < 54 * ts && box.y + box.height > 52.5 * ts) return true;
+
+    // B. Baris Toko Sisi Utara (y=44.5*ts, h=30)
+    // 1. Toko Serba Ada Marco (x: 62*ts, y: 44.5*ts, w: 58)
+    const mStallX = 62 * ts;
+    const mStallY = 44.5 * ts;
+    if (box.x < mStallX + 58 && box.x + box.width > mStallX && box.y < mStallY + 30 && box.y + box.height > mStallY + 12) return true;
+
+    // 2. Kedai Kuliner Gaston (x: 68*ts, y: 44.5*ts, w: 62)
+    const gStallX = 68 * ts;
+    const gStallY = 44.5 * ts;
+    if (box.x < gStallX + 62 && box.x + box.width > gStallX && box.y < gStallY + 30 && box.y + box.height > gStallY + 12) return true;
+
+    // 3. Paviliun Arkana Luna (x: 74*ts, y: 44.5*ts, w: 58)
+    const lStallX = 74 * ts;
+    const lStallY = 44.5 * ts;
+    if (box.x < lStallX + 58 && box.x + box.width > lStallX && box.y < lStallY + 30 && box.y + box.height > lStallY + 12) return true;
+
+    // C. Baris Toko Sisi Selatan (y=53.5*ts)
+    // 4. Kios Persenjataan Gareth (x: 62*ts, y: 53.5*ts, w: 58, h: 30)
+    const gaStallX = 62 * ts;
+    const gaStallY = 53.5 * ts;
+    if (box.x < gaStallX + 58 && box.x + box.width > gaStallX && box.y < gaStallY + 30 && box.y + box.height > gaStallY + 12) return true;
+
+    // 5. Suaka Satwa & Paddock Mia (x: 68*ts..75*ts, y: 53*ts..56.5*ts)
+    // Pagar Kiri Paddock
+    if (box.x < 68 * ts + 6 && box.x + box.width > 68 * ts && box.y < 56.5 * ts && box.y + box.height > 53 * ts) return true;
+    // Pagar Kanan Paddock
+    if (box.x < 75 * ts + 6 && box.x + box.width > 75 * ts && box.y < 56.5 * ts && box.y + box.height > 53 * ts) return true;
+    // Pagar Bawah Paddock
+    if (box.x < 75 * ts && box.x + box.width > 68 * ts && box.y < 56.5 * ts + 6 && box.y + box.height > 56.5 * ts) return true;
+    // Pagar Atas Paddock (kecuali gerbang loket Mia di 69.5*ts..71.5*ts)
+    if (box.x < 69.5 * ts && box.x + box.width > 68 * ts && box.y < 53.5 * ts && box.y + box.height > 53 * ts) return true;
+    if (box.x < 75 * ts && box.x + box.width > 71.5 * ts && box.y < 53.5 * ts && box.y + box.height > 53 * ts) return true;
 
     // 5. Pagar Kayu Pembatas Desa Serena
     const f1x = 45 * ts;
@@ -735,8 +851,8 @@ export class VillageManager {
     const bsY = 47.5 * ts;
     this.drawBlacksmithWorkshop(ctx, bsX, bsY, 76, 64);
 
-    // 3.8 KIOS PASAR RAYA OAKHAVEN (Plaza Barat Daya: 42.5*ts, 53.5*ts, terpisah lega jauh dari Guild)
-    this.drawMarketStall(ctx, 42.5 * ts, 53.5 * ts);
+    // 3.8 KAWASAN DISTRIK PASAR RAYA OAKHAVEN (GRAND BAZAAR)
+    this.drawGrandBazaarDistrict(ctx);
 
     // 4. TOKO BUNGA LILY (Timur Laut: 56*ts, 43*ts)
     const h2x = 56 * ts;
@@ -793,7 +909,7 @@ export class VillageManager {
 
     // 9. RAMBU PENUNJUK ARAH JALAN RAYA (Crossroad Signposts)
     this.drawSignpost(ctx, 45 * ts + 16, 50 * ts - 8, '⬅️ Desa Eldoria (Rimba Peri)');
-    this.drawSignpost(ctx, 58 * ts, 49 * ts, 'Desa Stonewatch (Tambang) ➡️');
+    this.drawSignpost(ctx, 58 * ts, 49 * ts, '🎪 Distrik Pasar Raya ➡️ | Tambang Stonewatch ➡️');
     this.drawSignpost(ctx, 50 * ts + 16, 44 * ts, '⬆️ Goa Kripta Kuno (Dungeon)');
 
     // 10. ARSITEKTUR DESA ELDORIA (DESA PERI HUTAN KUNO - BARAT LAUT)
@@ -1246,62 +1362,178 @@ export class VillageManager {
   }
 
   /**
-   * Render Kios Pedagang Pasar Raya Oakhaven (Tenda Kanopi Belang Merah-Kuning, Meja Kayu & Display Barang)
+   * Render Kawasan Distrik Pasar Raya Khusus (Grand Bazaar District: Gerbang Utama, 5 Toko Tematik, Pagar Suaka Satwa & Dekorasi Festival)
    */
-  private drawMarketStall(ctx: CanvasRenderingContext2D, x: number, y: number): void {
-    const w = 56;
+  private drawGrandBazaarDistrict(ctx: CanvasRenderingContext2D): void {
+    const ts = CONSTANTS.TILE_SIZE;
+
+    // 1. GERBANG UTAMA DISTRIK PASAR RAYA (Grand Bazaar Entrance Archway at 59.5*ts, 49*ts)
+    this.drawBazaarArchway(ctx, 59.5 * ts, 49 * ts);
+
+    // 2. GARLAND BUNTING (Tali Bendera Festival Menggantung Melintasi Jalan Pasar)
+    this.drawBazaarBunting(ctx, 60 * ts, 76 * ts, 45 * ts, 53 * ts);
+
+    // 3. LENTERA JALAN PASAR RAYA
+    this.drawStreetlamp(ctx, 61 * ts, 47.8 * ts);
+    this.drawStreetlamp(ctx, 67 * ts, 47.8 * ts);
+    this.drawStreetlamp(ctx, 73 * ts, 47.8 * ts);
+    this.drawStreetlamp(ctx, 61 * ts, 52.2 * ts);
+    this.drawStreetlamp(ctx, 67 * ts, 52.2 * ts);
+
+    // 4. BARIS TOKO SISI UTARA (y = 44.5 * ts)
+    // 4.1 Toko Serba Ada Saudagar Marco (x = 62 * ts, y = 44.5 * ts)
+    this.drawGeneralStoreMarco(ctx, 62 * ts, 44.5 * ts);
+
+    // 4.2 Kedai Kuliner Chef Gaston (x = 68 * ts, y = 44.5 * ts)
+    this.drawFoodTavernGaston(ctx, 68 * ts, 44.5 * ts);
+
+    // 4.3 Paviliun Arkana Sorceress Luna (x = 74 * ts, y = 44.5 * ts)
+    this.drawArcanePavilionLuna(ctx, 74 * ts, 44.5 * ts);
+
+    // 5. BARIS TOKO SISI SELATAN (y = 53.5 * ts)
+    // 5.1 Kios Persenjataan Gareth (x = 62 * ts, y = 53.5 * ts)
+    this.drawArmoryGareth(ctx, 62 * ts, 53.5 * ts);
+
+    // 5.2 Suaka Satwa & Toko Hewan Penjinak Mia (x = 68 * ts..75 * ts, y = 53 * ts..56.5 * ts)
+    this.drawPetSanctuaryMia(ctx, 68 * ts, 53 * ts);
+  }
+
+  /**
+   * Render Gerbang Lengkung Utama Masuk Distrik Pasar Raya (Archway dengan Panji & Lentera)
+   */
+  private drawBazaarArchway(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    const ts = CONSTANTS.TILE_SIZE;
+    const topY = y - 2.5 * ts;
+    const botY = y + 3.5 * ts;
+
+    // Pilar Batu Kayu Utara & Selatan
+    for (const py of [topY, botY - 14]) {
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(x - 4, py, 10, 16);
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(x - 2, py + 2, 6, 12);
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(x - 4, py, 10, 16);
+    }
+
+    // Balok Lengkung Atas Gerbang
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(x - 4, topY, 8, botY - topY);
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(x - 6, topY - 8, 12, 10);
+    ctx.fillRect(x - 6, botY + 2, 12, 10);
+
+    // Papan Gerbang Atas
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.roundRect(x - 68, topY - 14, 136, 16, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#f59e0b';
+    ctx.lineWidth = 1.8;
+    ctx.stroke();
+
+    ctx.fillStyle = '#fef08a';
+    ctx.font = 'bold 7px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🎪 DISTRIK PASAR RAYA (GRAND BAZAAR)', x, topY - 6);
+
+    // Bendera Segitiga Menggantung di Gerbang
+    const flags = ['#ef4444', '#facc15', '#22c55e', '#38bdf8', '#c084fc'];
+    for (let i = 0; i < flags.length; i++) {
+      const fx = x - 50 + i * 25;
+      const fy = topY + 2;
+      const wave = Math.sin(this.animTimer * 4 + i) * 1.5;
+      ctx.fillStyle = flags[i];
+      ctx.beginPath();
+      ctx.moveTo(fx, fy);
+      ctx.lineTo(fx + 14, fy);
+      ctx.lineTo(fx + 7 + wave, fy + 10);
+      ctx.closePath();
+      ctx.fill();
+    }
+  }
+
+  /**
+   * Render Tali Bendera Festival Menggantung Melintasi Lorong Pasar
+   */
+  private drawBazaarBunting(ctx: CanvasRenderingContext2D, startX: number, _endX: number, topY: number, botY: number): void {
+    const intervals = [startX + 80, startX + 220, startX + 360];
+    const flagColors = ['#ef4444', '#f59e0b', '#10b981', '#06b6d4', '#8b5cf6'];
+
+    intervals.forEach((ix, rowIdx) => {
+      ctx.strokeStyle = 'rgba(100, 116, 139, 0.45)';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(ix, topY + 28);
+      ctx.quadraticCurveTo(ix + 20, (topY + botY) / 2 + 10, ix, botY);
+      ctx.stroke();
+
+      for (let f = 0; f < 5; f++) {
+        const fy = topY + 36 + f * 34;
+        const fx = ix + Math.sin(f * 0.8) * 8;
+        const wave = Math.sin(this.animTimer * 3 + f + rowIdx) * 2;
+        ctx.fillStyle = flagColors[f % flagColors.length];
+        ctx.beginPath();
+        ctx.moveTo(fx, fy);
+        ctx.lineTo(fx + 8, fy + 4);
+        ctx.lineTo(fx + 2 + wave, fy + 12);
+        ctx.closePath();
+        ctx.fill();
+      }
+    });
+  }
+
+  /**
+   * 1. Toko Serba Ada Saudagar Marco (Beli Ramuan & Jual Seluruh Isi Tas)
+   */
+  private drawGeneralStoreMarco(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    const w = 58;
     const h = 32;
 
-    // Cobblestone ground rug/paving under the stall
+    // Cobblestone ground rug
     ctx.fillStyle = '#334155';
-    ctx.fillRect(x - 18, y + 16, w + 36, 18);
+    ctx.fillRect(x - 8, y + 16, w + 16, 18);
     ctx.fillStyle = '#1e293b';
-    ctx.fillRect(x - 16, y + 18, w + 32, 14);
+    ctx.fillRect(x - 6, y + 18, w + 12, 14);
 
-    // Left Side Potion & Pickle Barrel
+    // Left Side Potion Barrel
     ctx.fillStyle = '#78350f';
-    ctx.fillRect(x - 14, y + 18, 10, 14);
-    ctx.fillStyle = '#92400e';
-    ctx.fillRect(x - 14, y + 18, 10, 2);
+    ctx.fillRect(x - 6, y + 18, 10, 14);
     ctx.fillStyle = '#475569';
-    ctx.fillRect(x - 14, y + 23, 10, 2);
-    ctx.fillRect(x - 14, y + 28, 10, 2);
+    ctx.fillRect(x - 6, y + 22, 10, 2);
+    ctx.fillRect(x - 6, y + 27, 10, 2);
 
-    // Right Side Fresh Fruit & Veggie Crate
+    // Right Side Fruit Crate
     ctx.fillStyle = '#b45309';
-    ctx.fillRect(x + w + 4, y + 20, 12, 12);
-    ctx.fillStyle = '#78350f';
-    ctx.strokeRect(x + w + 4, y + 20, 12, 12);
-    // Red apples & green cabbages
+    ctx.fillRect(x + w - 2, y + 20, 12, 12);
     ctx.fillStyle = '#ef4444';
     ctx.beginPath();
-    ctx.arc(x + w + 8, y + 19, 2.5, 0, Math.PI * 2);
+    ctx.arc(x + w + 2, y + 19, 2.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#22c55e';
     ctx.beginPath();
-    ctx.arc(x + w + 12, y + 19, 2.5, 0, Math.PI * 2);
+    ctx.arc(x + w + 6, y + 19, 2.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // Merchant Marco standing behind the counter
-    // Torso / Green Apron
-    ctx.fillStyle = '#047857';
+    // Merchant Marco standing behind counter
+    ctx.fillStyle = '#047857'; // Green Apron
     ctx.fillRect(x + w / 2 - 6, y + 6, 12, 12);
-    // Head / Face
-    ctx.fillStyle = '#fed7aa';
+    ctx.fillStyle = '#fed7aa'; // Face
     ctx.fillRect(x + w / 2 - 4, y - 2, 8, 8);
-    // Straw Hat with Red Ribbon
-    ctx.fillStyle = '#fde047';
+    ctx.fillStyle = '#fde047'; // Straw Hat
     ctx.fillRect(x + w / 2 - 8, y - 5, 16, 3);
     ctx.fillRect(x + w / 2 - 5, y - 8, 10, 4);
     ctx.fillStyle = '#dc2626';
     ctx.fillRect(x + w / 2 - 5, y - 5, 10, 1.5);
 
-    // Wooden vertical posts (kiri & kanan)
+    // Wooden Posts
     ctx.fillStyle = '#451a03';
     ctx.fillRect(x + 2, y + 4, 4, h - 4);
     ctx.fillRect(x + w - 6, y + 4, 4, h - 4);
 
-    // Striped Awning (Kain Kanopi Belang Merah-Kuning Pasar)
+    // Striped Awning (Red & Yellow)
     const stripes = 7;
     const stripeW = w / stripes;
     for (let i = 0; i < stripes; i++) {
@@ -1313,58 +1545,33 @@ export class VillageManager {
       ctx.lineTo(x + i * stripeW - 2, y + 14);
       ctx.closePath();
       ctx.fill();
-
-      // Scalloped ruffle bottom edge
       ctx.beginPath();
       ctx.arc(x + i * stripeW + stripeW / 2 - 1, y + 14, stripeW / 2, 0, Math.PI);
       ctx.fill();
     }
 
-    // Wooden Counter Table
+    // Counter & Goods
     ctx.fillStyle = '#78350f';
     ctx.fillRect(x + 2, y + 16, w - 4, 12);
     ctx.fillStyle = '#b45309';
-    ctx.fillRect(x + 3, y + 16, w - 6, 3); // Meja atas meja counter
+    ctx.fillRect(x + 3, y + 16, w - 6, 3);
 
-    // Display Items di atas meja
-    // 1. Ramuan HP Merah
+    // Ramuan HP & MP di meja
     ctx.fillStyle = '#ef4444';
     ctx.beginPath();
-    ctx.arc(x + 9, y + 18, 2.5, 0, Math.PI * 2);
+    ctx.arc(x + 10, y + 18, 2.5, 0, Math.PI * 2);
     ctx.fill();
-    // 2. Ramuan MP Biru
     ctx.fillStyle = '#38bdf8';
     ctx.beginPath();
-    ctx.arc(x + 18, y + 18, 2.5, 0, Math.PI * 2);
+    ctx.arc(x + 20, y + 18, 2.5, 0, Math.PI * 2);
     ctx.fill();
-    // 3. Gulungan Kertas / Scroll
     ctx.fillStyle = '#fef08a';
-    ctx.fillRect(x + 26, y + 16, 7, 3);
-    ctx.fillStyle = '#b45309';
-    ctx.fillRect(x + 29, y + 16, 1.5, 3);
-    // 4. Keranjang Buah / Bahan
-    ctx.fillStyle = '#92400e';
-    ctx.fillRect(x + 37, y + 17, 12, 4);
-    ctx.fillStyle = '#22c55e';
-    ctx.beginPath();
-    ctx.arc(x + 40, y + 16, 2, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#ea580c';
-    ctx.beginPath();
-    ctx.arc(x + 45, y + 16, 2, 0, Math.PI * 2);
-    ctx.fill();
+    ctx.fillRect(x + 28, y + 16, 8, 3); // Scroll
 
-    // Peti kecil di bawah meja
-    ctx.fillStyle = '#5c2d16';
-    ctx.fillRect(x + 10, y + 23, 14, 7);
-    ctx.strokeStyle = '#ca8a04';
-    ctx.lineWidth = 0.8;
-    ctx.strokeRect(x + 10, y + 23, 14, 7);
-
-    // Signboard Atas: "🛒 PASAR RAYA"
+    // Signboard
     ctx.fillStyle = '#1e293b';
     ctx.beginPath();
-    ctx.roundRect(x + 8, y - 4, w - 16, 9, 2);
+    ctx.roundRect(x + 6, y - 4, w - 12, 9, 2);
     ctx.fill();
     ctx.strokeStyle = '#facc15';
     ctx.lineWidth = 1;
@@ -1374,7 +1581,463 @@ export class VillageManager {
     ctx.font = 'bold 6.5px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('🛒 PASAR RAYA', x + w / 2, y + 0.5);
+    ctx.fillText('🛒 SERBA ADA MARCO', x + w / 2, y + 0.5);
+  }
+
+  /**
+   * 2. Kedai Kuliner Chef Gaston (Makanan Penguat Status & Daging Serigala)
+   */
+  private drawFoodTavernGaston(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    const w = 62;
+    const h = 32;
+
+    // Terracotta warm brick paving
+    ctx.fillStyle = '#7c2d12';
+    ctx.fillRect(x - 8, y + 16, w + 16, 18);
+    ctx.fillStyle = '#9a3412';
+    ctx.fillRect(x - 6, y + 18, w + 12, 14);
+
+    // Left Side Iron Stew Cauldron with bubbling steam
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.arc(x - 4, y + 24, 7, 0, Math.PI * 2);
+    ctx.fill();
+    // Fire under cauldron
+    ctx.fillStyle = '#ea580c';
+    ctx.fillRect(x - 6, y + 30, 4, 3);
+    const steamWave = Math.sin(this.animTimer * 4 + x) * 2;
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.beginPath();
+    ctx.arc(x - 4 + steamWave, y + 14, 3.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Right Side Roasting Spit with meat skewer
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(x + w, y + 16, 2, 16);
+    ctx.fillRect(x + w + 10, y + 16, 2, 16);
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(x + w - 2, y + 20, 16, 4); // Sizzling meat skewer
+
+    // Chef Gaston standing behind counter
+    ctx.fillStyle = '#ffffff'; // White Chef Jacket
+    ctx.fillRect(x + w / 2 - 6, y + 6, 12, 12);
+    ctx.fillStyle = '#dc2626'; // Red necktie
+    ctx.fillRect(x + w / 2 - 2, y + 8, 4, 5);
+    ctx.fillStyle = '#fed7aa'; // Face
+    ctx.fillRect(x + w / 2 - 4, y - 2, 8, 8);
+    // Handlebar Moustache
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(x + w / 2 - 5, y + 3, 10, 2);
+    // Tall White Chef Toque Hat
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x + w / 2 - 5, y - 8, 10, 6);
+    ctx.beginPath();
+    ctx.arc(x + w / 2, y - 8, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Wooden Posts
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(x + 2, y + 4, 4, h - 4);
+    ctx.fillRect(x + w - 6, y + 4, 4, h - 4);
+
+    // Striped Awning (Orange & White)
+    const stripes = 7;
+    const stripeW = w / stripes;
+    for (let i = 0; i < stripes; i++) {
+      ctx.fillStyle = i % 2 === 0 ? '#ea580c' : '#ffffff';
+      ctx.beginPath();
+      ctx.moveTo(x + i * stripeW, y + 4);
+      ctx.lineTo(x + (i + 1) * stripeW, y + 4);
+      ctx.lineTo(x + (i + 1) * stripeW - 2, y + 14);
+      ctx.lineTo(x + i * stripeW - 2, y + 14);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + i * stripeW + stripeW / 2 - 1, y + 14, stripeW / 2, 0, Math.PI);
+      ctx.fill();
+    }
+
+    // Counter & Food display
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(x + 2, y + 16, w - 4, 12);
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(x + 3, y + 16, w - 6, 3);
+
+    // Food dishes on counter (Steak, pudding, soup bowl)
+    ctx.fillStyle = '#fb923c';
+    ctx.fillRect(x + 10, y + 17, 8, 3); // Steak plate
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.arc(x + 26, y + 18, 3, 0, Math.PI * 2); // Slime pudding
+    ctx.fill();
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath();
+    ctx.arc(x + 40, y + 18, 3, 0, Math.PI * 2); // Herbal soup
+    ctx.fill();
+
+    // Signboard
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.roundRect(x + 6, y - 4, w - 12, 9, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#ea580c';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#fed7aa';
+    ctx.font = 'bold 6.5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🍲 KEDAI KULINER GASTON', x + w / 2, y + 0.5);
+  }
+
+  /**
+   * 3. Paviliun Arkana Sorceress Luna (Sihir, Gulungan & Kristal Abisal)
+   */
+  private drawArcanePavilionLuna(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    const w = 58;
+    const h = 32;
+
+    // Deep purple mystical magic circle rug
+    ctx.fillStyle = '#3b0764';
+    ctx.fillRect(x - 8, y + 16, w + 16, 18);
+    ctx.strokeStyle = '#c084fc';
+    ctx.lineWidth = 0.8;
+    ctx.strokeRect(x - 6, y + 18, w + 12, 14);
+
+    // Left Side Floating Glowing Crystal Orb on Pedestal
+    ctx.fillStyle = '#581c87';
+    ctx.fillRect(x - 6, y + 22, 8, 10);
+    const orbBob = Math.sin(this.animTimer * 5) * 2;
+    ctx.fillStyle = '#c084fc';
+    ctx.beginPath();
+    ctx.arc(x - 2, y + 16 + orbBob, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = 'rgba(192, 132, 252, 0.4)';
+    ctx.beginPath();
+    ctx.arc(x - 2, y + 16 + orbBob, 8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Right Side Lectern with Open Grimoire
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(x + w, y + 18, 4, 14);
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(x + w - 4, y + 16, 12, 6);
+    ctx.fillStyle = '#9333ea';
+    ctx.fillRect(x + w + 1, y + 16, 2, 6);
+
+    // Sorceress Luna standing behind counter
+    ctx.fillStyle = '#4c1d95'; // Violet Robes
+    ctx.fillRect(x + w / 2 - 6, y + 6, 12, 12);
+    ctx.fillStyle = '#fed7aa'; // Face
+    ctx.fillRect(x + w / 2 - 4, y - 2, 8, 8);
+    // Pointed Wizard Hat with golden crescent
+    ctx.fillStyle = '#581c87';
+    ctx.beginPath();
+    ctx.moveTo(x + w / 2, y - 11);
+    ctx.lineTo(x + w / 2 + 8, y - 4);
+    ctx.lineTo(x + w / 2 - 8, y - 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.fillStyle = '#fde047';
+    ctx.fillRect(x + w / 2 - 8, y - 4, 16, 2);
+
+    // Wooden Posts
+    ctx.fillStyle = '#3b0764';
+    ctx.fillRect(x + 2, y + 4, 4, h - 4);
+    ctx.fillRect(x + w - 6, y + 4, 4, h - 4);
+
+    // Canopy (Deep Violet & Gold silk stripes)
+    const stripes = 7;
+    const stripeW = w / stripes;
+    for (let i = 0; i < stripes; i++) {
+      ctx.fillStyle = i % 2 === 0 ? '#581c87' : '#ca8a04';
+      ctx.beginPath();
+      ctx.moveTo(x + i * stripeW, y + 4);
+      ctx.lineTo(x + (i + 1) * stripeW, y + 4);
+      ctx.lineTo(x + (i + 1) * stripeW - 2, y + 14);
+      ctx.lineTo(x + i * stripeW - 2, y + 14);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + i * stripeW + stripeW / 2 - 1, y + 14, stripeW / 2, 0, Math.PI);
+      ctx.fill();
+    }
+
+    // Counter & Arcane Items
+    ctx.fillStyle = '#2e1065';
+    ctx.fillRect(x + 2, y + 16, w - 4, 12);
+    ctx.fillStyle = '#581c87';
+    ctx.fillRect(x + 3, y + 16, w - 6, 3);
+
+    // Crystal Gem & Arcane Scroll on counter
+    ctx.fillStyle = '#c084fc';
+    ctx.beginPath();
+    ctx.arc(x + 14, y + 18, 3, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(x + 26, y + 16, 8, 3); // Portal Scroll
+
+    // Signboard
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.roundRect(x + 6, y - 4, w - 12, 9, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#c084fc';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#e9d5ff';
+    ctx.font = 'bold 6.5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🔮 ARKANA LUNA', x + w / 2, y + 0.5);
+  }
+
+  /**
+   * 4. Kios Persenjataan Gareth (Senjata, Logam & Perkakas Ekspedisi)
+   */
+  private drawArmoryGareth(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    const w = 58;
+    const h = 32;
+
+    // Dark slate stone paving
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(x - 8, y + 16, w + 16, 18);
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(x - 6, y + 18, w + 12, 14);
+
+    // Left Side Mini Anvil & Hammer
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(x - 6, y + 24, 10, 8);
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(x - 8, y + 22, 14, 3);
+
+    // Right Side Weapon Rack with crossed sword & shield
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(x + w, y + 16, 2, 16);
+    ctx.fillRect(x + w + 10, y + 16, 2, 16);
+    // Steel Shield
+    ctx.fillStyle = '#475569';
+    ctx.beginPath();
+    ctx.arc(x + w + 5, y + 23, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(x + w + 4, y + 20, 2, 6);
+
+    // Pengrajin Gareth standing behind counter
+    ctx.fillStyle = '#451a03'; // Heavy Leather Vest
+    ctx.fillRect(x + w / 2 - 6, y + 6, 12, 12);
+    ctx.fillStyle = '#fed7aa'; // Face
+    ctx.fillRect(x + w / 2 - 4, y - 2, 8, 8);
+    ctx.fillStyle = '#334155'; // Short Brown Hair
+    ctx.fillRect(x + w / 2 - 5, y - 4, 10, 4);
+
+    // Wooden Posts
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(x + 2, y + 4, 4, h - 4);
+    ctx.fillRect(x + w - 6, y + 4, 4, h - 4);
+
+    // Striped Awning (Charcoal Slate & Steel Blue)
+    const stripes = 7;
+    const stripeW = w / stripes;
+    for (let i = 0; i < stripes; i++) {
+      ctx.fillStyle = i % 2 === 0 ? '#334155' : '#64748b';
+      ctx.beginPath();
+      ctx.moveTo(x + i * stripeW, y + 4);
+      ctx.lineTo(x + (i + 1) * stripeW, y + 4);
+      ctx.lineTo(x + (i + 1) * stripeW - 2, y + 14);
+      ctx.lineTo(x + i * stripeW - 2, y + 14);
+      ctx.closePath();
+      ctx.fill();
+      ctx.beginPath();
+      ctx.arc(x + i * stripeW + stripeW / 2 - 1, y + 14, stripeW / 2, 0, Math.PI);
+      ctx.fill();
+    }
+
+    // Counter & Display Goods
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(x + 2, y + 16, w - 4, 12);
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(x + 3, y + 16, w - 6, 3);
+
+    // Dark Iron Ingot on counter
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(x + 10, y + 17, 8, 3);
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(x + 11, y + 16, 6, 2);
+
+    // Dagger on counter
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(x + 24, y + 17, 10, 2);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(x + 22, y + 16.5, 3, 3);
+
+    // Signboard
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.roundRect(x + 6, y - 4, w - 12, 9, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#cbd5e1';
+    ctx.font = 'bold 6.5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('⚔️ SENJATA GARETH', x + w / 2, y + 0.5);
+  }
+
+  /**
+   * 5. Suaka Satwa & Toko Hewan Penjinak Mia (Paddock Peliharaan, Kandang & Pet Playpen)
+   */
+  private drawPetSanctuaryMia(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    const ts = CONSTANTS.TILE_SIZE;
+    const penW = 7 * ts;
+    const penH = 3.5 * ts;
+
+    // Lush green meadow pen grass
+    ctx.fillStyle = '#15803d';
+    ctx.fillRect(x, y, penW, penH);
+    ctx.fillStyle = '#16a34a';
+    ctx.fillRect(x + 4, y + 4, penW - 8, penH - 8);
+
+    // Red-roofed wooden pet shelter / doghouse in top-right of pen
+    const shX = x + penW - 44;
+    const shY = y + 4;
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(shX, shY + 8, 36, 24);
+    // Dark doorway into doghouse
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.arc(shX + 18, shY + 24, 7, Math.PI, 0, false);
+    ctx.lineTo(shX + 25, shY + 32);
+    ctx.lineTo(shX + 11, shY + 32);
+    ctx.closePath();
+    ctx.fill();
+    // Red pitched roof
+    ctx.fillStyle = '#dc2626';
+    ctx.beginPath();
+    ctx.moveTo(shX - 4, shY + 8);
+    ctx.lineTo(shX + 18, shY - 4);
+    ctx.lineTo(shX + 40, shY + 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#991b1b';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Water trough & Hay bedding in pen
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(x + 10, y + penH - 20, 18, 10);
+    ctx.fillStyle = '#0284c7';
+    ctx.fillRect(x + 12, y + penH - 18, 14, 6);
+
+    // Baby pet 1: Puni (bouncing mini slime)
+    const slimeBob = Math.sin(this.animTimer * 6) * 3;
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.arc(x + 40, y + 24 + slimeBob, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(x + 39, y + 23 + slimeBob, 1.5, 1.5);
+    ctx.fillRect(x + 42, y + 23 + slimeBob, 1.5, 1.5);
+
+    // Baby pet 2: Lobo (puppy playing with bone)
+    const wolfWag = Math.sin(this.animTimer * 12) * 3;
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(x + 70, y + 26, 8, 5);
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(x + 74, y + 23, 6, 6);
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(x + 67, y + 25 + wolfWag * 0.4, 3, 2); // Tail
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(x + 82, y + 27, 4, 2); // Bone toy
+
+    // Wooden post-and-rail fence around the pen
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 2.5;
+    // Top fence (left and right of Mia's counter)
+    ctx.beginPath();
+    ctx.moveTo(x, y);
+    ctx.lineTo(x + 48, y);
+    ctx.moveTo(x + 88, y);
+    ctx.lineTo(x + penW, y);
+    // Right fence
+    ctx.lineTo(x + penW, y + penH);
+    // Bottom fence
+    ctx.lineTo(x, y + penH);
+    // Left fence
+    ctx.lineTo(x, y);
+    ctx.stroke();
+
+    // Fence Posts
+    for (let px = x; px <= x + penW; px += 24) {
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(px - 2, y - 2, 4, penH + 4);
+    }
+
+    // Mia's Reception Counter (Pintu Masuk Suaka di x + 48..88)
+    const cX = x + 46;
+    const cY = y - 4;
+    const cW = 44;
+
+    // Green Striped Awning over counter
+    ctx.fillStyle = '#059669';
+    ctx.beginPath();
+    ctx.roundRect(cX - 2, cY - 14, cW + 4, 10, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#34d399';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Penjinak Mia standing behind the reception desk
+    ctx.fillStyle = '#065f46'; // Green Hunter Vest
+    ctx.fillRect(cX + cW / 2 - 5, cY - 2, 10, 10);
+    ctx.fillStyle = '#fed7aa'; // Face
+    ctx.fillRect(cX + cW / 2 - 4, cY - 8, 8, 7);
+    ctx.fillStyle = '#f59e0b'; // Blonde hair
+    ctx.fillRect(cX + cW / 2 - 5, cY - 10, 10, 4);
+    // Cute Fox/Cat Ears Headband
+    ctx.fillStyle = '#ea580c';
+    ctx.beginPath();
+    ctx.moveTo(cX + cW / 2 - 5, cY - 10);
+    ctx.lineTo(cX + cW / 2 - 2, cY - 14);
+    ctx.lineTo(cX + cW / 2, cY - 10);
+    ctx.moveTo(cX + cW / 2, cY - 10);
+    ctx.lineTo(cX + cW / 2 + 2, cY - 14);
+    ctx.lineTo(cX + cW / 2 + 5, cY - 10);
+    ctx.fill();
+
+    // Wooden Counter Table
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(cX, cY + 4, cW, 10);
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(cX + 1, cY + 4, cW - 2, 2.5);
+
+    // Treat Bag & Pet Bell on counter
+    ctx.fillStyle = '#ca8a04';
+    ctx.fillRect(cX + 6, y + 2, 5, 5); // Treat bag
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.arc(cX + cW - 8, y + 4, 2.5, 0, Math.PI * 2); // Bell
+    ctx.fill();
+
+    // Signboard Atas
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.roundRect(cX - 6, cY - 24, cW + 12, 10, 2);
+    ctx.fill();
+    ctx.strokeStyle = '#34d399';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    ctx.fillStyle = '#a7f3d0';
+    ctx.font = 'bold 6.5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('🐾 SUAKA SATWA MIA', cX + cW / 2, cY - 19);
   }
 
   private drawStreetlamp(ctx: CanvasRenderingContext2D, x: number, y: number): void {

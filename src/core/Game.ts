@@ -433,8 +433,24 @@ export class Game {
         return true;
       }
 
-      // 0.2 Market System Modal (Pasar Raya Oakhaven)
-      if (this.marketSystem.handleTouch(touchX, touchY, this.player, this.floatingText)) {
+      // 0.2 Market System Modal (Distrik Pasar Raya Oakhaven)
+      if (
+        this.marketSystem.handleTouch(
+          touchX,
+          touchY,
+          this.player,
+          this.pet,
+          this.floatingText,
+          (petType) => {
+            this.pet = new Pet(petType, this.player.x + 20, this.player.y);
+            this.saveSessionSnapshot();
+          },
+          () => {
+            this.pet = null;
+            this.saveSessionSnapshot();
+          }
+        )
+      ) {
         return true;
       }
 
@@ -2298,21 +2314,12 @@ export class Game {
         }
       }
 
-      // Suaka Hewan Desa (Pet Sanctuary) at (54, 52)
-      const petPenX = 54 * CONSTANTS.TILE_SIZE + 16;
-      const petPenY = 52 * CONSTANTS.TILE_SIZE + 16;
-      if (Math.hypot(petPenX - playerCenterX, petPenY - playerCenterY) < 38) {
-        if (this.input.isActionJustPressed || this.input.state.isAction) {
-          this.input.consumeAction();
-          this.openPetAdoptionDialog();
-        }
-      }
-
-      // Market Stall Interaction (Belanja Pasar Raya Oakhaven)
+      // Market Shops Interaction (Distrik Pasar Raya Oakhaven)
       if (!this.villageManager.isDialogOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen && !this.bankSystem.isOpen && !this.marketSystem.isOpen) {
-        if (this.villageManager.isNearMarketStall(playerCenterX, playerCenterY) && (this.input.isActionJustPressed || this.input.state.isAction)) {
+        const nearShop = this.villageManager.getNearbyMarketShop(playerCenterX, playerCenterY);
+        if (nearShop && (this.input.isActionJustPressed || this.input.state.isAction)) {
           this.input.consumeAction();
-          this.marketSystem.open();
+          this.marketSystem.open(nearShop.id);
           return;
         }
       }
@@ -3897,8 +3904,8 @@ export class Game {
       // 12.01 Royal Bank Modal (Exchange & Savings)
       this.bankSystem.renderModal(ctx, screenWidth, screenHeight, this.player);
 
-      // 12.02 Market System Modal (Pasar Raya Oakhaven)
-      this.marketSystem.renderModal(ctx, screenWidth, screenHeight, this.player);
+      // 12.02 Market System Modal (Distrik Pasar Raya Oakhaven)
+      this.marketSystem.renderModal(ctx, screenWidth, screenHeight, this.player, this.pet);
 
       // 12. Control Settings Modal (Gear ⚙️ & customization)
       this.controlSettingsModal.render(ctx, screenWidth, screenHeight);
@@ -4118,10 +4125,11 @@ export class Game {
         const stoneEntDist = Math.hypot(85 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 58 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
         const nearDoor = this.buildingInteriors.getNearbyOverworldDoor(playerCenterX, playerCenterY);
 
+        const nearMarketShop = this.villageManager.getNearbyMarketShop(playerCenterX, playerCenterY);
         if (nearDoor) {
           this.renderBottomActionPrompt(ctx, `Tekan [A] Masuk ${nearDoor.name} ${nearDoor.icon}`, nearDoor.accentColor, nearDoor.accentColor);
-        } else if (this.villageManager.isNearMarketStall(playerCenterX, playerCenterY)) {
-          this.renderBottomActionPrompt(ctx, 'Tekan [A] Belanja di Pasar Oakhaven 🛒', '#4ade80', '#bbf7d0');
+        } else if (nearMarketShop) {
+          this.renderBottomActionPrompt(ctx, nearMarketShop.prompt, nearMarketShop.accentColor, nearMarketShop.accentColor);
         } else if (eldEntDist < 38) {
           this.renderBottomActionPrompt(
             ctx,

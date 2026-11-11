@@ -84,9 +84,9 @@ export class TileMap {
     }
 
     // --- 1. WILAYAH PEDESAAN SERENA (IBUKOTA SERIKAT & LEMBAH PEMULA) ---
-    // Diperluas (x=36..64, y=40..60) dengan Alun-alun Grand Plaza, Lapangan Latihan, & Pasar
+    // Diperluas (x=36..78, y=40..60) dengan Alun-alun Grand Plaza, Lapangan Latihan, & Kawasan Distrik Pasar Raya Khusus
     for (let vy = 40; vy <= 60; vy++) {
-      for (let vx = 36; vx <= 64; vx++) {
+      for (let vx = 36; vx <= 78; vx++) {
         if (this.tiles[vy] && this.tiles[vy][vx] !== undefined) {
           this.tiles[vy][vx] = TileType.GRASS;
         }
@@ -111,11 +111,29 @@ export class TileMap {
       }
     }
     for (let vy = 49; vy <= 51; vy++) {
-      for (let vx = 38; vx <= 62; vx++) {
+      for (let vx = 38; vx <= 64; vx++) {
         if (this.tiles[vy] && this.tiles[vy][vx] !== undefined) {
           this.tiles[vy][vx] = TileType.COBBLESTONE;
         }
       }
+    }
+
+    // --- KAWASAN DISTRIK PASAR RAYA KHUSUS (GRAND BAZAAR DISTRICT: x=60..76, y=44..57) ---
+    // Pelataran plaza pasar raya berlapis batu ubin cobblestone megah & terpisah dari Guild
+    for (let by = 44; by <= 57; by++) {
+      for (let bx = 60; bx <= 76; bx++) {
+        if (this.tiles[by] && this.tiles[by][bx] !== undefined) {
+          this.tiles[by][bx] = TileType.COBBLESTONE;
+        }
+      }
+    }
+    // Jalan setapak tanah hiasan pinggiran bazaar (border perbatasan pasar)
+    for (let bx = 60; bx <= 76; bx++) {
+      if (this.tiles[43] && this.tiles[43][bx] !== undefined) this.tiles[43][bx] = TileType.DIRT_PATH;
+      if (this.tiles[58] && this.tiles[58][bx] !== undefined) this.tiles[58][bx] = TileType.DIRT_PATH;
+    }
+    for (let by = 44; by <= 57; by++) {
+      if (this.tiles[by] && this.tiles[by][77] !== undefined) this.tiles[by][77] = TileType.DIRT_PATH;
     }
 
     // Area Lapangan Latihan Prajurit (Training Grounds) di Barat Daya Serena (x=38..44, y=53..58)
@@ -350,8 +368,8 @@ export class TileMap {
    * Menentukan apakah koordinat tile berada di dalam wilayah aman salah satu pedesaan
    */
   public isVillageArea(tileX: number, tileY: number): boolean {
-    // 1. Desa Serena (Ibukota & Serikat)
-    const inSerena = tileX >= 36 && tileX <= 64 && tileY >= 40 && tileY <= 60;
+    // 1. Desa Serena & Distrik Pasar Raya Oakhaven (Ibukota & Serikat)
+    const inSerena = tileX >= 36 && tileX <= 78 && tileY >= 40 && tileY <= 60;
     // 2. Desa Eldoria (Rimba Peri Barat)
     const inEldoria = tileX >= 12 && tileX <= 32 && tileY >= 12 && tileY <= 28;
     // 3. Desa Stonewatch (Benteng Tambang Kurcaci)
@@ -364,7 +382,10 @@ export class TileMap {
    * Mendapatkan nama desa berdasarkan koordinat ubin (jika berada di pedesaan)
    */
   public getVillageName(tileX: number, tileY: number): string | null {
-    if (tileX >= 36 && tileX <= 64 && tileY >= 40 && tileY <= 60) {
+    if (tileX >= 59 && tileX <= 78 && tileY >= 42 && tileY <= 58) {
+      return 'Distrik Pasar Raya Oakhaven (Grand Bazaar)';
+    }
+    if (tileX >= 36 && tileX <= 78 && tileY >= 40 && tileY <= 60) {
       return 'Desa Serena (Ibukota Serikat)';
     }
     if (tileX >= 12 && tileX <= 32 && tileY >= 12 && tileY <= 28) {
