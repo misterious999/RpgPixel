@@ -230,9 +230,21 @@ export class Game {
 
     AudioEngine.init();
     this.questManager = new QuestManager();
+    this.questManager.onQuestTurnedIn = (q) => {
+      if (q.id === 'Q_ARC_COLLECT_GEMS') {
+        this.titleSystem.unlockTitle('RELIC_MASTER', this.player, this.floatingText);
+      }
+      if (q.category === 'ANIME_ARC' && q.arcTitle) {
+        this.triggerMapTransition(`「 ${q.arcTitle} 」`, '★ Babak Cerita Berhasil Diselesaikan! ★');
+        this.titleSystem.unlockTitle('ANIME_HERO', this.player, this.floatingText);
+      }
+    };
     this.villageManager = new VillageManager(this.questManager);
     this.villageManager.onOpenMarket = () => {
       this.marketSystem.open();
+    };
+    this.marketSystem.onBuySuccess = () => {
+      this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
     };
     this.miniMapUI = new MiniMapUI();
     this.quickPotionUI = new QuickPotionUI(this.player, this.floatingText);
@@ -2268,6 +2280,7 @@ export class Game {
           : this.stonewatchWorldItems;
 
       this.pet.update(deltaTime, this.player, activeItems, this.floatingText, getActiveIsTileSolid);
+      this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
     }
 
     // Update Blacksmith animations
@@ -2374,6 +2387,7 @@ export class Game {
               const name = def ? def.name : reward.itemId;
               this.floatingText.spawn(chest.x + 11, chest.y - 12, `+${reward.count} ${name}`, '#facc15', 1.8);
             }
+            this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
             const leveledUp = this.player.addExp(25);
             if (leveledUp) {
               AudioEngine.playLevelUp();
@@ -2387,6 +2401,10 @@ export class Game {
       // 7. Update World Items (Magnet & Pickup)
       for (let i = this.worldItems.length - 1; i >= 0; i--) {
         const item = this.worldItems[i];
+        if (item.isCollected || item.count <= 0) {
+          this.worldItems.splice(i, 1);
+          continue;
+        }
         const pickedUp = item.update(deltaTime, playerCenterX, playerCenterY);
         if (pickedUp) {
           const added = this.player.inventory.addItem(item.itemId, item.count);
@@ -2395,6 +2413,7 @@ export class Game {
             const def = ITEM_DEFINITIONS[item.itemId];
             const name = def ? def.name : item.itemId;
             this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `+${added} ${name}`, '#38bdf8');
+            this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
             this.worldItems.splice(i, 1);
           }
         }
@@ -2416,7 +2435,26 @@ export class Game {
               AudioEngine.playPlayerDeath();
               this.player.x = 50 * CONSTANTS.TILE_SIZE + 6;
               this.player.y = 50 * CONSTANTS.TILE_SIZE + 3;
-              this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur dan sadar kembali di Kota!', '#ef4444', 3.5);
+              this.player.direction = 'down';
+              if (this.companion) {
+                this.companion.x = this.player.x - 20;
+                this.companion.y = this.player.y;
+              }
+              if (this.pet) {
+                this.pet.x = this.player.x + 20;
+                this.pet.y = this.player.y;
+              }
+              for (const minion of this.player.minions) {
+                minion.x = this.player.x - 16;
+                minion.y = this.player.y;
+              }
+              this.camera.update(this.player.x, this.player.y);
+              if (this.player.val > 0) {
+                const lostVal = Math.min(this.player.val, Math.max(10, Math.floor(this.player.val * 0.1)));
+                this.player.removeVal(lostVal);
+                this.floatingText.spawn(this.player.x + 10, this.player.y - 36, `💸 Biaya Evakuasi Balai Kota: -${lostVal} 𝒱`, '#f87171', 4.0);
+              }
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur dan sadar kembali di Alun-Alun Kota!', '#ef4444', 3.5);
             }
           },
           this.player.minions,
@@ -2517,6 +2555,7 @@ export class Game {
               const name = def ? def.name : reward.itemId;
               this.floatingText.spawn(chest.x + 11, chest.y - 12, `+${reward.count} ${name}`, '#facc15', 2.0);
             }
+            this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
             const leveledUp = this.player.addExp(50);
             if (leveledUp) {
               AudioEngine.playLevelUp();
@@ -2530,6 +2569,10 @@ export class Game {
       // 6. Dungeon World Items
       for (let i = this.dungeonWorldItems.length - 1; i >= 0; i--) {
         const item = this.dungeonWorldItems[i];
+        if (item.isCollected || item.count <= 0) {
+          this.dungeonWorldItems.splice(i, 1);
+          continue;
+        }
         const pickedUp = item.update(deltaTime, playerCenterX, playerCenterY);
         if (pickedUp) {
           const added = this.player.inventory.addItem(item.itemId, item.count);
@@ -2538,6 +2581,7 @@ export class Game {
             const def = ITEM_DEFINITIONS[item.itemId];
             const name = def ? def.name : item.itemId;
             this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `+${added} ${name}`, '#38bdf8');
+            this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
             this.dungeonWorldItems.splice(i, 1);
           }
         }
@@ -2672,6 +2716,10 @@ export class Game {
       // Floor 2 World Items
       for (let i = this.floor2WorldItems.length - 1; i >= 0; i--) {
         const item = this.floor2WorldItems[i];
+        if (item.isCollected || item.count <= 0) {
+          this.floor2WorldItems.splice(i, 1);
+          continue;
+        }
         const pickedUp = item.update(deltaTime, playerCenterX, playerCenterY);
         if (pickedUp) {
           const added = this.player.inventory.addItem(item.itemId, item.count);
@@ -2680,6 +2728,7 @@ export class Game {
             const def = ITEM_DEFINITIONS[item.itemId];
             const name = def ? def.name : item.itemId;
             this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `+${added} ${name}`, '#38bdf8');
+            this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
             this.floor2WorldItems.splice(i, 1);
           }
         }
@@ -2806,6 +2855,10 @@ export class Game {
       // Floor 3 World Items
       for (let i = this.floor3WorldItems.length - 1; i >= 0; i--) {
         const item = this.floor3WorldItems[i];
+        if (item.isCollected || item.count <= 0) {
+          this.floor3WorldItems.splice(i, 1);
+          continue;
+        }
         const pickedUp = item.update(deltaTime, playerCenterX, playerCenterY);
         if (pickedUp) {
           const added = this.player.inventory.addItem(item.itemId, item.count);
@@ -2814,6 +2867,7 @@ export class Game {
             const def = ITEM_DEFINITIONS[item.itemId];
             const name = def ? def.name : item.itemId;
             this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `+${added} ${name}`, '#38bdf8');
+            this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
             this.floor3WorldItems.splice(i, 1);
           }
         }
@@ -2833,6 +2887,7 @@ export class Game {
               const name = def ? def.name : reward.itemId;
               this.floatingText.spawn(chest.x + 11, chest.y - 12, `+${reward.count} ${name}`, '#facc15', 2.0);
             }
+            this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
             const leveledUp = this.player.addExp(80);
             if (leveledUp) {
               AudioEngine.playLevelUp();
@@ -2964,6 +3019,10 @@ export class Game {
       // Eldoria World Items
       for (let i = this.eldoriaWorldItems.length - 1; i >= 0; i--) {
         const item = this.eldoriaWorldItems[i];
+        if (item.isCollected || item.count <= 0) {
+          this.eldoriaWorldItems.splice(i, 1);
+          continue;
+        }
         const pickedUp = item.update(deltaTime, playerCenterX, playerCenterY);
         if (pickedUp) {
           const added = this.player.inventory.addItem(item.itemId, item.count);
@@ -2972,6 +3031,7 @@ export class Game {
             const def = ITEM_DEFINITIONS[item.itemId];
             const name = def ? def.name : item.itemId;
             this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `+${added} ${name}`, '#38bdf8');
+            this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
             this.eldoriaWorldItems.splice(i, 1);
           }
         }
@@ -2991,6 +3051,7 @@ export class Game {
               const name = def ? def.name : reward.itemId;
               this.floatingText.spawn(chest.x + 11, chest.y - 12, `+${reward.count} ${name}`, '#facc15', 2.0);
             }
+            this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
             const leveledUp = this.player.addExp(75);
             if (leveledUp) {
               AudioEngine.playLevelUp();
@@ -3122,6 +3183,10 @@ export class Game {
       // Stonewatch World Items
       for (let i = this.stonewatchWorldItems.length - 1; i >= 0; i--) {
         const item = this.stonewatchWorldItems[i];
+        if (item.isCollected || item.count <= 0) {
+          this.stonewatchWorldItems.splice(i, 1);
+          continue;
+        }
         const pickedUp = item.update(deltaTime, playerCenterX, playerCenterY);
         if (pickedUp) {
           const added = this.player.inventory.addItem(item.itemId, item.count);
@@ -3130,6 +3195,7 @@ export class Game {
             const def = ITEM_DEFINITIONS[item.itemId];
             const name = def ? def.name : item.itemId;
             this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `+${added} ${name}`, '#38bdf8');
+            this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
             this.stonewatchWorldItems.splice(i, 1);
           }
         }
@@ -3149,6 +3215,7 @@ export class Game {
               const name = def ? def.name : reward.itemId;
               this.floatingText.spawn(chest.x + 11, chest.y - 12, `+${reward.count} ${name}`, '#facc15', 2.0);
             }
+            this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
             const leveledUp = this.player.addExp(90);
             if (leveledUp) {
               AudioEngine.playLevelUp();

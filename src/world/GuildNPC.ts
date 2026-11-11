@@ -18,6 +18,14 @@ export class GuildNPC {
   public questManager: QuestManager | null = null;
   public activeTab: 'QUESTS' | 'CARD' = 'QUESTS';
 
+  // Quest Board Category & Pagination
+  public questCategory: 'ALL' | 'ANIME' | 'DUNGEON' | 'OVERWORLD' = 'ALL';
+  public questPage: number = 0;
+  private questCategoryRects: { category: 'ALL' | 'ANIME' | 'DUNGEON' | 'OVERWORLD'; x: number; y: number; w: number; h: number }[] = [];
+  private questPrevPageRect = { x: 0, y: 0, w: 0, h: 0 };
+  private questNextPageRect = { x: 0, y: 0, w: 0, h: 0 };
+  private questActionRects: { questId: string; x: number; y: number; w: number; h: number }[] = [];
+
   // Ceremony State for Novices (Random Awakening by System)
   public ceremonyState: 'READY' | 'SPINNING' | 'AWAKENED' = 'READY';
   private spinTimer: number = 0;
@@ -38,9 +46,19 @@ export class GuildNPC {
     return Math.hypot(npcCenterX - playerCenterX, npcCenterY - playerCenterY) < 38;
   }
 
+  public getFilteredQuests() {
+    if (!this.questManager) return [];
+    const all = this.questManager.quests;
+    if (this.questCategory === 'ALL') return all;
+    if (this.questCategory === 'ANIME') return all.filter((q) => q.category === 'ANIME_ARC');
+    if (this.questCategory === 'DUNGEON') return all.filter((q) => q.category === 'DUNGEON' || q.category === 'BOSS');
+    return all.filter((q) => q.category === 'OVERWORLD');
+  }
+
   public openAppraisal(): void {
     this.isAppraisalOpen = true;
     this.ceremonyState = 'READY';
+    this.questPage = 0;
     this.openTime = Date.now();
   }
 
@@ -128,32 +146,64 @@ export class GuildNPC {
 
       // 2. Interaksi di Tab MISI GUILD
       if (this.activeTab === 'QUESTS' && this.questManager) {
-        const colW = (modalWidth - 36) / 2;
-        const cardH = (modalHeight - 74) / 2;
-        const startY = modalY + 66;
+        // A. Cek Touch pada Category Filter Pills
+        for (const catRect of this.questCategoryRects) {
+          if (
+            touchX >= catRect.x &&
+            touchX <= catRect.x + catRect.w &&
+            touchY >= catRect.y &&
+            touchY <= catRect.y + catRect.h
+          ) {
+            this.questCategory = catRect.category;
+            this.questPage = 0;
+            AudioEngine.playButtonClick();
+            return true;
+          }
+        }
 
-        const quests = this.questManager.quests;
-        for (let i = 0; i < quests.length; i++) {
-          const col = i % 2;
-          const row = Math.floor(i / 2);
-          const cx = col === 0 ? modalX + 14 : modalX + 22 + colW;
-          const cy = startY + row * (cardH + 6);
+        // B. Cek Touch Tombol Halaman Prev
+        const prev = this.questPrevPageRect;
+        if (touchX >= prev.x && touchX <= prev.x + prev.w && touchY >= prev.y && touchY <= prev.y + prev.h) {
+          if (this.questPage > 0) {
+            this.questPage--;
+            AudioEngine.playButtonClick();
+          }
+          return true;
+        }
 
-          // Area Tombol Aksi di Bawah Kartu Misi
-          const btnX = cx + 8;
-          const btnY = cy + cardH - 24;
-          const btnW = colW - 18;
-          const btnH = 20;
+        // C. Cek Touch Tombol Halaman Next
+        const next = this.questNextPageRect;
+        if (touchX >= next.x && touchX <= next.x + next.w && touchY >= next.y && touchY <= next.y + next.h) {
+          const filtered = this.getFilteredQuests();
+          const maxPages = Math.max(1, Math.ceil(filtered.length / 4));
+          if (this.questPage < maxPages - 1) {
+            this.questPage++;
+            AudioEngine.playButtonClick();
+          }
+          return true;
+        }
 
-          if (touchX >= btnX && touchX <= btnX + btnW && touchY >= btnY && touchY <= btnY + btnH) {
-            const q = quests[i];
-            if (q.status === 'AVAILABLE') {
-              this.questManager.acceptQuest(q.id);
-              floatingText.spawn(player.x + 10, player.y - 18, `📜 Misi Diterima: ${q.title}!`, '#4ade80', 2.5);
-              return true;
-            } else if (q.status === 'COMPLETED') {
-              this.questManager.turnInQuest(q.id, player, floatingText);
-              return true;
+        // D. Cek Area Tombol Aksi di Kartu Misi Aktif
+        for (const act of this.questActionRects) {
+          if (
+            touchX >= act.x &&
+            touchX <= act.x + act.w &&
+            touchY >= act.y &&
+            touchY <= act.y + act.h
+          ) {
+            const q = this.questManager.quests.find((item) => item.id === act.questId);
+            if (q) {
+              if (q.status === 'AVAILABLE') {
+                this.questManager.acceptQuest(q.id);
+                floatingText.spawn(player.x + 10, player.y - 18, `📜 Misi Diterima: ${q.title}!`, '#4ade80', 2.5);
+                return true;
+              } else if (q.status === 'COMPLETED') {
+                this.questManager.turnInQuest(q.id, player, floatingText);
+                return true;
+              } else if (q.status === 'ACTIVE') {
+                floatingText.spawn(player.x + 10, player.y - 18, `⏳ Progres: ${q.targetName} (${q.currentCount}/${q.requiredCount})`, '#38bdf8', 2.0);
+                return true;
+              }
             }
           }
         }
@@ -367,14 +417,67 @@ export class GuildNPC {
     _player: Player
   ): void {
     if (!this.questManager) return;
-    const quests = this.questManager.quests;
 
+    // Reset touch hitboxes for this frame
+    this.questCategoryRects = [];
+    this.questActionRects = [];
+    this.questPrevPageRect = { x: 0, y: 0, w: 0, h: 0 };
+    this.questNextPageRect = { x: 0, y: 0, w: 0, h: 0 };
+
+    // 1. Category Filter Pills Bar (Tepat di bawah tab Misi/Kartu)
+    const catY = modalY + 66;
+    const catH = 20;
+    const categories: { id: 'ALL' | 'ANIME' | 'DUNGEON' | 'OVERWORLD'; label: string }[] = [
+      { id: 'ALL', label: '🌟 Semua' },
+      { id: 'ANIME', label: '✨ Alur Anime' },
+      { id: 'DUNGEON', label: '⚔️ Dungeon' },
+      { id: 'OVERWORLD', label: '🌿 Rimba Luar' }
+    ];
+
+    const totalCatW = modalWidth - 28;
+    const catPillW = Math.floor((totalCatW - 12) / categories.length);
+
+    for (let c = 0; c < categories.length; c++) {
+      const cat = categories[c];
+      const pillX = modalX + 14 + c * (catPillW + 4);
+      const isSel = this.questCategory === cat.id;
+
+      this.questCategoryRects.push({
+        category: cat.id,
+        x: pillX,
+        y: catY,
+        w: catPillW,
+        h: catH
+      });
+
+      ctx.fillStyle = isSel ? '#0284c7' : '#1e293b';
+      ctx.fillRect(pillX, catY, catPillW, catH);
+      ctx.strokeStyle = isSel ? '#38bdf8' : '#334155';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(pillX, catY, catPillW, catH);
+
+      ctx.font = isSel ? 'bold 8.5px sans-serif' : '8px sans-serif';
+      ctx.fillStyle = isSel ? '#ffffff' : '#94a3b8';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(cat.label, pillX + catPillW / 2, catY + catH / 2);
+    }
+
+    // 2. Filter & Pagination Logic
+    const filtered = this.getFilteredQuests();
+    const maxPages = Math.max(1, Math.ceil(filtered.length / 4));
+    this.questPage = Math.max(0, Math.min(this.questPage, maxPages - 1));
+    const pageQuests = filtered.slice(this.questPage * 4, this.questPage * 4 + 4);
+
+    // 3. Grid Kartu Misi (2 Kolom x 2 Baris Presisi Bebas Overflow)
     const colW = (modalWidth - 36) / 2;
-    const cardH = (modalHeight - 82) / 2;
-    const startY = modalY + 68;
+    const footerH = 22;
+    const startY = catY + catH + 6;
+    const availableH = modalHeight - (startY - modalY) - footerH - 8;
+    const cardH = Math.floor((availableH - 6) / 2);
 
-    for (let i = 0; i < quests.length; i++) {
-      const q = quests[i];
+    for (let i = 0; i < pageQuests.length; i++) {
+      const q = pageQuests[i];
       const col = i % 2;
       const row = Math.floor(i / 2);
       const cx = col === 0 ? modalX + 14 : modalX + 22 + colW;
@@ -393,40 +496,51 @@ export class GuildNPC {
       ctx.textAlign = 'left';
       ctx.textBaseline = 'top';
       const safeQTitle = CanvasText.truncate(ctx, `[${q.badge}] ${q.title}`, colW - 16);
-      ctx.fillText(safeQTitle, cx + 8, cy + 6);
+      ctx.fillText(safeQTitle, cx + 8, cy + 5);
 
       // Target Objective & Count
       ctx.fillStyle = '#cbd5e1';
-      ctx.font = '8.5px sans-serif';
+      ctx.font = '8px sans-serif';
       const safeQTarget = CanvasText.truncate(ctx, `Target: ${q.targetName} (${q.currentCount}/${q.requiredCount})`, colW - 16);
-      ctx.fillText(safeQTarget, cx + 8, cy + 20);
+      ctx.fillText(safeQTarget, cx + 8, cy + 18);
 
       // Progress Bar
       const pBarW = colW - 16;
       const pBarH = 4;
-      const pct = Math.min(1, q.currentCount / q.requiredCount);
+      const pct = Math.min(1, q.currentCount / Math.max(1, q.requiredCount));
       ctx.fillStyle = '#334155';
-      ctx.fillRect(cx + 8, cy + 34, pBarW, pBarH);
+      ctx.fillRect(cx + 8, cy + 30, pBarW, pBarH);
       ctx.fillStyle = q.themeColor;
-      ctx.fillRect(cx + 8, cy + 34, Math.round(pBarW * pct), pBarH);
+      ctx.fillRect(cx + 8, cy + 30, Math.round(pBarW * pct), pBarH);
 
-      // Rewards line
+      // Rewards line (Emas, Val, EXP)
       ctx.fillStyle = '#eab308';
-      ctx.font = '8px sans-serif';
-      const safeQRewards = CanvasText.truncate(ctx, `Hadiah: +${q.rewardGold} Emas · +${q.rewardExp} EXP`, colW - 16);
-      ctx.fillText(safeQRewards, cx + 8, cy + 42);
+      ctx.font = '7.5px sans-serif';
+      let rewStr = `+${q.rewardGold} Emas`;
+      if (q.rewardVal) rewStr += ` · +${q.rewardVal} 𝒱`;
+      rewStr += ` · +${q.rewardExp} EXP`;
+      const safeQRewards = CanvasText.truncate(ctx, rewStr, colW - 16);
+      ctx.fillText(safeQRewards, cx + 8, cy + 38);
 
-      // Button at bottom
+      // Action Button at Bottom
       const btnX = cx + 8;
-      const btnY = cy + cardH - 22;
+      const btnY = cy + cardH - 20;
       const btnW = colW - 16;
-      const btnH = 18;
+      const btnH = 17;
+
+      this.questActionRects.push({
+        questId: q.id,
+        x: btnX,
+        y: btnY,
+        w: btnW,
+        h: btnH
+      });
 
       if (q.status === 'AVAILABLE') {
         ctx.fillStyle = '#16a34a';
         ctx.fillRect(btnX, btnY, btnW, btnH);
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 9px sans-serif';
+        ctx.font = 'bold 8.5px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('➕ TERIMA MISI', btnX + btnW / 2, btnY + btnH / 2);
@@ -434,7 +548,7 @@ export class GuildNPC {
         ctx.fillStyle = '#334155';
         ctx.fillRect(btnX, btnY, btnW, btnH);
         ctx.fillStyle = '#94a3b8';
-        ctx.font = 'bold 9px sans-serif';
+        ctx.font = 'bold 8.5px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText(`⏳ BERJALAN (${q.currentCount}/${q.requiredCount})`, btnX + btnW / 2, btnY + btnH / 2);
@@ -442,7 +556,7 @@ export class GuildNPC {
         ctx.fillStyle = '#eab308';
         ctx.fillRect(btnX, btnY, btnW, btnH);
         ctx.fillStyle = '#0f172a';
-        ctx.font = 'bold 9.5px sans-serif';
+        ctx.font = 'bold 9px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('🎁 KLAIM HADIAH!', btnX + btnW / 2, btnY + btnH / 2);
@@ -450,12 +564,51 @@ export class GuildNPC {
         ctx.fillStyle = '#064e3b';
         ctx.fillRect(btnX, btnY, btnW, btnH);
         ctx.fillStyle = '#6ee7b7';
-        ctx.font = 'bold 9px sans-serif';
+        ctx.font = 'bold 8.5px sans-serif';
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
         ctx.fillText('✓ MISI TUNTAS', btnX + btnW / 2, btnY + btnH / 2);
       }
     }
+
+    // 4. Pagination Controls Bar di Bagian Bawah Modal
+    const pageY = modalY + modalHeight - footerH - 4;
+    const pageBtnW = 75;
+    const pageBtnH = 18;
+
+    // Tombol [◀ Hal Sblm]
+    const pX = modalX + 14;
+    this.questPrevPageRect = { x: pX, y: pageY, w: pageBtnW, h: pageBtnH };
+    ctx.fillStyle = this.questPage > 0 ? '#1e293b' : 'rgba(30, 41, 59, 0.4)';
+    ctx.fillRect(pX, pageY, pageBtnW, pageBtnH);
+    ctx.strokeStyle = this.questPage > 0 ? '#64748b' : '#334155';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(pX, pageY, pageBtnW, pageBtnH);
+    ctx.fillStyle = this.questPage > 0 ? '#f8fafc' : '#64748b';
+    ctx.font = 'bold 8px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.textBaseline = 'middle';
+    ctx.fillText('◀ Sblmnya', pX + pageBtnW / 2, pageY + pageBtnH / 2);
+
+    // Keterangan Halaman di Tengah
+    ctx.fillStyle = '#94a3b8';
+    ctx.font = '8.5px sans-serif';
+    ctx.fillText(
+      `Hal. ${this.questPage + 1} / ${maxPages} (${filtered.length} Misi)`,
+      modalX + modalWidth / 2,
+      pageY + pageBtnH / 2
+    );
+
+    // Tombol [Lanjut ▶]
+    const nX = modalX + modalWidth - pageBtnW - 14;
+    this.questNextPageRect = { x: nX, y: pageY, w: pageBtnW, h: pageBtnH };
+    ctx.fillStyle = this.questPage < maxPages - 1 ? '#1e293b' : 'rgba(30, 41, 59, 0.4)';
+    ctx.fillRect(nX, pageY, pageBtnW, pageBtnH);
+    ctx.strokeStyle = this.questPage < maxPages - 1 ? '#64748b' : '#334155';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(nX, pageY, pageBtnW, pageBtnH);
+    ctx.fillStyle = this.questPage < maxPages - 1 ? '#f8fafc' : '#64748b';
+    ctx.fillText('Lanjut ▶', nX + pageBtnW / 2, pageY + pageBtnH / 2);
   }
 
   /**

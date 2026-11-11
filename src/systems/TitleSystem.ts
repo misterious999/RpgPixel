@@ -87,6 +87,20 @@ export const TITLE_DEFINITIONS: Record<string, TitleDefinition> = {
     badge: '💎',
     description: 'Telah mencapai Pangkat Petualang S-Rank!',
     color: '#ec4899'
+  },
+  ANIME_HERO: {
+    id: 'ANIME_HERO',
+    name: '« Pahlawan Terpilih Anime »',
+    badge: '✨',
+    description: 'Telah menuntaskan misi alur cerita petualang anime serikat!',
+    color: '#facc15'
+  },
+  RELIC_MASTER: {
+    id: 'RELIC_MASTER',
+    name: '« Penguasa Pusaka Purba »',
+    badge: '🗡️',
+    description: 'Telah mengumpulkan kristal abisal pusaka dewata untuk mahakarya penempaan.',
+    color: '#38bdf8'
   }
 };
 

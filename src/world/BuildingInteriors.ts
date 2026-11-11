@@ -428,7 +428,7 @@ export class BuildingInteriors {
       if (galahadDist < 44) {
         return {
           type: 'GALAHAD',
-          prompt: '🛡️ [A] Bicara dengan Kapten Galahad (Misi Slime)',
+          prompt: '🛡️ [A] Bicara dengan Kapten Galahad (Misi Petualang)',
           color: '#38bdf8',
           x: 2 * ts,
           y: 3.5 * ts
@@ -440,7 +440,7 @@ export class BuildingInteriors {
       if (morgrimDist < 44) {
         return {
           type: 'MORGRIM',
-          prompt: '🪓 [A] Bicara dengan Jagal Morgrim (Misi Raja Goa)',
+          prompt: '🪓 [A] Bicara dengan Jagal Morgrim (Misi Bos Dungeon)',
           color: '#f87171',
           x: 3.5 * ts,
           y: 9.5 * ts
@@ -452,7 +452,7 @@ export class BuildingInteriors {
       if (ignisDist < 44) {
         return {
           type: 'IGNIS',
-          prompt: '🔮 [A] Bicara dengan Cendekiawan Ignis (Misi Goa)',
+          prompt: '🔮 [A] Bicara dengan Cendekiawan Ignis (Misi Riset Abisal)',
           color: '#c084fc',
           x: 15.5 * ts,
           y: 2.5 * ts
@@ -464,7 +464,7 @@ export class BuildingInteriors {
       if (kaelenDist < 44) {
         return {
           type: 'KAELEN',
-          prompt: '🏹 [A] Bicara dengan Ranger Kaelen (Misi Serigala)',
+          prompt: '🏹 [A] Bicara dengan Ranger Kaelen (Misi Pemburu Rimba)',
           color: '#4ade80',
           x: 15.5 * ts,
           y: 6.5 * ts

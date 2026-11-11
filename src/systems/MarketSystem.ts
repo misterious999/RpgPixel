@@ -30,6 +30,7 @@ export class MarketSystem {
   public isOpen: boolean = false;
   public activeCategory: 'ALL' | 'POTION' | 'SCROLL' | 'MATERIAL' = 'ALL';
   public selectedItemIndex: number = 0;
+  public onBuySuccess?: () => void;
 
   // Saved hitboxes for mobile touch interaction
   private closeBtnRect = { x: 0, y: 0, w: 0, h: 0 };
@@ -101,6 +102,7 @@ export class MarketSystem {
         floatingText.spawn(player.x + 10, player.y - 18, `🛒 Beli ${added}x ${def.name} (-${actualCost.toLocaleString()} 𝒱)!`, '#4ade80', 2.5);
       }
     }
+    this.onBuySuccess?.();
     return true;
   }
 

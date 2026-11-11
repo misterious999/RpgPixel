@@ -484,6 +484,29 @@ export class VillageManager {
     return false;
   }
 
+  public getNPCQuest(npc: VillageNPCData) {
+    // 1. Prioritas 1: Misi dari NPC ini yang sudah COMPLETED (siap klaim hadiah)
+    const completed = this.questManager.quests.find(
+      (q) => (q.giver.includes(npc.name) || q.id === npc.questId) && q.status === 'COMPLETED'
+    );
+    if (completed) return completed;
+
+    // 2. Prioritas 2: Misi dari NPC ini yang AVAILABLE (siap diambil)
+    const available = this.questManager.quests.find(
+      (q) => (q.giver.includes(npc.name) || q.id === npc.questId) && q.status === 'AVAILABLE'
+    );
+    if (available) return available;
+
+    // 3. Prioritas 3: Misi yang sedang ACTIVE
+    const active = this.questManager.quests.find(
+      (q) => (q.giver.includes(npc.name) || q.id === npc.questId) && q.status === 'ACTIVE'
+    );
+    if (active) return active;
+
+    // 4. Fallback ke questId bawaan
+    return this.questManager.quests.find((q) => q.id === npc.questId) || null;
+  }
+
   public handleTouch(
     touchX: number,
     touchY: number,
@@ -511,9 +534,9 @@ export class VillageManager {
     const ab = this.actionBtnRect;
     const isActionHit = ab.w > 0 && touchX >= ab.x - 4 && touchX <= ab.x + ab.w + 4 && touchY >= ab.y - 4 && touchY <= ab.y + ab.h + 4;
 
-    if (this.activeDialogNPC.roleType === 'QUEST' && this.activeDialogNPC.questId) {
+    if (this.activeDialogNPC.roleType === 'QUEST') {
       if (isActionHit) {
-        const q = this.questManager.quests.find((item) => item.id === this.activeDialogNPC!.questId);
+        const q = this.getNPCQuest(this.activeDialogNPC);
         if (q) {
           if (q.status === 'AVAILABLE') {
             this.questManager.acceptQuest(q.id);
@@ -1575,8 +1598,8 @@ export class VillageManager {
     const btnH = 28;
 
     // --- QUEST NPC PANEL KHUSUS ---
-    if (npc.roleType === 'QUEST' && npc.questId) {
-      const q = this.questManager.quests.find((item) => item.id === npc.questId);
+    if (npc.roleType === 'QUEST') {
+      const q = this.getNPCQuest(npc);
       if (q) {
         const qBoxH = 54;
         const qBoxY = btnY - qBoxH - 8;
@@ -1626,11 +1649,14 @@ export class VillageManager {
         ctx.fillStyle = '#94a3b8';
         ctx.font = '8px sans-serif';
         ctx.textAlign = 'left';
-        const safeQTarget = CanvasText.truncate(ctx, `Target: Basmi ${q.requiredCount} ${q.targetName}`, qBoxW - 16);
+        const safeQTarget = CanvasText.truncate(ctx, `Target: ${q.targetName} (${q.currentCount}/${q.requiredCount})`, qBoxW - 16);
         ctx.fillText(safeQTarget, qBoxX + 8, qBoxY + 22);
 
         ctx.fillStyle = '#fde047';
-        const safeQReward = CanvasText.truncate(ctx, `Hadiah: +${q.rewardGold} Emas · +${q.rewardExp} EXP`, qBoxW - 16);
+        let rewStr = `Hadiah: +${q.rewardGold} Emas`;
+        if (q.rewardVal) rewStr += ` · +${q.rewardVal} 𝒱`;
+        rewStr += ` · +${q.rewardExp} EXP`;
+        const safeQReward = CanvasText.truncate(ctx, rewStr, qBoxW - 16);
         ctx.fillText(safeQReward, qBoxX + 8, qBoxY + 36);
 
         // Action Button
