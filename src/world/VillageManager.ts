@@ -83,7 +83,7 @@ export class VillageManager {
         accentColor: '#facc15',
         x: 62 * ts + 28,
         y: 44.5 * ts + 20,
-        prompt: 'Tekan [A] Belanja di Toko Serba Ada Marco 🛒'
+        prompt: '[A] Belanja di Toko Serba Ada Marco 🛒'
       },
       {
         id: 'FOOD',
@@ -94,7 +94,7 @@ export class VillageManager {
         accentColor: '#fb923c',
         x: 68 * ts + 28,
         y: 44.5 * ts + 20,
-        prompt: 'Tekan [A] Masuk Kedai Kuliner Chef Gaston 🍲'
+        prompt: '[A] Masuk Kedai Kuliner Chef Gaston 🍲'
       },
       {
         id: 'ARCANE',
@@ -105,7 +105,7 @@ export class VillageManager {
         accentColor: '#c084fc',
         x: 74 * ts + 28,
         y: 44.5 * ts + 20,
-        prompt: 'Tekan [A] Kunjungi Paviliun Arkana Luna 🔮'
+        prompt: '[A] Kunjungi Paviliun Arkana Luna 🔮'
       },
       {
         id: 'ARMORY',
@@ -116,7 +116,7 @@ export class VillageManager {
         accentColor: '#94a3b8',
         x: 62 * ts + 28,
         y: 53.5 * ts + 20,
-        prompt: 'Tekan [A] Belanja di Kios Senjata Gareth ⚔️'
+        prompt: '[A] Belanja di Kios Senjata Gareth ⚔️'
       },
       {
         id: 'PET',
@@ -127,7 +127,7 @@ export class VillageManager {
         accentColor: '#34d399',
         x: 70 * ts + 20,
         y: 53 * ts + 16,
-        prompt: 'Tekan [A] Kunjungi Suaka & Toko Pet Mia 🐾'
+        prompt: '[A] Kunjungi Suaka & Toko Pet Mia 🐾'
       }
     ];
   }
@@ -737,7 +737,7 @@ export class VillageManager {
   /**
    * Render seluruh dekorasi bangunan pedesaan khusus & arsitektur Balai Serikat Guild
    */
-  public renderEnvironment(ctx: CanvasRenderingContext2D, playerCenterX: number, playerCenterY: number): void {
+  public renderEnvironment(ctx: CanvasRenderingContext2D, playerCenterX: number, playerCenterY: number, isSuppressed: boolean = false): void {
     const ts = CONSTANTS.TILE_SIZE;
     ctx.save();
 
@@ -918,7 +918,7 @@ export class VillageManager {
     // 12. RENDER SELURUH NPC DESA (Quest, Ambient, & Riddle)
     for (const npc of this.npcs) {
       if (npc.isInsideBuilding) continue;
-      this.renderNPC(ctx, npc, playerCenterX, playerCenterY);
+      this.renderNPC(ctx, npc, playerCenterX, playerCenterY, isSuppressed);
     }
 
     ctx.restore();
@@ -2238,7 +2238,7 @@ export class VillageManager {
     ctx.fillRect(x - 2, y - 2, 4, 4);
   }
 
-  private renderNPC(ctx: CanvasRenderingContext2D, npc: VillageNPCData, playerCenterX: number, playerCenterY: number): void {
+  private renderNPC(ctx: CanvasRenderingContext2D, npc: VillageNPCData, playerCenterX: number, playerCenterY: number, isSuppressed: boolean = false): void {
     const x = Math.floor(npc.x);
     const y = Math.floor(npc.y);
     const isNear = Math.hypot(npc.x + npc.width / 2 - playerCenterX, npc.y + npc.height / 2 - playerCenterY) < 38;
@@ -2334,7 +2334,7 @@ export class VillageManager {
     ctx.fillText(npc.name, x + npc.width / 2, labelY);
 
     // Indikator Interaksi Prompt [A] & Anime Emote Bubble saat dekat
-    if (isNear) {
+    if (isNear && !isSuppressed && !this.isDialogOpen) {
       const bob = Math.sin(this.animTimer * 1.5) * 2.5;
       const promptY = y - 18 + bob;
 

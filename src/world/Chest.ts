@@ -45,7 +45,7 @@ export class Chest {
     }
   }
 
-  public render(ctx: CanvasRenderingContext2D, isPlayerNear: boolean): void {
+  public render(ctx: CanvasRenderingContext2D, isPlayerNear: boolean, isSuppressed: boolean = false): void {
     ctx.save();
     const x = Math.floor(this.x);
     const y = Math.floor(this.y);
@@ -78,13 +78,13 @@ export class Chest {
       ctx.fillRect(x + 10, y + 7, 2, 2);
 
       // Interactive Hint when player is near
-      if (isPlayerNear) {
+      if (isPlayerNear && !isSuppressed) {
         ctx.font = 'bold 9px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#fef08a';
         ctx.strokeStyle = 'rgba(0, 0, 0, 0.8)';
         ctx.lineWidth = 2.5;
-        const hintText = 'Tekan [A] Buka';
+        const hintText = '[A] Buka';
         ctx.strokeText(hintText, x + 11, y - 6);
         ctx.fillText(hintText, x + 11, y - 6);
       }

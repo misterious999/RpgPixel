@@ -161,6 +161,9 @@ export class Game {
   private screenHeight: number = 400;
   private dpr: number = 1;
 
+  // Active Bottom Action Prompt Rect for Direct Touch Interaction
+  private bottomActionPromptRect: { x: number; y: number; w: number; h: number } | null = null;
+
   // DOM elements for HUD
   private fpsEl: HTMLElement | null;
   private coordsEl: HTMLElement | null;
@@ -212,13 +215,7 @@ export class Game {
     UpdateService.isSafeToReload = () => {
       return (
         this.onboardingUI.state === 'PLAYING' &&
-        !this.inventoryUI.isOpen &&
-        !this.guildNPC.isAppraisalOpen &&
-        !this.blacksmithNPC.isWorkshopOpen &&
-        !this.bankSystem.isOpen &&
-        !this.marketSystem.isOpen &&
-        !this.controlSettingsModal.isOpen &&
-        !NotificationModal.isOpen
+        !this.isAnyModalOpen()
       );
     };
     UpdateService.saveGameBeforeReload = () => {
@@ -471,7 +468,21 @@ export class Game {
         return true;
       }
       // 4. Inventory Backpack
-      return this.inventoryUI.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight);
+      if (this.inventoryUI.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight)) {
+        return true;
+      }
+
+      // 5. Sentuhan langsung pada Banner Prompt Aksi Bawah Layar (Mobile Friendly Action Tap)
+      if (!this.isAnyModalOpen() && this.bottomActionPromptRect) {
+        const { x, y, w, h } = this.bottomActionPromptRect;
+        if (touchX >= x && touchX <= x + w && touchY >= y && touchY <= y + h) {
+          this.input.state.isAction = true;
+          this.input.isActionJustPressed = true;
+          return true;
+        }
+      }
+
+      return false;
     });
 
     this.fpsEl = document.getElementById('fps-display');
@@ -1485,6 +1496,31 @@ export class Game {
     this.saveSessionSnapshot();
   }
 
+  /**
+   * Cek terpusat apakah ada modal, dialog, atau menu overlay yang sedang terbuka.
+   * Meliputi: Inventory/Kartu, Village Dialog, Guild Appraisal, Blacksmith Workshop,
+   * Royal Bank, Market Shop, Control Settings, Cooking, Title/Gelar, Leaderboard,
+   * Notification Modal, serta Companion Hire Modal.
+   */
+  public isAnyModalOpen(): boolean {
+    const isCompanionModalOpen = typeof document !== 'undefined' && document.getElementById('companion-hire-modal') !== null;
+    return (
+      this.inventoryUI.isOpen ||
+      this.inventoryUI.isCardModalOpen ||
+      this.villageManager.isDialogOpen ||
+      this.guildNPC.isAppraisalOpen ||
+      this.blacksmithNPC.isWorkshopOpen ||
+      this.bankSystem.isOpen ||
+      this.marketSystem.isOpen ||
+      this.controlSettingsModal.isOpen ||
+      NotificationModal.isOpen ||
+      this.cookingSystem.isOpen ||
+      this.titleSystem.isOpen ||
+      this.leaderboardUI.isOpen ||
+      isCompanionModalOpen
+    );
+  }
+
   public isCurrentMapInterior(): boolean {
     return this.currentMap.startsWith('INTERIOR_');
   }
@@ -2195,8 +2231,8 @@ export class Game {
       return false;
     };
 
-    // Freeze player if inventory, village dialog, guild dialog, blacksmith workshop, bank, market, control settings, or notification modal is open
-    const activeInput = (this.inventoryUI.isOpen || this.villageManager.isDialogOpen || this.guildNPC.isAppraisalOpen || this.blacksmithNPC.isWorkshopOpen || this.bankSystem.isOpen || this.marketSystem.isOpen || this.controlSettingsModal.isOpen || NotificationModal.isOpen || this.cookingSystem.isOpen || this.titleSystem.isOpen || this.leaderboardUI.isOpen)
+    // Freeze player if any modal, dialog, or UI overlay is open
+    const activeInput = this.isAnyModalOpen()
       ? { axisX: 0, axisY: 0, isAction: false, isSprint: false }
       : this.input.state;
 
@@ -2292,7 +2328,7 @@ export class Game {
     this.blacksmithNPC.update(deltaTime);
 
     // --- OVERWORLD SPECIFIC UPDATES ---
-    if (this.currentMap === 'OVERWORLD') {
+    if (this.currentMap === 'OVERWORLD' && !this.isAnyModalOpen()) {
       // Papan Kehormatan Guild (Leaderboard Notice Board) at (53, 48)
       const boardX = 53 * CONSTANTS.TILE_SIZE + 16;
       const boardY = 48 * CONSTANTS.TILE_SIZE + 16;
@@ -2304,22 +2340,19 @@ export class Game {
       }
 
       // Market Shops Interaction (Distrik Pasar Raya Oakhaven)
-      if (!this.villageManager.isDialogOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen && !this.bankSystem.isOpen && !this.marketSystem.isOpen) {
-        const nearShop = this.villageManager.getNearbyMarketShop(playerCenterX, playerCenterY);
-        if (nearShop && (this.input.isActionJustPressed || this.input.state.isAction)) {
-          this.input.consumeAction();
-          this.marketSystem.open(nearShop.id);
-          return;
-        }
+      const nearShop = this.villageManager.getNearbyMarketShop(playerCenterX, playerCenterY);
+      if (nearShop && (this.input.isActionJustPressed || this.input.state.isAction)) {
+        this.input.consumeAction();
+        this.marketSystem.open(nearShop.id);
+        return;
       }
 
       // Village NPC Interaction (Quest & Ambient Warga Luar Ruangan)
-      if (!this.villageManager.isDialogOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen && !this.bankSystem.isOpen && !this.marketSystem.isOpen) {
-        const nearNPC = this.villageManager.isNearAnyNPC(playerCenterX, playerCenterY);
-        if (nearNPC && (this.input.isActionJustPressed || this.input.state.isAction)) {
-          this.input.consumeAction();
-          this.villageManager.openDialog(nearNPC);
-        }
+      const nearNPC = this.villageManager.isNearAnyNPC(playerCenterX, playerCenterY);
+      if (nearNPC && (this.input.isActionJustPressed || this.input.state.isAction)) {
+        this.input.consumeAction();
+        this.villageManager.openDialog(nearNPC);
+        return;
       }
 
       // 4.6 Masuk ke Interior Gedung (Guild, Bengkel Besi, Apotek & Inn, Eldoria, Stonewatch)
@@ -2368,6 +2401,9 @@ export class Game {
           }
         }
       }
+    }
+
+    if (this.currentMap === 'OVERWORLD') {
 
       // 6. Update Chests & Handle Interactions
       for (const chest of this.chests) {
@@ -2522,7 +2558,7 @@ export class Game {
     } else if (this.currentMap === 'DUNGEON') {
       // --- DUNGEON FLOOR 1 SPECIFIC UPDATES ---
       // 4. Exit Ladder to Surface
-      if (this.dungeonMap.isNearLadder(playerCenterX, playerCenterY)) {
+      if (!this.isAnyModalOpen() && this.dungeonMap.isNearLadder(playerCenterX, playerCenterY)) {
         if (this.input.isActionJustPressed || this.input.state.isAction) {
           this.exitDungeon(false);
           return;
@@ -2530,7 +2566,7 @@ export class Game {
       }
 
       // 4.5 Descent Ladder to Floor 2 in Boss Room
-      if (this.dungeonMap.isNearFloor2Ladder(playerCenterX, playerCenterY)) {
+      if (!this.isAnyModalOpen() && this.dungeonMap.isNearFloor2Ladder(playerCenterX, playerCenterY)) {
         if (this.input.isActionJustPressed || this.input.state.isAction) {
           this.enterFloor2();
           return;
@@ -2672,7 +2708,7 @@ export class Game {
     } else if (this.currentMap === 'DUNGEON_FLOOR_2') {
       // --- DUNGEON FLOOR 2 SPECIFIC UPDATES (Ancient Crypt Ruins) ---
       // Ladder up to Floor 1
-      if (this.dungeonFloor2.isNearLadderUp(playerCenterX, playerCenterY)) {
+      if (!this.isAnyModalOpen() && this.dungeonFloor2.isNearLadderUp(playerCenterX, playerCenterY)) {
         if (this.input.isActionJustPressed || this.input.state.isAction) {
           this.exitFloor2();
           return;
@@ -2680,7 +2716,7 @@ export class Game {
       }
 
       // Portal down to Floor 3 (Infernal Sanctum)
-      if (this.dungeonFloor2.isNearFloor3Portal(playerCenterX, playerCenterY)) {
+      if (!this.isAnyModalOpen() && this.dungeonFloor2.isNearFloor3Portal(playerCenterX, playerCenterY)) {
         if (this.input.isActionJustPressed || this.input.state.isAction) {
           this.enterFloor3();
           return;
@@ -2819,7 +2855,7 @@ export class Game {
     } else if (this.currentMap === 'DUNGEON_FLOOR_3') {
       // --- DUNGEON FLOOR 3 SPECIFIC UPDATES (Sanctuarium Neraka Abisal) ---
       // Portal up to Floor 2
-      if (this.dungeonFloor3.isNearPortalUp(playerCenterX, playerCenterY)) {
+      if (!this.isAnyModalOpen() && this.dungeonFloor3.isNearPortalUp(playerCenterX, playerCenterY)) {
         if (this.input.isActionJustPressed || this.input.state.isAction) {
           this.exitFloor3();
           return;
@@ -2983,7 +3019,7 @@ export class Game {
     } else if (this.currentMap === 'DUNGEON_ELDORIA') {
       // --- DUNGEON ELDORIA SPECIFIC UPDATES (Kuil Roh Hutan) ---
       // Ladder up to Desa Eldoria
-      if (this.dungeonEldoria.isNearLadderUp(playerCenterX, playerCenterY)) {
+      if (!this.isAnyModalOpen() && this.dungeonEldoria.isNearLadderUp(playerCenterX, playerCenterY)) {
         if (this.input.isActionJustPressed || this.input.state.isAction) {
           this.exitDungeonEldoria();
           return;
@@ -3147,7 +3183,7 @@ export class Game {
     } else if (this.currentMap === 'DUNGEON_STONEWATCH') {
       // --- DUNGEON STONEWATCH SPECIFIC UPDATES (Tambang Besi Abisal) ---
       // Ladder up to Desa Stonewatch
-      if (this.dungeonStonewatch.isNearLadderUp(playerCenterX, playerCenterY)) {
+      if (!this.isAnyModalOpen() && this.dungeonStonewatch.isNearLadderUp(playerCenterX, playerCenterY)) {
         if (this.input.isActionJustPressed || this.input.state.isAction) {
           this.exitDungeonStonewatch();
           return;
@@ -3319,7 +3355,7 @@ export class Game {
         }
         return;
       }
-      if (this.guildNPC.isAppraisalOpen || this.blacksmithNPC.isWorkshopOpen || this.bankSystem.isOpen || this.marketSystem.isOpen) {
+      if (this.isAnyModalOpen()) {
         return;
       }
 
@@ -3536,17 +3572,17 @@ export class Game {
       this.tileMap.render(ctx, this.camera);
 
       // Render Desa Khusus Oakhaven (Bangunan, Balai Serikat, Air Mancur, Lampu & NPC)
-      this.villageManager.renderEnvironment(ctx, playerCenterX, playerCenterY);
+      this.villageManager.renderEnvironment(ctx, playerCenterX, playerCenterY, this.isAnyModalOpen());
 
       // Render Interactive Notice Board & Pet Pen
       this.renderNoticeBoard(ctx, 53 * CONSTANTS.TILE_SIZE, 48 * CONSTANTS.TILE_SIZE, playerCenterX, playerCenterY);
       this.renderPetPen(ctx, 54 * CONSTANTS.TILE_SIZE, 52 * CONSTANTS.TILE_SIZE, playerCenterX, playerCenterY);
 
       // Render Pintu Masuk Interior Gedung (Guild, Bengkel, Apotek, Pondok Eldoria, Barak Stonewatch)
-      this.buildingInteriors.renderOverworldDoorMarkers(ctx, playerCenterX, playerCenterY);
+      this.buildingInteriors.renderOverworldDoorMarkers(ctx, playerCenterX, playerCenterY, this.isAnyModalOpen());
 
       // 2. Render Cave / Dungeon Entrance Serena
-      this.caveEntrance.render(ctx, this.caveEntrance.isNearPlayer(playerCenterX, playerCenterY));
+      this.caveEntrance.render(ctx, this.caveEntrance.isNearPlayer(playerCenterX, playerCenterY), this.isAnyModalOpen());
 
       // 2.1 Render Eldoria Sylvan Temple Entrance (Desa Eldoria)
       this.renderEldoriaEntrance(ctx, playerCenterX, playerCenterY);
@@ -3556,7 +3592,7 @@ export class Game {
 
       // 4. Render Overworld Chests
       for (const chest of this.chests) {
-        chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY));
+        chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY), this.isAnyModalOpen());
       }
 
       // 5. Render Overworld Items
@@ -3607,7 +3643,7 @@ export class Game {
 
       // 2. Render Dungeon Chests
       for (const chest of this.dungeonChests) {
-        chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY));
+        chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY), this.isAnyModalOpen());
       }
 
       // 3. Render Dungeon Items
@@ -3701,7 +3737,7 @@ export class Game {
 
       // 2.5 Render Floor 3 Chests
       for (const chest of this.floor3Chests) {
-        chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY));
+        chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY), this.isAnyModalOpen());
       }
 
       // 3. Render Floor 3 Monsters (Hellhound, Abyssal Reaper, Infernal Knight, Ignis Dragon)
@@ -3748,7 +3784,7 @@ export class Game {
 
       // 2.5 Render Eldoria Chests
       for (const chest of this.eldoriaChests) {
-        chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY));
+        chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY), this.isAnyModalOpen());
       }
 
       // 3. Render Eldoria Monsters
@@ -3795,7 +3831,7 @@ export class Game {
 
       // 2.5 Render Stonewatch Chests
       for (const chest of this.stonewatchChests) {
-        chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY));
+        chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY), this.isAnyModalOpen());
       }
 
       // 3. Render Stonewatch Monsters
@@ -3834,7 +3870,7 @@ export class Game {
       // --- INTERIOR ROOM WORLD RENDERING ---
       const interiorId = this.getInteriorIdFromCurrentMap();
       if (interiorId) {
-        this.buildingInteriors.renderInterior(ctx, interiorId, this.camera, playerCenterX, playerCenterY);
+        this.buildingInteriors.renderInterior(ctx, interiorId, this.camera, playerCenterX, playerCenterY, this.isAnyModalOpen());
       }
 
       // Render Companion if active
@@ -3871,7 +3907,7 @@ export class Game {
     // --- SCREEN SPACE 1:1 RENDERING ---
     if (this.onboardingUI.state === 'PLAYING') {
       // 8. Mobile Touch D-Pad & Action Buttons
-      if (!this.inventoryUI.isOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen && !this.bankSystem.isOpen && !this.marketSystem.isOpen && !this.controlSettingsModal.isOpen) {
+      if (!this.isAnyModalOpen()) {
         this.input.renderTouchUI(ctx, screenWidth, screenHeight);
         // Mobile Skill Bar
         this.skillBarUI.renderTouchSkillBar(ctx, screenWidth, screenHeight);
@@ -4096,54 +4132,58 @@ export class Game {
       }
 
       // 15. Action Prompt Bubbles (Dynamic Width, Centered & Overflow-Proof)
-      const playerCenterX = this.player.x + this.player.width / 2;
-      const playerCenterY = this.player.y + this.player.height / 2;
+      this.bottomActionPromptRect = null;
 
-      if (this.currentMap === 'DUNGEON' && this.dungeonMap.isNearLadder(playerCenterX, playerCenterY)) {
-        this.renderBottomActionPrompt(ctx, 'Tekan [A] Naik Tangga (Keluar Goa) ▲', '#facc15', '#fef08a');
-      } else if (this.currentMap === 'DUNGEON' && this.dungeonMap.isNearFloor2Ladder(playerCenterX, playerCenterY)) {
-        this.renderBottomActionPrompt(ctx, 'Tekan [A] Masuk Makam Kuno Lantai 2 ▼', '#c084fc', '#e879f9');
-      } else if (this.currentMap === 'DUNGEON_FLOOR_2' && this.dungeonFloor2.isNearLadderUp(playerCenterX, playerCenterY)) {
-        this.renderBottomActionPrompt(ctx, 'Tekan [A] Naik Tangga (Lantai 1) ▲', '#38bdf8', '#93c5fd');
-      } else if (this.currentMap === 'DUNGEON_FLOOR_2' && this.dungeonFloor2.isNearFloor3Portal(playerCenterX, playerCenterY)) {
-        this.renderBottomActionPrompt(ctx, 'Tekan [A] Masuk Neraka Abisal Lantai 3 ▼', '#f97316', '#fdba74');
-      } else if (this.currentMap === 'DUNGEON_FLOOR_3' && this.dungeonFloor3.isNearPortalUp(playerCenterX, playerCenterY)) {
-        this.renderBottomActionPrompt(ctx, 'Tekan [A] Masuk Portal Naik (Lantai 2) ▲', '#38bdf8', '#93c5fd');
-      } else if (this.currentMap === 'DUNGEON_ELDORIA' && this.dungeonEldoria.isNearLadderUp(playerCenterX, playerCenterY)) {
-        this.renderBottomActionPrompt(ctx, 'Tekan [A] Naik Tangga (Desa Eldoria) ▲', '#4ade80', '#86efac');
-      } else if (this.currentMap === 'DUNGEON_STONEWATCH' && this.dungeonStonewatch.isNearLadderUp(playerCenterX, playerCenterY)) {
-        this.renderBottomActionPrompt(ctx, 'Tekan [A] Naik Tangga (Desa Stonewatch) ▲', '#f59e0b', '#fde68a');
-      } else if (this.currentMap === 'OVERWORLD') {
-        const eldEntDist = Math.hypot(21 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 13 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
-        const stoneEntDist = Math.hypot(85 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 58 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
-        const nearDoor = this.buildingInteriors.getNearbyOverworldDoor(playerCenterX, playerCenterY);
+      if (!this.isAnyModalOpen()) {
+        const playerCenterX = this.player.x + this.player.width / 2;
+        const playerCenterY = this.player.y + this.player.height / 2;
 
-        const nearMarketShop = this.villageManager.getNearbyMarketShop(playerCenterX, playerCenterY);
-        if (nearDoor) {
-          this.renderBottomActionPrompt(ctx, `Tekan [A] Masuk ${nearDoor.name} ${nearDoor.icon}`, nearDoor.accentColor, nearDoor.accentColor);
-        } else if (nearMarketShop) {
-          this.renderBottomActionPrompt(ctx, nearMarketShop.prompt, nearMarketShop.accentColor, nearMarketShop.accentColor);
-        } else if (eldEntDist < 38) {
-          this.renderBottomActionPrompt(
-            ctx,
-            this.isEldoriaDungeonUnlocked ? 'Tekan [A] Masuk Kuil Roh Hutan 🌿' : 'Pecahkan Teka-Teki Elder Sylas 🔒',
-            this.isEldoriaDungeonUnlocked ? '#4ade80' : '#ef4444',
-            this.isEldoriaDungeonUnlocked ? '#86efac' : '#fca5a5'
-          );
-        } else if (stoneEntDist < 38) {
-          this.renderBottomActionPrompt(
-            ctx,
-            this.isStonewatchDungeonUnlocked ? 'Tekan [A] Masuk Tambang Abisal ⚒️' : 'Pecahkan Teka-Teki Kapten Borin 🔒',
-            this.isStonewatchDungeonUnlocked ? '#f59e0b' : '#ef4444',
-            this.isStonewatchDungeonUnlocked ? '#fde68a' : '#fca5a5'
-          );
-        }
-      } else if (this.isCurrentMapInterior()) {
-        const interiorId = this.getInteriorIdFromCurrentMap();
-        if (interiorId && !this.villageManager.isDialogOpen && !this.guildNPC.isAppraisalOpen && !this.blacksmithNPC.isWorkshopOpen && !this.bankSystem.isOpen && !this.marketSystem.isOpen) {
-          const action = this.buildingInteriors.getNearbyAction(interiorId, playerCenterX, playerCenterY);
-          if (action) {
-            this.renderBottomActionPrompt(ctx, action.prompt, action.color || '#facc15', action.color || '#fef08a');
+        if (this.currentMap === 'DUNGEON' && this.dungeonMap.isNearLadder(playerCenterX, playerCenterY)) {
+          this.renderBottomActionPrompt(ctx, '[A] Naik Tangga (Keluar Goa) ▲', '#facc15', '#fef08a');
+        } else if (this.currentMap === 'DUNGEON' && this.dungeonMap.isNearFloor2Ladder(playerCenterX, playerCenterY)) {
+          this.renderBottomActionPrompt(ctx, '[A] Masuk Makam Kuno Lantai 2 ▼', '#c084fc', '#e879f9');
+        } else if (this.currentMap === 'DUNGEON_FLOOR_2' && this.dungeonFloor2.isNearLadderUp(playerCenterX, playerCenterY)) {
+          this.renderBottomActionPrompt(ctx, '[A] Naik Tangga (Lantai 1) ▲', '#38bdf8', '#93c5fd');
+        } else if (this.currentMap === 'DUNGEON_FLOOR_2' && this.dungeonFloor2.isNearFloor3Portal(playerCenterX, playerCenterY)) {
+          this.renderBottomActionPrompt(ctx, '[A] Masuk Neraka Abisal Lantai 3 ▼', '#f97316', '#fdba74');
+        } else if (this.currentMap === 'DUNGEON_FLOOR_3' && this.dungeonFloor3.isNearPortalUp(playerCenterX, playerCenterY)) {
+          this.renderBottomActionPrompt(ctx, '[A] Masuk Portal Naik (Lantai 2) ▲', '#38bdf8', '#93c5fd');
+        } else if (this.currentMap === 'DUNGEON_ELDORIA' && this.dungeonEldoria.isNearLadderUp(playerCenterX, playerCenterY)) {
+          this.renderBottomActionPrompt(ctx, '[A] Naik Tangga (Desa Eldoria) ▲', '#4ade80', '#86efac');
+        } else if (this.currentMap === 'DUNGEON_STONEWATCH' && this.dungeonStonewatch.isNearLadderUp(playerCenterX, playerCenterY)) {
+          this.renderBottomActionPrompt(ctx, '[A] Naik Tangga (Desa Stonewatch) ▲', '#f59e0b', '#fde68a');
+        } else if (this.currentMap === 'OVERWORLD') {
+          const eldEntDist = Math.hypot(21 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 13 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
+          const stoneEntDist = Math.hypot(85 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 58 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
+          const nearDoor = this.buildingInteriors.getNearbyOverworldDoor(playerCenterX, playerCenterY);
+
+          const nearMarketShop = this.villageManager.getNearbyMarketShop(playerCenterX, playerCenterY);
+          if (nearDoor) {
+            this.renderBottomActionPrompt(ctx, `[A] Masuk ${nearDoor.name} ${nearDoor.icon}`, nearDoor.accentColor, nearDoor.accentColor);
+          } else if (nearMarketShop) {
+            this.renderBottomActionPrompt(ctx, nearMarketShop.prompt, nearMarketShop.accentColor, nearMarketShop.accentColor);
+          } else if (eldEntDist < 38) {
+            this.renderBottomActionPrompt(
+              ctx,
+              this.isEldoriaDungeonUnlocked ? '[A] Masuk Kuil Roh Hutan 🌿' : 'Pecahkan Teka-Teki Elder Sylas 🔒',
+              this.isEldoriaDungeonUnlocked ? '#4ade80' : '#ef4444',
+              this.isEldoriaDungeonUnlocked ? '#86efac' : '#fca5a5'
+            );
+          } else if (stoneEntDist < 38) {
+            this.renderBottomActionPrompt(
+              ctx,
+              this.isStonewatchDungeonUnlocked ? '[A] Masuk Tambang Abisal ⚒️' : 'Pecahkan Teka-Teki Kapten Borin 🔒',
+              this.isStonewatchDungeonUnlocked ? '#f59e0b' : '#ef4444',
+              this.isStonewatchDungeonUnlocked ? '#fde68a' : '#fca5a5'
+            );
+          }
+        } else if (this.isCurrentMapInterior()) {
+          const interiorId = this.getInteriorIdFromCurrentMap();
+          if (interiorId) {
+            const action = this.buildingInteriors.getNearbyAction(interiorId, playerCenterX, playerCenterY);
+            if (action) {
+              this.renderBottomActionPrompt(ctx, action.prompt, action.color || '#facc15', action.color || '#fef08a');
+            }
           }
         }
       }
@@ -4172,6 +4212,8 @@ export class Game {
     const pH = 26;
     const pX = (this.screenWidth - pW) / 2;
     const pY = this.screenHeight - 90;
+
+    this.bottomActionPromptRect = { x: pX, y: pY, w: pW, h: pH };
 
     ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
     ctx.fillRect(pX, pY, pW, pH);
@@ -4226,7 +4268,7 @@ export class Game {
     ctx.fillStyle = '#ca8a04';
     ctx.fillRect(bx + 14, by + 4, 4, 3);
 
-    if (isNear) {
+    if (isNear && !this.isAnyModalOpen()) {
       ctx.font = 'bold 8px sans-serif';
       const prompt = '[A] Papan Kehormatan (Top 10)';
       const pw = ctx.measureText(prompt).width + 12;
@@ -4264,7 +4306,7 @@ export class Game {
     ctx.arc(px + 20, py + 14, 5.5, 0, Math.PI * 2);
     ctx.fill();
 
-    if (isNear) {
+    if (isNear && !this.isAnyModalOpen()) {
       ctx.font = 'bold 8px sans-serif';
       const prompt = '[A] Adopsi Pet Auto-Loot';
       const pw = ctx.measureText(prompt).width + 12;
@@ -4438,7 +4480,7 @@ export class Game {
       ctx.fillText('Kuil Terbuka 🌿', ex + 16, ey + 38);
     }
 
-    if (isNear) {
+    if (isNear && !this.isAnyModalOpen()) {
       ctx.font = 'bold 8px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillStyle = this.isEldoriaDungeonUnlocked ? '#86efac' : '#fca5a5';
@@ -4545,7 +4587,7 @@ export class Game {
       ctx.fillText('Tambang Terbuka ⚒️', ex + 16, ey + 39);
     }
 
-    if (isNear) {
+    if (isNear && !this.isAnyModalOpen()) {
       ctx.font = 'bold 8px sans-serif';
       ctx.textAlign = 'center';
       ctx.fillStyle = this.isStonewatchDungeonUnlocked ? '#fde68a' : '#fca5a5';

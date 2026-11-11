@@ -199,7 +199,7 @@ export class BlacksmithNPC {
     }
   }
 
-  public render(ctx: CanvasRenderingContext2D, isNear: boolean, _player: Player): void {
+  public render(ctx: CanvasRenderingContext2D, isNear: boolean, _player: Player, isSuppressed: boolean = false): void {
     const x = this.x;
     const y = this.y;
 
@@ -301,7 +301,7 @@ export class BlacksmithNPC {
     ctx.fillStyle = '#f8fafc';
     ctx.fillText('⚒️ Brokk Pandai Besi', x + 16, y - 4);
 
-    if (isNear) {
+    if (isNear && !this.isWorkshopOpen && !isSuppressed) {
       const bubbleW = 150;
       const bubbleH = 22;
       const bubbleX = x + 16 - bubbleW / 2;
@@ -316,7 +316,7 @@ export class BlacksmithNPC {
       ctx.fillStyle = '#fef08a';
       ctx.font = 'bold 9px sans-serif';
       ctx.textBaseline = 'middle';
-      ctx.fillText('Tekan [A] Buka Bengkel Senjata', x + 16, bubbleY + bubbleH / 2);
+      ctx.fillText('[A] Buka Bengkel Senjata', x + 16, bubbleY + bubbleH / 2);
     }
 
     ctx.restore();

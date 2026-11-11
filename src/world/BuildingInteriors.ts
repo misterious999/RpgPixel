@@ -379,7 +379,7 @@ export class BuildingInteriors {
     if (exitDist < 38) {
       return {
         type: 'DOOR_EXIT',
-        prompt: 'Tekan [A] Keluar ke Desa 🚪',
+        prompt: '[A] Keluar ke Desa 🚪',
         color: '#facc15',
         x: def.insideDoorX + 16,
         y: def.insideDoorY - 12
@@ -613,7 +613,7 @@ export class BuildingInteriors {
   /**
    * Render penanda pintu masuk bangunan di Overworld
    */
-  public renderOverworldDoorMarkers(ctx: CanvasRenderingContext2D, playerCenterX: number, playerCenterY: number): void {
+  public renderOverworldDoorMarkers(ctx: CanvasRenderingContext2D, playerCenterX: number, playerCenterY: number, isSuppressed: boolean = false): void {
     ctx.save();
 
     for (const key of Object.keys(this.doors) as InteriorId[]) {
@@ -651,7 +651,7 @@ export class BuildingInteriors {
       ctx.fillText(doorLabel, dx + 16, dy - 10);
 
       // 3. Prompt Interaksi Mengambang saat Pemain Mendekat
-      if (isNear) {
+      if (isNear && !isSuppressed) {
         const bob = Math.sin(this.animTimer * 2) * 2;
         ctx.font = 'bold 8.5px sans-serif';
         const promptText = `[A] Masuk ${def.tag}`;
@@ -685,7 +685,8 @@ export class BuildingInteriors {
     currentRoom: InteriorId,
     _camera: Camera,
     playerCenterX: number,
-    playerCenterY: number
+    playerCenterY: number,
+    isSuppressed: boolean = false
   ): void {
     const ts = CONSTANTS.TILE_SIZE;
     const def = this.doors[currentRoom];
@@ -832,14 +833,14 @@ export class BuildingInteriors {
     ctx.textBaseline = 'middle';
     ctx.fillText('🚪 KELUAR', exX + 16, exY);
 
-    if (isNearExit) {
+    if (isNearExit && !isSuppressed) {
       const bob = Math.sin(this.animTimer * 2) * 2;
       ctx.font = 'bold 9.5px sans-serif';
       ctx.strokeStyle = '#000000';
       ctx.lineWidth = 2.5;
-      ctx.strokeText('Tekan [A] Keluar ke Desa 🚪', exX + 16, exY - 20 + bob);
+      ctx.strokeText('[A] Keluar ke Desa 🚪', exX + 16, exY - 20 + bob);
       ctx.fillStyle = '#fef08a';
-      ctx.fillText('Tekan [A] Keluar ke Desa 🚪', exX + 16, exY - 20 + bob);
+      ctx.fillText('[A] Keluar ke Desa 🚪', exX + 16, exY - 20 + bob);
     }
 
     ctx.restore();

@@ -59,7 +59,7 @@ export class CaveEntrance {
     }
   }
 
-  public render(ctx: CanvasRenderingContext2D, isPlayerNear: boolean): void {
+  public render(ctx: CanvasRenderingContext2D, isPlayerNear: boolean, isSuppressed: boolean = false): void {
     const x = Math.floor(this.x);
     const y = Math.floor(this.y);
 
@@ -173,7 +173,7 @@ export class CaveEntrance {
     ctx.fillText('DUNGEON GUA', x + 32, y - 3.5);
 
     // 7. Interactive Prompt when player is near
-    if (isPlayerNear) {
+    if (isPlayerNear && !isSuppressed) {
       const bob = Math.sin(this.animTimer) * 2;
       const promptY = y - 29 + bob;
 
