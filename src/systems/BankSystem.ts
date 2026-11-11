@@ -17,10 +17,10 @@ export class BankSystem {
 
   // Exchange Rates (Anime Dungeon Ancient Coins -> Royal Val)
   public readonly exchangeRates: CoinExchangeRate[] = [
-    { id: 'BRONZE_COIN', name: 'Koin Tembaga Purba', rate: 10, icon: '🪙', color: '#d97706' },
-    { id: 'SILVER_COIN', name: 'Koin Perak Kuno', rate: 100, icon: '🥈', color: '#cbd5e1' },
-    { id: 'GOLD_COIN', name: 'Koin Emas Abisal', rate: 1000, icon: '🥇', color: '#facc15' },
-    { id: 'PLATINUM_COIN', name: 'Koin Platina Raja Purba', rate: 10000, icon: '👑', color: '#a5b4fc' }
+    { id: 'BRONZE_COIN', name: 'Koin Tembaga Purba', rate: 5, icon: '🪙', color: '#d97706' },
+    { id: 'SILVER_COIN', name: 'Koin Perak Kuno', rate: 25, icon: '🥈', color: '#cbd5e1' },
+    { id: 'GOLD_COIN', name: 'Koin Emas Abisal', rate: 100, icon: '🥇', color: '#facc15' },
+    { id: 'PLATINUM_COIN', name: 'Koin Platina Raja Purba', rate: 500, icon: '👑', color: '#a5b4fc' }
   ];
 
   // Saved hitboxes for touch interaction

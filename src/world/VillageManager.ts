@@ -2531,8 +2531,10 @@ export class VillageManager {
         ctx.fillText(safeQTarget, qBoxX + 8, qBoxY + 22);
 
         ctx.fillStyle = '#fde047';
-        let rewStr = `Hadiah: +${q.rewardGold} Emas`;
-        if (q.rewardVal) rewStr += ` · +${q.rewardVal} 𝒱`;
+        let rewStr = q.rewardGold > 0 ? `Hadiah: +${q.rewardGold} Emas` : 'Hadiah:';
+        if (q.rewardVal) {
+          rewStr = rewStr === 'Hadiah:' ? `Hadiah: +${q.rewardVal} 𝒱` : `${rewStr} · +${q.rewardVal} 𝒱`;
+        }
         rewStr += ` · +${q.rewardExp} EXP`;
         const safeQReward = CanvasText.truncate(ctx, rewStr, qBoxW - 16);
         ctx.fillText(safeQReward, qBoxX + 8, qBoxY + 36);

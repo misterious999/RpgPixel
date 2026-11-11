@@ -101,10 +101,10 @@ export const SHOP_METADATA: Record<
  */
 export function getItemSellPrice(itemId: string): number {
   const sellPrices: Record<string, number> = {
-    BRONZE_COIN: 10,
-    SILVER_COIN: 100,
-    GOLD_COIN: 1000,
-    PLATINUM_COIN: 10000,
+    BRONZE_COIN: 5,
+    SILVER_COIN: 25,
+    GOLD_COIN: 100,
+    PLATINUM_COIN: 500,
     HEALTH_POTION: 20,
     MANA_POTION: 25,
     ELIXIR_FULL: 125,

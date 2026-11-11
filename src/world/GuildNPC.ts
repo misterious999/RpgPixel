@@ -523,8 +523,8 @@ export class GuildNPC {
       // Rewards line (Emas, Val, EXP)
       ctx.fillStyle = '#eab308';
       ctx.font = '7.5px sans-serif';
-      let rewStr = `+${q.rewardGold} Emas`;
-      if (q.rewardVal) rewStr += ` · +${q.rewardVal} 𝒱`;
+      let rewStr = q.rewardGold > 0 ? `+${q.rewardGold} Emas` : '';
+      if (q.rewardVal) rewStr = rewStr ? `${rewStr} · +${q.rewardVal} 𝒱` : `+${q.rewardVal} 𝒱`;
       rewStr += ` · +${q.rewardExp} EXP`;
       const safeQRewards = CanvasText.truncate(ctx, rewStr, colW - 16);
       ctx.fillText(safeQRewards, cx + 8, cy + 38);

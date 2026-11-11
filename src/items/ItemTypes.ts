@@ -42,7 +42,7 @@ export const ITEM_DEFINITIONS: Record<string, ItemDefinition> = {
   BRONZE_COIN: {
     id: 'BRONZE_COIN',
     name: 'Koin Tembaga Purba',
-    description: 'Koin tembaga kuno peninggalan peradaban bawah tanah. Dapat ditukar di Bank seharga 10 Val.',
+    description: 'Koin tembaga kuno peninggalan peradaban bawah tanah. Dapat ditukar di Bank seharga 5 Val.',
     category: 'treasure',
     maxStack: 999,
     color: '#d97706',
@@ -65,7 +65,7 @@ export const ITEM_DEFINITIONS: Record<string, ItemDefinition> = {
   SILVER_COIN: {
     id: 'SILVER_COIN',
     name: 'Koin Perak Kuno',
-    description: 'Koin perak berukir lambang ksatria purba. Dapat ditukar di Bank seharga 100 Val.',
+    description: 'Koin perak berukir lambang ksatria purba. Dapat ditukar di Bank seharga 25 Val.',
     category: 'treasure',
     maxStack: 999,
     color: '#cbd5e1',
@@ -88,7 +88,7 @@ export const ITEM_DEFINITIONS: Record<string, ItemDefinition> = {
   GOLD_COIN: {
     id: 'GOLD_COIN',
     name: 'Koin Emas Abisal',
-    description: 'Koin emas murni dari monster dan peti dungeon. Dapat ditukar di Bank seharga 1.000 Val.',
+    description: 'Koin emas murni dari monster dan peti dungeon. Dapat ditukar di Bank seharga 100 Val.',
     category: 'treasure',
     maxStack: 999,
     color: '#eab308',
@@ -111,7 +111,7 @@ export const ITEM_DEFINITIONS: Record<string, ItemDefinition> = {
   PLATINUM_COIN: {
     id: 'PLATINUM_COIN',
     name: 'Koin Platina Raja Purba',
-    description: 'Koin platina berkilau kemakmuran peninggalan raja purba abisal. Dapat ditukar di Bank seharga 10.000 Val!',
+    description: 'Koin platina berkilau kemakmuran peninggalan raja purba abisal. Dapat ditukar di Bank seharga 500 Val!',
     category: 'treasure',
     maxStack: 999,
     color: '#a5b4fc',

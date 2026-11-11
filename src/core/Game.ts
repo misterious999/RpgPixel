@@ -832,15 +832,17 @@ export class Game {
     // 1. Treasure Chests
     this.chests.push(
       new Chest(53 * ts + 5, 47 * ts + 6, [
-        { itemId: 'HEALTH_POTION', count: 3 },
-        { itemId: 'GOLD_COIN', count: 50 }
+        { itemId: 'HEALTH_POTION', count: 2 },
+        { itemId: 'BRONZE_COIN', count: 4 }
       ]),
       new Chest(47 * ts + 5, 52 * ts + 6, [
-        { itemId: 'MAGIC_FLOWER', count: 5 },
-        { itemId: 'WOOD_LOG', count: 10 }
+        { itemId: 'MAGIC_FLOWER', count: 4 },
+        { itemId: 'WOOD_LOG', count: 6 }
       ]),
       new Chest(54 * ts + 5, 54 * ts + 6, [
-        { itemId: 'GOLD_COIN', count: 120 }
+        { itemId: 'BRONZE_COIN', count: 6 },
+        { itemId: 'HEALTH_POTION', count: 1 },
+        { itemId: 'MANA_POTION', count: 1 }
       ])
     );
 
@@ -849,10 +851,10 @@ export class Game {
       { dx: -2, dy: -2, item: 'MAGIC_FLOWER', count: 2 },
       { dx: 2, dy: -1, item: 'WOOD_LOG', count: 3 },
       { dx: -3, dy: 2, item: 'WOOD_LOG', count: 2 },
-      { dx: 3, dy: 1, item: 'GOLD_COIN', count: 10 },
+      { dx: 3, dy: 1, item: 'BRONZE_COIN', count: 2 },
       { dx: -1, dy: 3, item: 'HEALTH_POTION', count: 1 },
       { dx: 4, dy: -3, item: 'MAGIC_FLOWER', count: 1 },
-      { dx: -4, dy: -2, item: 'GOLD_COIN', count: 25 },
+      { dx: -4, dy: -2, item: 'BRONZE_COIN', count: 3 },
       { dx: 1, dy: -4, item: 'WOOD_LOG', count: 4 }
     ];
 
@@ -897,31 +899,27 @@ export class Game {
     this.dungeonChests = [
       // Peti 1: Ruang Tengkorak Kuno (West Crypt)
       new Chest(6 * ts + 5, 15 * ts + 6, [
-        { itemId: 'BRONZE_COIN', count: 18 },
-        { itemId: 'SILVER_COIN', count: 3 },
-        { itemId: 'GOLD_COIN', count: 1 },
-        { itemId: 'HEALTH_POTION', count: 2 },
-        { itemId: 'ANCIENT_BONE', count: 3 },
-        { itemId: 'DARK_IRON_ORE', count: 5 }
+        { itemId: 'BRONZE_COIN', count: 4 },
+        { itemId: 'SILVER_COIN', count: 1 },
+        { itemId: 'HEALTH_POTION', count: 1 },
+        { itemId: 'ANCIENT_BONE', count: 2 },
+        { itemId: 'DARK_IRON_ORE', count: 2 }
       ]),
       // Peti 2: Gua Kristal Mineral (East Cavern)
       new Chest(34 * ts + 5, 15 * ts + 6, [
-        { itemId: 'BRONZE_COIN', count: 25 },
-        { itemId: 'SILVER_COIN', count: 5 },
-        { itemId: 'GOLD_COIN', count: 2 },
-        { itemId: 'MANA_POTION', count: 3 },
-        { itemId: 'DUNGEON_GEM', count: 1 },
-        { itemId: 'DARK_IRON_ORE', count: 6 }
+        { itemId: 'BRONZE_COIN', count: 6 },
+        { itemId: 'SILVER_COIN', count: 2 },
+        { itemId: 'MANA_POTION', count: 1 },
+        { itemId: 'DARK_IRON_ORE', count: 3 }
       ]),
       // Peti 3: Harta Karun Legendaris di Belakang Altar Bos (North Chamber)
       new Chest(24 * ts + 5, 4 * ts + 6, [
-        { itemId: 'SILVER_COIN', count: 15 },
-        { itemId: 'GOLD_COIN', count: 5 },
-        { itemId: 'PLATINUM_COIN', count: 1 },
-        { itemId: 'DUNGEON_GEM', count: 3 },
-        { itemId: 'HEALTH_POTION', count: 4 },
-        { itemId: 'MANA_POTION', count: 4 },
-        { itemId: 'DARK_IRON_ORE', count: 10 }
+        { itemId: 'SILVER_COIN', count: 3 },
+        { itemId: 'GOLD_COIN', count: 1 },
+        { itemId: 'DUNGEON_GEM', count: 1 },
+        { itemId: 'HEALTH_POTION', count: 2 },
+        { itemId: 'MANA_POTION', count: 2 },
+        { itemId: 'DARK_IRON_ORE', count: 4 }
       ])
     ];
 
@@ -1089,27 +1087,25 @@ export class Game {
     // Peti Harta Karun Lantai 3 (Ruang Rahasia Barat & Timur & Tahta Naga)
     this.floor3Chests = [
       new Chest(5 * ts + 5, 16 * ts + 6, [
-        { itemId: 'SILVER_COIN', count: 12 },
-        { itemId: 'GOLD_COIN', count: 4 },
-        { itemId: 'PLATINUM_COIN', count: 1 },
-        { itemId: 'DARK_IRON_ORE', count: 12 },
-        { itemId: 'HEALTH_POTION', count: 4 }
+        { itemId: 'SILVER_COIN', count: 3 },
+        { itemId: 'GOLD_COIN', count: 1 },
+        { itemId: 'DARK_IRON_ORE', count: 4 },
+        { itemId: 'HEALTH_POTION', count: 2 }
       ]),
       new Chest(34 * ts + 5, 16 * ts + 6, [
-        { itemId: 'SILVER_COIN', count: 16 },
-        { itemId: 'GOLD_COIN', count: 6 },
-        { itemId: 'PLATINUM_COIN', count: 1 },
-        { itemId: 'DUNGEON_GEM', count: 6 },
-        { itemId: 'MANA_POTION', count: 5 }
+        { itemId: 'SILVER_COIN', count: 4 },
+        { itemId: 'GOLD_COIN', count: 1 },
+        { itemId: 'DUNGEON_GEM', count: 1 },
+        { itemId: 'MANA_POTION', count: 2 }
       ]),
       new Chest(27 * ts + 8, 4 * ts + 8, [
-        { itemId: 'SILVER_COIN', count: 30 },
-        { itemId: 'GOLD_COIN', count: 15 },
-        { itemId: 'PLATINUM_COIN', count: 3 },
-        { itemId: 'DUNGEON_GEM', count: 10 },
-        { itemId: 'DARK_IRON_ORE', count: 20 },
-        { itemId: 'HEALTH_POTION', count: 6 },
-        { itemId: 'MANA_POTION', count: 6 }
+        { itemId: 'SILVER_COIN', count: 5 },
+        { itemId: 'GOLD_COIN', count: 2 },
+        { itemId: 'PLATINUM_COIN', count: 1 },
+        { itemId: 'DUNGEON_GEM', count: 3 },
+        { itemId: 'DARK_IRON_ORE', count: 6 },
+        { itemId: 'HEALTH_POTION', count: 3 },
+        { itemId: 'MANA_POTION', count: 3 }
       ])
     ];
   }
@@ -1273,25 +1269,25 @@ export class Game {
 
     this.eldoriaChests = [
       new Chest(7 * ts + 8, 21 * ts + 8, [
-        { itemId: 'SILVER_COIN', count: 15 },
-        { itemId: 'GOLD_COIN', count: 4 },
-        { itemId: 'MAGIC_FLOWER', count: 12 },
-        { itemId: 'HEALTH_POTION', count: 4 }
+        { itemId: 'SILVER_COIN', count: 3 },
+        { itemId: 'GOLD_COIN', count: 1 },
+        { itemId: 'MAGIC_FLOWER', count: 4 },
+        { itemId: 'HEALTH_POTION', count: 2 }
       ]),
       new Chest(28 * ts + 8, 21 * ts + 8, [
-        { itemId: 'SILVER_COIN', count: 20 },
-        { itemId: 'GOLD_COIN', count: 6 },
-        { itemId: 'MANA_POTION', count: 5 },
-        { itemId: 'DUNGEON_GEM', count: 4 }
+        { itemId: 'SILVER_COIN', count: 4 },
+        { itemId: 'GOLD_COIN', count: 1 },
+        { itemId: 'MANA_POTION', count: 2 },
+        { itemId: 'DUNGEON_GEM', count: 1 }
       ]),
       new Chest(24 * ts + 8, 5 * ts + 8, [
-        { itemId: 'SILVER_COIN', count: 35 },
-        { itemId: 'GOLD_COIN', count: 15 },
-        { itemId: 'PLATINUM_COIN', count: 2 },
-        { itemId: 'DUNGEON_GEM', count: 8 },
-        { itemId: 'MAGIC_FLOWER', count: 20 },
-        { itemId: 'HEALTH_POTION', count: 8 },
-        { itemId: 'MANA_POTION', count: 8 }
+        { itemId: 'SILVER_COIN', count: 5 },
+        { itemId: 'GOLD_COIN', count: 2 },
+        { itemId: 'PLATINUM_COIN', count: 1 },
+        { itemId: 'DUNGEON_GEM', count: 3 },
+        { itemId: 'MAGIC_FLOWER', count: 6 },
+        { itemId: 'HEALTH_POTION', count: 3 },
+        { itemId: 'MANA_POTION', count: 3 }
       ])
     ];
   }
@@ -1319,26 +1315,26 @@ export class Game {
 
     this.stonewatchChests = [
       new Chest(7 * ts + 8, 21 * ts + 8, [
-        { itemId: 'SILVER_COIN', count: 18 },
-        { itemId: 'GOLD_COIN', count: 5 },
-        { itemId: 'DARK_IRON_ORE', count: 15 },
-        { itemId: 'HEALTH_POTION', count: 5 }
+        { itemId: 'SILVER_COIN', count: 3 },
+        { itemId: 'GOLD_COIN', count: 1 },
+        { itemId: 'DARK_IRON_ORE', count: 4 },
+        { itemId: 'HEALTH_POTION', count: 2 }
       ]),
       new Chest(27 * ts + 8, 20 * ts + 8, [
-        { itemId: 'SILVER_COIN', count: 24 },
-        { itemId: 'GOLD_COIN', count: 8 },
-        { itemId: 'PLATINUM_COIN', count: 1 },
-        { itemId: 'DARK_IRON_ORE', count: 20 },
-        { itemId: 'DUNGEON_GEM', count: 5 }
+        { itemId: 'SILVER_COIN', count: 4 },
+        { itemId: 'GOLD_COIN', count: 1 },
+        { itemId: 'DARK_IRON_ORE', count: 5 },
+        { itemId: 'DUNGEON_GEM', count: 1 },
+        { itemId: 'MANA_POTION', count: 2 }
       ]),
       new Chest(24 * ts + 8, 5 * ts + 8, [
-        { itemId: 'SILVER_COIN', count: 40 },
-        { itemId: 'GOLD_COIN', count: 20 },
-        { itemId: 'PLATINUM_COIN', count: 3 },
-        { itemId: 'DUNGEON_GEM', count: 12 },
-        { itemId: 'DARK_IRON_ORE', count: 35 },
-        { itemId: 'HEALTH_POTION', count: 8 },
-        { itemId: 'MANA_POTION', count: 8 }
+        { itemId: 'SILVER_COIN', count: 5 },
+        { itemId: 'GOLD_COIN', count: 2 },
+        { itemId: 'PLATINUM_COIN', count: 1 },
+        { itemId: 'DUNGEON_GEM', count: 3 },
+        { itemId: 'DARK_IRON_ORE', count: 8 },
+        { itemId: 'HEALTH_POTION', count: 3 },
+        { itemId: 'MANA_POTION', count: 3 }
       ])
     ];
   }
@@ -1637,7 +1633,7 @@ export class Game {
         <div style="display: flex; flex-direction: column; gap: 8px;">
           <div style="background: rgba(30, 41, 59, 0.85); border: 1px solid #38bdf8; border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <div style="font-weight: bold; font-size: 13px; color: #38bdf8;">🛡️ Rodric (Ksatria Baja) [50 Gold]</div>
+              <div style="font-weight: bold; font-size: 13px; color: #38bdf8;">🛡️ Rodric (Ksatria Baja) [4 Emas / 400 𝒱]</div>
               <div style="font-size: 11px; color: #cbd5e1;">Tanker tangguh berzirah baja tebal yang menarik perhatian monster.</div>
             </div>
             <button id="hire-rodric-btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">Rekrut</button>
@@ -1645,7 +1641,7 @@ export class Game {
 
           <div style="background: rgba(30, 41, 59, 0.85); border: 1px solid #c084fc; border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <div style="font-weight: bold; font-size: 13px; color: #c084fc;">🔮 Lyra (Penyihir Bintang Peri) [65 Gold]</div>
+              <div style="font-weight: bold; font-size: 13px; color: #c084fc;">🔮 Lyra (Penyihir Bintang Peri) [5 Emas / 500 𝒱]</div>
               <div style="font-size: 11px; color: #cbd5e1;">Penyihir elf anggun dengan tembakan sihir bintang jarak jauh.</div>
             </div>
             <button id="hire-lyra-btn" style="background: linear-gradient(135deg, #9333ea, #7e22ce); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">Rekrut</button>
@@ -1653,7 +1649,7 @@ export class Game {
 
           <div style="background: rgba(30, 41, 59, 0.85); border: 1px solid #4ade80; border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
             <div>
-              <div style="font-weight: bold; font-size: 13px; color: #4ade80;">🌿 Flora (Pendeta Suci) [50 Gold]</div>
+              <div style="font-weight: bold; font-size: 13px; color: #4ade80;">🌿 Flora (Pendeta Suci) [4 Emas / 400 𝒱]</div>
               <div style="font-size: 11px; color: #cbd5e1;">Pendeta berhati mulia yang otomatis menyembuhkan HP saat sekarat.</div>
             </div>
             <button id="hire-flora-btn" style="background: linear-gradient(135deg, #16a34a, #15803d); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">Rekrut</button>
@@ -1666,13 +1662,16 @@ export class Game {
     const closeBtn = document.getElementById('close-companion-btn');
     if (closeBtn) closeBtn.onclick = () => modal.remove();
 
-    const hireHelper = (type: CompanionType, cost: number, name: string, color: string) => {
+    const hireHelper = (type: CompanionType, goldCost: number, valCost: number, name: string, color: string) => {
       const gold = this.player.inventory.getItemCount('GOLD_COIN');
-      if (gold < cost) {
-        this.floatingText.spawn(this.player.x + 12, this.player.y - 16, `Koin Emas tidak cukup (butuh ${cost})!`, '#ef4444');
+      if (gold >= goldCost) {
+        this.player.inventory.removeItemsById('GOLD_COIN', goldCost);
+      } else if (this.player.val >= valCost) {
+        this.player.removeVal(valCost);
+      } else {
+        this.floatingText.spawn(this.player.x + 12, this.player.y - 16, `Butuh ${goldCost} Koin Emas atau ${valCost} 𝒱!`, '#ef4444');
         return;
       }
-      this.player.inventory.removeItemsById('GOLD_COIN', cost);
       this.companion = new Companion(type, this.player.x - 24, this.player.y);
       this.saveSessionSnapshot();
       AudioEngine.playLevelUp();
@@ -1681,11 +1680,11 @@ export class Game {
     };
 
     const rBtn = document.getElementById('hire-rodric-btn');
-    if (rBtn) rBtn.onclick = () => hireHelper('RODRIC', 50, 'Rodric', '#38bdf8');
+    if (rBtn) rBtn.onclick = () => hireHelper('RODRIC', 4, 400, 'Rodric', '#38bdf8');
     const lBtn = document.getElementById('hire-lyra-btn');
-    if (lBtn) lBtn.onclick = () => hireHelper('LYRA', 65, 'Lyra', '#c084fc');
+    if (lBtn) lBtn.onclick = () => hireHelper('LYRA', 5, 500, 'Lyra', '#c084fc');
     const fBtn = document.getElementById('hire-flora-btn');
-    if (fBtn) fBtn.onclick = () => hireHelper('FLORA', 50, 'Flora', '#4ade80');
+    if (fBtn) fBtn.onclick = () => hireHelper('FLORA', 4, 400, 'Flora', '#4ade80');
   }
 
   public openPetAdoptionDialog(): void {
@@ -1788,7 +1787,6 @@ export class Game {
   private handleMonsterDefeated(monster: Monster): void {
     const isNight = this.timeWeatherEngine.isNight();
     const expReward = isNight ? Math.round(monster.expReward * 1.25) : monster.expReward;
-    const goldReward = isNight ? Math.round(monster.goldReward * 1.25) : monster.goldReward;
 
     const leveledUp = this.player.addExp(expReward);
     this.floatingText.spawn(
@@ -1824,47 +1822,43 @@ export class Game {
         ? this.eldoriaWorldItems
         : this.stonewatchWorldItems;
 
-    // Drop Koin Emas Tradisional
-    targetItems.push(new WorldItem(monster.x + 4, monster.y + 4, 'GOLD_COIN', goldReward));
-
     // --- OVERWORLD MONSTER DROPS (Koin Perunggu Anime & Bahan) ---
     if (monster.type === 'FOREST_SLIME') {
       if (Math.random() < 0.70) targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'BRONZE_COIN', 1 + Math.floor(Math.random() * 2)));
       if (Math.random() < 0.65) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'SLIME_JELLY', 1));
       if (Math.random() < 0.40) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'MAGIC_FLOWER', 1));
     } else if (monster.type === 'WILD_WOLF') {
-      if (Math.random() < 0.75) targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'BRONZE_COIN', 2 + Math.floor(Math.random() * 3)));
+      if (Math.random() < 0.75) targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'BRONZE_COIN', 2 + Math.floor(Math.random() * 2)));
       if (Math.random() < 0.75) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'WOLF_MEAT', 1));
       if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'HEALTH_POTION', 1));
       if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'MANA_POTION', 1));
     } else if (monster.type === 'GOBLIN') {
-      if (Math.random() < 0.85) targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'BRONZE_COIN', 3 + Math.floor(Math.random() * 4)));
+      if (Math.random() < 0.85) targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'BRONZE_COIN', 2 + Math.floor(Math.random() * 2)));
       if (Math.random() < 0.60) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'WOOD_LOG', 2));
       if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 1));
     }
     // --- DUNGEON FLOOR 1 MONSTER DROPS ---
     else if (monster.type === 'SLIME') {
-      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'BRONZE_COIN', 3 + Math.floor(Math.random() * 4)));
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'BRONZE_COIN', 2 + Math.floor(Math.random() * 2)));
       if (Math.random() < 0.65) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'SLIME_JELLY', 1));
-      if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 1));
+      if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 1));
     } else if (monster.type === 'BAT') {
-      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'BRONZE_COIN', 4 + Math.floor(Math.random() * 5)));
-      if (Math.random() < 0.5) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 2));
-      if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 1));
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'BRONZE_COIN', 2 + Math.floor(Math.random() * 3)));
+      if (Math.random() < 0.50) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 1));
+      if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 1));
     } else if (monster.type === 'SKELETON') {
-      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 1 + Math.floor(Math.random() * 2)));
-      if (Math.random() < 0.75) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'ANCIENT_BONE', 1));
-      if (Math.random() < 0.65) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 2));
-      if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 6, monster.y + 12, 'MANA_POTION', 1));
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 1));
+      if (Math.random() < 0.65) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'ANCIENT_BONE', 1));
+      if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'DARK_IRON_ORE', 1));
+      if (Math.random() < 0.25) targetItems.push(new WorldItem(monster.x + 6, monster.y + 12, 'MANA_POTION', 1));
     } else if (monster.type === 'BOSS_SLIME') {
-      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'SILVER_COIN', 10));
-      targetItems.push(new WorldItem(monster.x + 12, monster.y + 6, 'GOLD_COIN', 3));
-      targetItems.push(new WorldItem(monster.x + 14, monster.y + 8, 'PLATINUM_COIN', 1));
-      targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 3));
-      targetItems.push(new WorldItem(monster.x + 24, monster.y + 12, 'DARK_IRON_ORE', 6));
-      targetItems.push(new WorldItem(monster.x + 12, monster.y + 16, 'SLIME_JELLY', 4));
-      targetItems.push(new WorldItem(monster.x + 28, monster.y + 14, 'HEALTH_POTION', 3));
-      targetItems.push(new WorldItem(monster.x + 6, monster.y + 14, 'MANA_POTION', 3));
+      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'SILVER_COIN', 3));
+      targetItems.push(new WorldItem(monster.x + 12, monster.y + 6, 'GOLD_COIN', 1));
+      targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 2));
+      targetItems.push(new WorldItem(monster.x + 24, monster.y + 12, 'DARK_IRON_ORE', 3));
+      targetItems.push(new WorldItem(monster.x + 12, monster.y + 16, 'SLIME_JELLY', 3));
+      targetItems.push(new WorldItem(monster.x + 28, monster.y + 14, 'HEALTH_POTION', 2));
+      targetItems.push(new WorldItem(monster.x + 6, monster.y + 14, 'MANA_POTION', 2));
 
       // Buka akses tangga menuju Lantai 2
       this.dungeonMap.isFloor2Unlocked = true;
@@ -1874,23 +1868,21 @@ export class Game {
     }
     // --- DUNGEON FLOOR 2 MONSTER DROPS ---
     else if (monster.type === 'STONE_GOLEM') {
-      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 2 + Math.floor(Math.random() * 3)));
-      targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DARK_IRON_ORE', 2));
-      if (Math.random() < 0.5) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'ANCIENT_BONE', 1));
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 1 + Math.floor(Math.random() * 2)));
+      targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DARK_IRON_ORE', 1));
+      if (Math.random() < 0.40) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'ANCIENT_BONE', 1));
     } else if (monster.type === 'CRYPT_SHADOW') {
-      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 3 + Math.floor(Math.random() * 3)));
-      targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 2));
-      if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'MANA_POTION', 1));
-      if (Math.random() < 0.4) targetItems.push(new WorldItem(monster.x + 6, monster.y + 14, 'ANCIENT_BONE', 1));
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 1 + Math.floor(Math.random() * 2)));
+      targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 1));
+      if (Math.random() < 0.30) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'MANA_POTION', 1));
+      if (Math.random() < 0.30) targetItems.push(new WorldItem(monster.x + 6, monster.y + 14, 'ANCIENT_BONE', 1));
     } else if (monster.type === 'BOSS_TITAN_GOLEM') {
-      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'SILVER_COIN', 20));
-      targetItems.push(new WorldItem(monster.x + 12, monster.y + 6, 'GOLD_COIN', 6));
-      targetItems.push(new WorldItem(monster.x + 14, monster.y + 8, 'PLATINUM_COIN', 2));
-      targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 5));
-      targetItems.push(new WorldItem(monster.x + 24, monster.y + 12, 'DARK_IRON_ORE', 8));
-      targetItems.push(new WorldItem(monster.x + 10, monster.y + 16, 'HEALTH_POTION', 4));
-      targetItems.push(new WorldItem(monster.x + 28, monster.y + 16, 'MANA_POTION', 4));
-      targetItems.push(new WorldItem(monster.x + 18, monster.y + 20, 'GOLD_COIN', 300));
+      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'SILVER_COIN', 4));
+      targetItems.push(new WorldItem(monster.x + 12, monster.y + 6, 'GOLD_COIN', 2));
+      targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 3));
+      targetItems.push(new WorldItem(monster.x + 24, monster.y + 12, 'DARK_IRON_ORE', 4));
+      targetItems.push(new WorldItem(monster.x + 10, monster.y + 16, 'HEALTH_POTION', 2));
+      targetItems.push(new WorldItem(monster.x + 28, monster.y + 16, 'MANA_POTION', 2));
 
       this.dungeonFloor2.isFloor3Unlocked = true;
       this.titleSystem.unlockTitle('TITAN_BREAKER', this.player, this.floatingText);
@@ -1899,30 +1891,29 @@ export class Game {
     }
     // --- DUNGEON FLOOR 3 MONSTER DROPS ---
     else if (monster.type === 'INFERNO_HELLHOUND') {
-      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 4 + Math.floor(Math.random() * 5)));
-      if (Math.random() < 0.8) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'WOLF_MEAT', 2));
-      if (Math.random() < 0.5) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DARK_IRON_ORE', 2));
-      if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'HEALTH_POTION', 1));
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 1 + Math.floor(Math.random() * 2)));
+      if (Math.random() < 0.60) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'WOLF_MEAT', 1));
+      if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DARK_IRON_ORE', 1));
+      if (Math.random() < 0.30) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'HEALTH_POTION', 1));
     } else if (monster.type === 'ABYSSAL_REAPER') {
-      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 6 + Math.floor(Math.random() * 5)));
-      if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 6, monster.y + 2, 'GOLD_COIN', 1));
-      if (Math.random() < 0.6) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DUNGEON_GEM', 1));
-      if (Math.random() < 0.6) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 3));
-      if (Math.random() < 0.5) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'MANA_POTION', 2));
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 2 + Math.floor(Math.random() * 2)));
+      if (Math.random() < 0.15) targetItems.push(new WorldItem(monster.x + 6, monster.y + 2, 'GOLD_COIN', 1));
+      if (Math.random() < 0.40) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DUNGEON_GEM', 1));
+      if (Math.random() < 0.50) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 2));
+      if (Math.random() < 0.30) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'MANA_POTION', 1));
     } else if (monster.type === 'INFERNAL_KNIGHT') {
-      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 8 + Math.floor(Math.random() * 5)));
-      if (Math.random() < 0.5) targetItems.push(new WorldItem(monster.x + 6, monster.y + 2, 'GOLD_COIN', 1));
-      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DARK_IRON_ORE', 3));
-      if (Math.random() < 0.6) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'ANCIENT_BONE', 2));
-      if (Math.random() < 0.5) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'HEALTH_POTION', 2));
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 2 + Math.floor(Math.random() * 2)));
+      if (Math.random() < 0.20) targetItems.push(new WorldItem(monster.x + 6, monster.y + 2, 'GOLD_COIN', 1));
+      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DARK_IRON_ORE', 2));
+      if (Math.random() < 0.40) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'ANCIENT_BONE', 1));
+      if (Math.random() < 0.30) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'HEALTH_POTION', 1));
     } else if (monster.type === 'BOSS_INFERNAL_DRAGON') {
-      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'GOLD_COIN', 15));
-      targetItems.push(new WorldItem(monster.x + 14, monster.y + 8, 'PLATINUM_COIN', 5));
-      targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 8));
-      targetItems.push(new WorldItem(monster.x + 28, monster.y + 12, 'DARK_IRON_ORE', 12));
-      targetItems.push(new WorldItem(monster.x + 10, monster.y + 16, 'HEALTH_POTION', 6));
-      targetItems.push(new WorldItem(monster.x + 36, monster.y + 16, 'MANA_POTION', 6));
-      targetItems.push(new WorldItem(monster.x + 20, monster.y + 24, 'GOLD_COIN', 600));
+      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'GOLD_COIN', 3));
+      targetItems.push(new WorldItem(monster.x + 14, monster.y + 8, 'PLATINUM_COIN', 1));
+      targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 4));
+      targetItems.push(new WorldItem(monster.x + 28, monster.y + 12, 'DARK_IRON_ORE', 6));
+      targetItems.push(new WorldItem(monster.x + 10, monster.y + 16, 'HEALTH_POTION', 3));
+      targetItems.push(new WorldItem(monster.x + 36, monster.y + 16, 'MANA_POTION', 3));
 
       this.titleSystem.unlockTitle('DRAGON_SLAYER', this.player, this.floatingText);
       this.floatingText.spawn(monster.x + 20, monster.y - 32, '👑 RAJA NAGA IGNIS DIKALAHKAN!!', '#facc15', 5.0);
@@ -1930,26 +1921,25 @@ export class Game {
     }
     // --- DUNGEON ELDORIA (KUIL ROH HUTAN) MONSTER DROPS ---
     else if (monster.type === 'SYLVAN_SPRITE') {
-      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 2 + Math.floor(Math.random() * 4)));
-      if (Math.random() < 0.70) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'MAGIC_FLOWER', 2));
-      if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MANA_POTION', 1));
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 1 + Math.floor(Math.random() * 2)));
+      if (Math.random() < 0.60) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'MAGIC_FLOWER', 1));
+      if (Math.random() < 0.30) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MANA_POTION', 1));
     } else if (monster.type === 'VINE_CREEPER') {
-      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 3 + Math.floor(Math.random() * 4)));
-      if (Math.random() < 0.70) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'WOOD_LOG', 2));
-      if (Math.random() < 0.40) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 2));
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 1 + Math.floor(Math.random() * 2)));
+      if (Math.random() < 0.60) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'WOOD_LOG', 1));
+      if (Math.random() < 0.30) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'MAGIC_FLOWER', 1));
     } else if (monster.type === 'TREANT_WARRIOR') {
-      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 4 + Math.floor(Math.random() * 5)));
-      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'WOOD_LOG', 3));
-      if (Math.random() < 0.50) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DARK_IRON_ORE', 2));
-      if (Math.random() < 0.40) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'HEALTH_POTION', 1));
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 2 + Math.floor(Math.random() * 2)));
+      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'WOOD_LOG', 2));
+      if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DARK_IRON_ORE', 1));
+      if (Math.random() < 0.25) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'HEALTH_POTION', 1));
     } else if (monster.type === 'BOSS_ANCIENT_ENT') {
-      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'GOLD_COIN', 8));
-      targetItems.push(new WorldItem(monster.x + 14, monster.y + 8, 'PLATINUM_COIN', 2));
-      targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 6));
-      targetItems.push(new WorldItem(monster.x + 28, monster.y + 12, 'MAGIC_FLOWER', 10));
-      targetItems.push(new WorldItem(monster.x + 10, monster.y + 16, 'WOOD_LOG', 15));
-      targetItems.push(new WorldItem(monster.x + 36, monster.y + 16, 'HEALTH_POTION', 5));
-      targetItems.push(new WorldItem(monster.x + 20, monster.y + 24, 'GOLD_COIN', 800));
+      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'GOLD_COIN', 3));
+      targetItems.push(new WorldItem(monster.x + 14, monster.y + 8, 'PLATINUM_COIN', 1));
+      targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 3));
+      targetItems.push(new WorldItem(monster.x + 28, monster.y + 12, 'MAGIC_FLOWER', 6));
+      targetItems.push(new WorldItem(monster.x + 10, monster.y + 16, 'WOOD_LOG', 6));
+      targetItems.push(new WorldItem(monster.x + 36, monster.y + 16, 'HEALTH_POTION', 3));
 
       this.titleSystem.unlockTitle('SYLVAN_WARDEN', this.player, this.floatingText);
       this.floatingText.spawn(monster.x + 16, monster.y - 32, '🌿 ENT PURBA RIMBA DITUMBANGKAN!!', '#4ade80', 5.0);
@@ -1957,28 +1947,27 @@ export class Game {
     }
     // --- DUNGEON STONEWATCH (TAMBANG BESI ABISAL) MONSTER DROPS ---
     else if (monster.type === 'CRYSTAL_SPIDER') {
-      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 3 + Math.floor(Math.random() * 5)));
-      if (Math.random() < 0.55) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DUNGEON_GEM', 1));
-      if (Math.random() < 0.50) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DARK_IRON_ORE', 2));
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 1 + Math.floor(Math.random() * 2)));
+      if (Math.random() < 0.40) targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DUNGEON_GEM', 1));
+      if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DARK_IRON_ORE', 1));
     } else if (monster.type === 'IRONCLAD_SKELETON') {
-      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 4 + Math.floor(Math.random() * 6)));
-      if (Math.random() < 0.35) targetItems.push(new WorldItem(monster.x + 6, monster.y + 2, 'GOLD_COIN', 1));
-      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DARK_IRON_ORE', 3));
-      if (Math.random() < 0.60) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'ANCIENT_BONE', 2));
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 2 + Math.floor(Math.random() * 2)));
+      if (Math.random() < 0.15) targetItems.push(new WorldItem(monster.x + 6, monster.y + 2, 'GOLD_COIN', 1));
+      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DARK_IRON_ORE', 1));
+      if (Math.random() < 0.40) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'ANCIENT_BONE', 1));
     } else if (monster.type === 'ARMORED_GOLEM') {
-      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 5 + Math.floor(Math.random() * 6)));
-      if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 6, monster.y + 2, 'GOLD_COIN', 1));
-      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DARK_IRON_ORE', 4));
-      if (Math.random() < 0.40) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DUNGEON_GEM', 2));
-      if (Math.random() < 0.45) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'HEALTH_POTION', 2));
+      targetItems.push(new WorldItem(monster.x + 2, monster.y + 2, 'SILVER_COIN', 2 + Math.floor(Math.random() * 2)));
+      if (Math.random() < 0.20) targetItems.push(new WorldItem(monster.x + 6, monster.y + 2, 'GOLD_COIN', 1));
+      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'DARK_IRON_ORE', 2));
+      if (Math.random() < 0.30) targetItems.push(new WorldItem(monster.x + 12, monster.y + 8, 'DUNGEON_GEM', 1));
+      if (Math.random() < 0.30) targetItems.push(new WorldItem(monster.x + 4, monster.y + 12, 'HEALTH_POTION', 1));
     } else if (monster.type === 'BOSS_OBSIDIAN_BEHEMOTH') {
-      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'GOLD_COIN', 12));
-      targetItems.push(new WorldItem(monster.x + 14, monster.y + 8, 'PLATINUM_COIN', 3));
-      targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 8));
-      targetItems.push(new WorldItem(monster.x + 28, monster.y + 12, 'DARK_IRON_ORE', 16));
-      targetItems.push(new WorldItem(monster.x + 10, monster.y + 16, 'HEALTH_POTION', 6));
-      targetItems.push(new WorldItem(monster.x + 36, monster.y + 16, 'MANA_POTION', 6));
-      targetItems.push(new WorldItem(monster.x + 20, monster.y + 24, 'GOLD_COIN', 1000));
+      targetItems.push(new WorldItem(monster.x + 8, monster.y + 4, 'GOLD_COIN', 3));
+      targetItems.push(new WorldItem(monster.x + 14, monster.y + 8, 'PLATINUM_COIN', 1));
+      targetItems.push(new WorldItem(monster.x + 16, monster.y + 8, 'DUNGEON_GEM', 4));
+      targetItems.push(new WorldItem(monster.x + 28, monster.y + 12, 'DARK_IRON_ORE', 6));
+      targetItems.push(new WorldItem(monster.x + 10, monster.y + 16, 'HEALTH_POTION', 3));
+      targetItems.push(new WorldItem(monster.x + 36, monster.y + 16, 'MANA_POTION', 3));
 
       this.titleSystem.unlockTitle('MINE_CONQUEROR', this.player, this.floatingText);
       this.floatingText.spawn(monster.x + 16, monster.y - 32, '⚒️ BEHEMOTH OBSIDIAN DIHANCURKAN!!', '#f59e0b', 5.0);

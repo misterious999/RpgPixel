@@ -202,7 +202,7 @@ export class Player {
 
     // Starter Items
     this.inventory.addItem('HEALTH_POTION', 3);
-    this.inventory.addItem('GOLD_COIN', 50);
+    this.inventory.addItem('BRONZE_COIN', 5);
 
     this.updateSkills();
   }

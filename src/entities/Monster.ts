@@ -88,7 +88,7 @@ export class Monster {
         this.level = 2;
         this.attackPower = 8;
         this.expReward = 25;
-        this.goldReward = 16;
+        this.goldReward = 2;
         this.speed = 36;
         this.aggroRange = 100;
         this.tier = 'LOW';
@@ -102,7 +102,7 @@ export class Monster {
         this.level = 3;
         this.attackPower = 9;
         this.expReward = 28;
-        this.goldReward = 14;
+        this.goldReward = 2;
         this.speed = 60;
         this.aggroRange = 120;
         this.tier = 'MID';
@@ -116,7 +116,7 @@ export class Monster {
         this.level = 4;
         this.attackPower = 15;
         this.expReward = 55;
-        this.goldReward = 38;
+        this.goldReward = 1;
         this.speed = 42;
         this.aggroRange = 115;
         this.tier = 'HIGH';
@@ -130,7 +130,7 @@ export class Monster {
         this.level = 8;
         this.attackPower = 24;
         this.expReward = 280;
-        this.goldReward = 180;
+        this.goldReward = 1;
         this.speed = 32;
         this.aggroRange = 140;
         this.tier = 'BOSS';
@@ -144,7 +144,7 @@ export class Monster {
         this.level = 1;
         this.attackPower = 5;
         this.expReward = 20;
-        this.goldReward = 12;
+        this.goldReward = 1;
         this.speed = 32;
         this.aggroRange = 90;
         this.tier = 'LOW';
@@ -158,7 +158,7 @@ export class Monster {
         this.level = 3;
         this.attackPower = 11;
         this.expReward = 38;
-        this.goldReward = 22;
+        this.goldReward = 2;
         this.speed = 48;
         this.aggroRange = 120;
         this.tier = 'MID';
@@ -172,7 +172,7 @@ export class Monster {
         this.level = 4;
         this.attackPower = 14;
         this.expReward = 50;
-        this.goldReward = 32;
+        this.goldReward = 2;
         this.speed = 40;
         this.aggroRange = 110;
         this.tier = 'MID';
@@ -186,7 +186,7 @@ export class Monster {
         this.level = 6;
         this.attackPower = 20;
         this.expReward = 85;
-        this.goldReward = 55;
+        this.goldReward = 2;
         this.speed = 28;
         this.aggroRange = 105;
         this.tier = 'HIGH';
@@ -200,7 +200,7 @@ export class Monster {
         this.level = 7;
         this.attackPower = 25;
         this.expReward = 95;
-        this.goldReward = 60;
+        this.goldReward = 2;
         this.speed = 52;
         this.aggroRange = 130;
         this.tier = 'HIGH';
@@ -214,7 +214,7 @@ export class Monster {
         this.level = 12;
         this.attackPower = 36;
         this.expReward = 550;
-        this.goldReward = 380;
+        this.goldReward = 2;
         this.speed = 26;
         this.aggroRange = 160;
         this.tier = 'BOSS';
@@ -228,7 +228,7 @@ export class Monster {
         this.level = 9;
         this.attackPower = 28;
         this.expReward = 140;
-        this.goldReward = 90;
+        this.goldReward = 2;
         this.speed = 56;
         this.aggroRange = 130;
         this.tier = 'HIGH';
@@ -242,7 +242,7 @@ export class Monster {
         this.level = 11;
         this.attackPower = 35;
         this.expReward = 190;
-        this.goldReward = 125;
+        this.goldReward = 3;
         this.speed = 46;
         this.aggroRange = 140;
         this.tier = 'HIGH';
@@ -256,7 +256,7 @@ export class Monster {
         this.level = 13;
         this.attackPower = 42;
         this.expReward = 260;
-        this.goldReward = 160;
+        this.goldReward = 3;
         this.speed = 38;
         this.aggroRange = 135;
         this.tier = 'HIGH';
@@ -270,7 +270,7 @@ export class Monster {
         this.level = 18;
         this.attackPower = 52;
         this.expReward = 1200;
-        this.goldReward = 800;
+        this.goldReward = 3;
         this.speed = 30;
         this.aggroRange = 180;
         this.tier = 'BOSS';
@@ -285,7 +285,7 @@ export class Monster {
         this.level = 7;
         this.attackPower = 15;
         this.expReward = 75;
-        this.goldReward = 45;
+        this.goldReward = 2;
         this.speed = 52;
         this.aggroRange = 115;
         this.tier = 'LOW';
@@ -299,7 +299,7 @@ export class Monster {
         this.level = 10;
         this.attackPower = 23;
         this.expReward = 125;
-        this.goldReward = 75;
+        this.goldReward = 2;
         this.speed = 42;
         this.aggroRange = 125;
         this.tier = 'MID';
@@ -313,7 +313,7 @@ export class Monster {
         this.level = 14;
         this.attackPower = 34;
         this.expReward = 220;
-        this.goldReward = 130;
+        this.goldReward = 2;
         this.speed = 34;
         this.aggroRange = 120;
         this.tier = 'HIGH';
@@ -327,7 +327,7 @@ export class Monster {
         this.level = 17;
         this.attackPower = 48;
         this.expReward = 1100;
-        this.goldReward = 750;
+        this.goldReward = 3;
         this.speed = 28;
         this.aggroRange = 170;
         this.tier = 'BOSS';
@@ -342,7 +342,7 @@ export class Monster {
         this.level = 9;
         this.attackPower = 19;
         this.expReward = 95;
-        this.goldReward = 55;
+        this.goldReward = 2;
         this.speed = 56;
         this.aggroRange = 125;
         this.tier = 'LOW';
@@ -356,7 +356,7 @@ export class Monster {
         this.level = 13;
         this.attackPower = 30;
         this.expReward = 175;
-        this.goldReward = 100;
+        this.goldReward = 2;
         this.speed = 38;
         this.aggroRange = 125;
         this.tier = 'MID';
@@ -370,7 +370,7 @@ export class Monster {
         this.level = 16;
         this.attackPower = 40;
         this.expReward = 280;
-        this.goldReward = 165;
+        this.goldReward = 3;
         this.speed = 32;
         this.aggroRange = 130;
         this.tier = 'HIGH';
@@ -384,7 +384,7 @@ export class Monster {
         this.level = 21;
         this.attackPower = 58;
         this.expReward = 1500;
-        this.goldReward = 1000;
+        this.goldReward = 3;
         this.speed = 30;
         this.aggroRange = 180;
         this.tier = 'BOSS';
