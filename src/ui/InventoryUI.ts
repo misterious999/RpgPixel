@@ -19,6 +19,9 @@ export class InventoryUI {
     size: 34
   };
 
+  private actionBtn1Rect = { x: 0, y: 0, w: 0, h: 0 };
+  private actionBtn2Rect = { x: 0, y: 0, w: 0, h: 0 };
+
   constructor(
     private inventory: Inventory,
     private player: Player,
@@ -171,36 +174,31 @@ export class InventoryUI {
       }
     }
 
-    // Right Column: "Gunakan" (Use) button check
-    const col2X = modalX + 204;
-    const col2W = modalWidth - 204 - 16;
-    const btnX = col2X + 10;
-    const btnY = modalY + modalHeight - 44;
-    const btnWidth = col2W - 20;
-    const btnHeight = 32;
-
+    // Right Column: Action buttons check (Gunakan / Cek Kartu / Buang)
     if (this.selectedSlotIndex !== null) {
       const slot = this.inventory.getSlot(this.selectedSlotIndex);
       if (slot) {
         const def = ITEM_DEFINITIONS[slot.itemId];
-        if (def && def.category === 'consumable') {
-          if (
-            touchX >= btnX &&
-            touchX <= btnX + btnWidth &&
-            touchY >= btnY &&
-            touchY <= btnY + btnHeight
-          ) {
-            this.useSelectedItem();
+        if (def) {
+          const { x: b1x, y: b1y, w: b1w, h: b1h } = this.actionBtn1Rect;
+          if (touchX >= b1x && touchX <= b1x + b1w && touchY >= b1y && touchY <= b1y + b1h) {
+            if (def.id === 'ADVENTURER_CARD') {
+              this.inspectAdventurerCard();
+            } else if (def.category === 'consumable') {
+              this.useSelectedItem();
+            } else {
+              this.discardItem(1);
+            }
             return true;
           }
-        } else if (def && def.id === 'ADVENTURER_CARD') {
-          if (
-            touchX >= btnX &&
-            touchX <= btnX + btnWidth &&
-            touchY >= btnY &&
-            touchY <= btnY + btnHeight
-          ) {
-            this.inspectAdventurerCard();
+
+          const { x: b2x, y: b2y, w: b2w, h: b2h } = this.actionBtn2Rect;
+          if (b2w > 0 && touchX >= b2x && touchX <= b2x + b2w && touchY >= b2y && touchY <= b2y + b2h) {
+            if (def.category === 'consumable') {
+              this.discardItem(1);
+            } else {
+              this.discardItem(slot.count);
+            }
             return true;
           }
         }
@@ -208,6 +206,30 @@ export class InventoryUI {
     }
 
     return true; // Modal is open, so swallow touch
+  }
+
+  private discardItem(count: number): void {
+    if (this.selectedSlotIndex === null) return;
+    const slot = this.inventory.getSlot(this.selectedSlotIndex);
+    if (!slot) return;
+    const def = ITEM_DEFINITIONS[slot.itemId];
+    if (!def || def.id === 'ADVENTURER_CARD') return;
+
+    const toDiscard = Math.min(count, slot.count);
+    this.inventory.removeItem(this.selectedSlotIndex, toDiscard);
+    AudioEngine.playItemPickup(false);
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 12, `🗑️ Buang ${toDiscard}x ${def.name}!`, '#f87171', 2.0);
+
+    if (!this.inventory.getSlot(this.selectedSlotIndex)) {
+      let nextIndex: number | null = null;
+      for (let i = 0; i < this.inventory.capacity; i++) {
+        if (this.inventory.slots[i]) {
+          nextIndex = i;
+          break;
+        }
+      }
+      this.selectedSlotIndex = nextIndex;
+    }
   }
 
   private useSelectedItem(): void {
@@ -502,6 +524,9 @@ export class InventoryUI {
 
           // Action Button Render
           if (def.id === 'ADVENTURER_CARD') {
+            this.actionBtn1Rect = { x: btnX, y: btnY, w: btnWidth, h: btnHeight };
+            this.actionBtn2Rect = { x: 0, y: 0, w: 0, h: 0 };
+
             ctx.fillStyle = '#1e3a8a';
             ctx.fillRect(btnX, btnY, btnWidth, btnHeight);
             ctx.strokeStyle = '#60a5fa';
@@ -509,25 +534,80 @@ export class InventoryUI {
             ctx.strokeRect(btnX, btnY, btnWidth, btnHeight);
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 10.5px sans-serif';
+            ctx.font = 'bold 10px sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
             ctx.fillText('🪪 CEK KARTU PETUALANG', btnX + btnWidth / 2, btnY + btnHeight / 2);
           } else if (def.category === 'consumable') {
+            const b1w = Math.floor((btnWidth - 6) * 0.65);
+            const b2w = btnWidth - 6 - b1w;
+            const b1x = btnX;
+            const b2x = b1x + b1w + 6;
+
+            this.actionBtn1Rect = { x: b1x, y: btnY, w: b1w, h: btnHeight };
+            this.actionBtn2Rect = { x: b2x, y: btnY, w: b2w, h: btnHeight };
+
+            // Button 1: Gunakan
             ctx.fillStyle = '#10b981';
-            ctx.fillRect(btnX, btnY, btnWidth, btnHeight);
+            ctx.fillRect(b1x, btnY, b1w, btnHeight);
             ctx.strokeStyle = '#34d399';
             ctx.lineWidth = 1.5;
-            ctx.strokeRect(btnX, btnY, btnWidth, btnHeight);
+            ctx.strokeRect(b1x, btnY, b1w, btnHeight);
 
             ctx.fillStyle = '#ffffff';
-            ctx.font = 'bold 10.5px sans-serif';
+            ctx.font = 'bold 9px sans-serif';
             ctx.textAlign = 'center';
             ctx.textBaseline = 'middle';
-            ctx.fillText('GUNAKAN ITEM', btnX + btnWidth / 2, btnY + btnHeight / 2);
+            ctx.fillText('✨ GUNAKAN', b1x + b1w / 2, btnY + btnHeight / 2);
+
+            // Button 2: Buang (1x)
+            ctx.fillStyle = '#450a0a';
+            ctx.fillRect(b2x, btnY, b2w, btnHeight);
+            ctx.strokeStyle = '#ef4444';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(b2x, btnY, b2w, btnHeight);
+
+            ctx.fillStyle = '#fca5a5';
+            ctx.font = 'bold 8.5px sans-serif';
+            ctx.fillText('🗑️ BUANG', b2x + b2w / 2, btnY + btnHeight / 2);
+          } else {
+            // Materials, Treasures, Loot
+            const b1w = Math.floor((btnWidth - 6) / 2);
+            const b2w = btnWidth - 6 - b1w;
+            const b1x = btnX;
+            const b2x = b1x + b1w + 6;
+
+            this.actionBtn1Rect = { x: b1x, y: btnY, w: b1w, h: btnHeight };
+            this.actionBtn2Rect = { x: b2x, y: btnY, w: b2w, h: btnHeight };
+
+            // Button 1: Buang 1x
+            ctx.fillStyle = '#1e293b';
+            ctx.fillRect(b1x, btnY, b1w, btnHeight);
+            ctx.strokeStyle = '#64748b';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(b1x, btnY, b1w, btnHeight);
+
+            ctx.fillStyle = '#e2e8f0';
+            ctx.font = 'bold 8.5px sans-serif';
+            ctx.textAlign = 'center';
+            ctx.textBaseline = 'middle';
+            ctx.fillText('🗑️ BUANG 1x', b1x + b1w / 2, btnY + btnHeight / 2);
+
+            // Button 2: Buang Semua
+            ctx.fillStyle = '#7f1d1d';
+            ctx.fillRect(b2x, btnY, b2w, btnHeight);
+            ctx.strokeStyle = '#f87171';
+            ctx.lineWidth = 1;
+            ctx.strokeRect(b2x, btnY, b2w, btnHeight);
+
+            ctx.fillStyle = '#ffffff';
+            ctx.font = 'bold 8.5px sans-serif';
+            ctx.fillText(`🗑️ BUANG SEMUA (${slot.count}x)`, b2x + b2w / 2, btnY + btnHeight / 2);
           }
         }
       } else {
+        this.actionBtn1Rect = { x: 0, y: 0, w: 0, h: 0 };
+        this.actionBtn2Rect = { x: 0, y: 0, w: 0, h: 0 };
         // Empty Slot Message (Centered & Clean)
         ctx.fillStyle = '#64748b';
         ctx.font = 'italic 11px sans-serif';

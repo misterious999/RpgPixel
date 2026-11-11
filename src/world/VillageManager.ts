@@ -385,9 +385,9 @@ export class VillageManager {
 
   public isNearMarketStall(playerCenterX: number, playerCenterY: number): boolean {
     const ts = CONSTANTS.TILE_SIZE;
-    const stallCenterX = 47.2 * ts + 26;
-    const stallCenterY = 48.8 * ts + 20;
-    return Math.hypot(stallCenterX - playerCenterX, stallCenterY - playerCenterY) < 42;
+    const stallCenterX = 42.5 * ts + 26;
+    const stallCenterY = 53.5 * ts + 20;
+    return Math.hypot(stallCenterX - playerCenterX, stallCenterY - playerCenterY) < 46;
   }
 
   /**
@@ -438,10 +438,10 @@ export class VillageManager {
       return true;
     }
 
-    // 3.8 Kios Pasar Raya Oakhaven (Barat Alun-Alun: 47.2*ts, 48.8*ts, w=52, h=30)
-    const msX = 47.2 * ts;
-    const msY = 48.8 * ts;
-    if (box.x < msX + 52 && box.x + box.width > msX && box.y < msY + 30 && box.y + box.height > msY + 12) {
+    // 3.8 Kios Pasar Raya Oakhaven (Barat Daya Alun-Alun: 42.5*ts, 53.5*ts, w=56, h=32)
+    const msX = 42.5 * ts;
+    const msY = 53.5 * ts;
+    if (box.x < msX + 56 && box.x + box.width > msX && box.y < msY + 32 && box.y + box.height > msY + 12) {
       return true;
     }
 
@@ -735,8 +735,8 @@ export class VillageManager {
     const bsY = 47.5 * ts;
     this.drawBlacksmithWorkshop(ctx, bsX, bsY, 76, 64);
 
-    // 3.8 KIOS PASAR RAYA OAKHAVEN (Barat Alun-Alun: 47.2*ts, 48.8*ts)
-    this.drawMarketStall(ctx, 47.2 * ts, 48.8 * ts);
+    // 3.8 KIOS PASAR RAYA OAKHAVEN (Plaza Barat Daya: 42.5*ts, 53.5*ts, terpisah lega jauh dari Guild)
+    this.drawMarketStall(ctx, 42.5 * ts, 53.5 * ts);
 
     // 4. TOKO BUNGA LILY (Timur Laut: 56*ts, 43*ts)
     const h2x = 56 * ts;
@@ -1249,8 +1249,52 @@ export class VillageManager {
    * Render Kios Pedagang Pasar Raya Oakhaven (Tenda Kanopi Belang Merah-Kuning, Meja Kayu & Display Barang)
    */
   private drawMarketStall(ctx: CanvasRenderingContext2D, x: number, y: number): void {
-    const w = 52;
+    const w = 56;
     const h = 32;
+
+    // Cobblestone ground rug/paving under the stall
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(x - 18, y + 16, w + 36, 18);
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(x - 16, y + 18, w + 32, 14);
+
+    // Left Side Potion & Pickle Barrel
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(x - 14, y + 18, 10, 14);
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(x - 14, y + 18, 10, 2);
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(x - 14, y + 23, 10, 2);
+    ctx.fillRect(x - 14, y + 28, 10, 2);
+
+    // Right Side Fresh Fruit & Veggie Crate
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(x + w + 4, y + 20, 12, 12);
+    ctx.fillStyle = '#78350f';
+    ctx.strokeRect(x + w + 4, y + 20, 12, 12);
+    // Red apples & green cabbages
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(x + w + 8, y + 19, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#22c55e';
+    ctx.beginPath();
+    ctx.arc(x + w + 12, y + 19, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Merchant Marco standing behind the counter
+    // Torso / Green Apron
+    ctx.fillStyle = '#047857';
+    ctx.fillRect(x + w / 2 - 6, y + 6, 12, 12);
+    // Head / Face
+    ctx.fillStyle = '#fed7aa';
+    ctx.fillRect(x + w / 2 - 4, y - 2, 8, 8);
+    // Straw Hat with Red Ribbon
+    ctx.fillStyle = '#fde047';
+    ctx.fillRect(x + w / 2 - 8, y - 5, 16, 3);
+    ctx.fillRect(x + w / 2 - 5, y - 8, 10, 4);
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(x + w / 2 - 5, y - 5, 10, 1.5);
 
     // Wooden vertical posts (kiri & kanan)
     ctx.fillStyle = '#451a03';
@@ -1258,7 +1302,7 @@ export class VillageManager {
     ctx.fillRect(x + w - 6, y + 4, 4, h - 4);
 
     // Striped Awning (Kain Kanopi Belang Merah-Kuning Pasar)
-    const stripes = 6;
+    const stripes = 7;
     const stripeW = w / stripes;
     for (let i = 0; i < stripes; i++) {
       ctx.fillStyle = i % 2 === 0 ? '#dc2626' : '#fef08a';
@@ -1280,42 +1324,42 @@ export class VillageManager {
     ctx.fillStyle = '#78350f';
     ctx.fillRect(x + 2, y + 16, w - 4, 12);
     ctx.fillStyle = '#b45309';
-    ctx.fillRect(x + 4, y + 16, w - 8, 3); // Meja atas meja counter
+    ctx.fillRect(x + 3, y + 16, w - 6, 3); // Meja atas meja counter
 
     // Display Items di atas meja
     // 1. Ramuan HP Merah
     ctx.fillStyle = '#ef4444';
     ctx.beginPath();
-    ctx.arc(x + 8, y + 18, 2.5, 0, Math.PI * 2);
+    ctx.arc(x + 9, y + 18, 2.5, 0, Math.PI * 2);
     ctx.fill();
     // 2. Ramuan MP Biru
     ctx.fillStyle = '#38bdf8';
     ctx.beginPath();
-    ctx.arc(x + 16, y + 18, 2.5, 0, Math.PI * 2);
+    ctx.arc(x + 18, y + 18, 2.5, 0, Math.PI * 2);
     ctx.fill();
     // 3. Gulungan Kertas / Scroll
     ctx.fillStyle = '#fef08a';
-    ctx.fillRect(x + 24, y + 16, 7, 3);
+    ctx.fillRect(x + 26, y + 16, 7, 3);
     ctx.fillStyle = '#b45309';
-    ctx.fillRect(x + 27, y + 16, 1.5, 3);
+    ctx.fillRect(x + 29, y + 16, 1.5, 3);
     // 4. Keranjang Buah / Bahan
     ctx.fillStyle = '#92400e';
-    ctx.fillRect(x + 35, y + 17, 10, 4);
+    ctx.fillRect(x + 37, y + 17, 12, 4);
     ctx.fillStyle = '#22c55e';
     ctx.beginPath();
-    ctx.arc(x + 38, y + 16, 2, 0, Math.PI * 2);
+    ctx.arc(x + 40, y + 16, 2, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#ea580c';
     ctx.beginPath();
-    ctx.arc(x + 42, y + 16, 2, 0, Math.PI * 2);
+    ctx.arc(x + 45, y + 16, 2, 0, Math.PI * 2);
     ctx.fill();
 
     // Peti kecil di bawah meja
     ctx.fillStyle = '#5c2d16';
-    ctx.fillRect(x + 10, y + 23, 12, 7);
+    ctx.fillRect(x + 10, y + 23, 14, 7);
     ctx.strokeStyle = '#ca8a04';
     ctx.lineWidth = 0.8;
-    ctx.strokeRect(x + 10, y + 23, 12, 7);
+    ctx.strokeRect(x + 10, y + 23, 14, 7);
 
     // Signboard Atas: "🛒 PASAR RAYA"
     ctx.fillStyle = '#1e293b';
@@ -1327,7 +1371,7 @@ export class VillageManager {
     ctx.stroke();
 
     ctx.fillStyle = '#fef08a';
-    ctx.font = 'bold 6px sans-serif';
+    ctx.font = 'bold 6.5px sans-serif';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
     ctx.fillText('🛒 PASAR RAYA', x + w / 2, y + 0.5);
