@@ -1,5 +1,15 @@
 import { CONSTANTS } from '../core/Constants.ts';
 import { Camera } from '../core/Camera.ts';
+import {
+  drawDungeonWall3D,
+  drawDungeonFloor,
+  drawRoyalCarpet,
+  drawBossMandala,
+  drawWallTorch3D,
+  DungeonLightingEngine,
+  DungeonTheme,
+  tileHash
+} from './DungeonVisuals.ts';
 
 export enum DungeonTileType {
   FLOOR = 0,
@@ -14,6 +24,22 @@ interface DungeonTorch {
   x: number;
   y: number;
 }
+
+const FLOOR1_THEME: DungeonTheme = {
+  wallTopBase: '#1e293b',
+  wallTopHighlight: '#475569',
+  wallTopShadow: '#090d16',
+  wallFaceBase: '#0f172a',
+  wallFaceBrick1: '#1e293b',
+  wallFaceBrick2: '#243147',
+  wallFaceMortar: '#090d16',
+  wallFaceCrack: '#06b6d4',
+  floorTones: ['#1e293b', '#243147', '#1a2332', '#28354c'],
+  floorMortar: '#0a0f1d',
+  floorHighlight: '#64748b',
+  mossColor: '#065f46',
+  puddleColor: 'rgba(8, 145, 178, 0.35)'
+};
 
 export class DungeonMap {
   public width: number = 40;
@@ -166,6 +192,17 @@ export class DungeonMap {
     this.animTimer += deltaTime * 4;
   }
 
+  private isWallFacingFloor(tx: number, ty: number): boolean {
+    if (ty + 1 >= this.height) return false;
+    const below = this.tiles[ty + 1][tx];
+    return below !== DungeonTileType.WALL;
+  }
+
+  private hasNorthWall(tx: number, ty: number): boolean {
+    if (ty - 1 < 0) return false;
+    return this.tiles[ty - 1][tx] === DungeonTileType.WALL;
+  }
+
   public render(ctx: CanvasRenderingContext2D, camera: Camera): void {
     const ts = this.tileSize;
 
@@ -174,45 +211,76 @@ export class DungeonMap {
     const startRow = Math.max(0, Math.floor(camera.y / ts));
     const endRow = Math.min(this.height - 1, Math.ceil((camera.y + camera.viewportHeight) / ts));
 
+    // 1. Render Base Tiles (Floors, 3D Walls, Pools, Pillars)
     for (let y = startRow; y <= endRow; y++) {
       for (let x = startCol; x <= endCol; x++) {
         const tile = this.tiles[y][x];
         const px = x * ts;
         const py = y * ts;
         this.drawTile(ctx, tile, px, py, ts, x, y);
+
+        // Render Royal Velvet Carpet down the Great Hall & South Corridor (x = 20)
+        if (x === 20 && y >= 16 && y <= 34 && tile !== DungeonTileType.WALL) {
+          drawRoyalCarpet(ctx, px, py, ts, y === 16, y === 34);
+        }
       }
     }
 
-    // Render Wall Torches
+    // 2. Render Boss Arena King Slime Runic Mandala (Center of Abyssal Altar, x: 20, y: 5)
+    const mandalaX = 20 * ts + 16;
+    const mandalaY = 5 * ts + 16;
+    if (
+      mandalaX >= camera.x - 60 && mandalaX <= camera.x + camera.viewportWidth + 60 &&
+      mandalaY >= camera.y - 60 && mandalaY <= camera.y + camera.viewportHeight + 60
+    ) {
+      drawBossMandala(ctx, mandalaX, mandalaY, 36, this.animTimer, '#06b6d4', '#a855f7', '👑');
+    }
+
+    // 3. Render Wall Torches with 3D bracket & animated 3-layer flame
     for (const t of this.torches) {
       const tx = t.x * ts;
       const ty = t.y * ts;
-      if (tx >= camera.x - ts && tx <= camera.x + camera.viewportWidth + ts &&
-          ty >= camera.y - ts && ty <= camera.y + camera.viewportHeight + ts) {
-        this.drawWallTorch(ctx, tx + 12, ty + 10);
+      if (
+        tx >= camera.x - ts && tx <= camera.x + camera.viewportWidth + ts &&
+        ty >= camera.y - ts && ty <= camera.y + camera.viewportHeight + ts
+      ) {
+        drawWallTorch3D(ctx, tx + 13, ty + 12, this.animTimer);
       }
     }
 
-    // Render Staircase Down to Floor 2 if unlocked
+    // 4. Render Staircase Down to Floor 2 if unlocked
     if (this.isFloor2Unlocked) {
       const sx = this.floor2LadderX;
       const sy = this.floor2LadderY;
+      ctx.save();
+      // Chiseled stairwell opening
       ctx.fillStyle = '#020617';
       ctx.fillRect(sx, sy, ts, ts);
 
-      ctx.fillStyle = '#475569';
-      for (let s = 0; s < 4; s++) {
-        ctx.fillRect(sx + 4 + s * 2, sy + 6 + s * 5, ts - 8 - s * 4, 3.5);
+      // Descending stone treads
+      for (let s = 0; s < 5; s++) {
+        const treadY = sy + 4 + s * 5;
+        const treadW = ts - 6 - s * 3;
+        ctx.fillStyle = s % 2 === 0 ? '#334155' : '#475569';
+        ctx.fillRect(sx + 3 + (s * 1.5), treadY, treadW, 3.5);
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(sx + 3 + (s * 1.5), treadY + 3.5, treadW, 1.5);
       }
 
-      ctx.strokeStyle = '#c084fc';
-      ctx.lineWidth = 1.5;
+      // Glowing violet ancient runic frame
+      const pulse = Math.sin(this.animTimer * 4) * 0.3 + 0.7;
+      ctx.strokeStyle = `rgba(192, 132, 252, ${pulse})`;
+      ctx.lineWidth = 2;
       ctx.strokeRect(sx + 2, sy + 2, ts - 4, ts - 4);
 
+      // Floor 2 portal glyph beacon
       ctx.font = 'bold 8px sans-serif';
       ctx.textAlign = 'center';
-      ctx.fillStyle = '#e879f9';
-      ctx.fillText('▼ Ke Lantai 2', sx + 16, sy - 4);
+      ctx.fillStyle = '#f0abfc';
+      ctx.shadowColor = '#c084fc';
+      ctx.shadowBlur = 4;
+      ctx.fillText('▼ KE LANTAI 2', sx + 16, sy - 5);
+      ctx.restore();
     }
   }
 
@@ -227,127 +295,166 @@ export class DungeonMap {
   ): void {
     switch (type) {
       case DungeonTileType.FLOOR: {
-        // Dark slate cobblestone pavers
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(x, y, size, size);
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(x, y, size, 1);
-        ctx.fillRect(x, y, 1, size);
-        // Subtle brick texture
-        if ((tileX + tileY) % 2 === 0) {
-          ctx.fillStyle = 'rgba(255, 255, 255, 0.04)';
-          ctx.fillRect(x + 2, y + 2, size - 4, size - 4);
-        }
+        drawDungeonFloor(
+          ctx,
+          x,
+          y,
+          size,
+          tileX,
+          tileY,
+          FLOOR1_THEME,
+          this.animTimer,
+          this.hasNorthWall(tileX, tileY)
+        );
         break;
       }
       case DungeonTileType.CRACKED: {
-        ctx.fillStyle = '#172033';
-        ctx.fillRect(x, y, size, size);
-        ctx.fillStyle = '#090d16';
-        ctx.fillRect(x, y, size, 1);
-        ctx.fillRect(x, y, 1, size);
-        // Ancient cracks / moss
-        ctx.fillStyle = '#0f172a';
-        ctx.fillRect(x + 6, y + 8, 8, 2);
-        ctx.fillRect(x + 12, y + 10, 2, 7);
-        ctx.fillRect(x + 18, y + 20, 6, 2);
-        // Faint turquoise runic glow
-        ctx.fillStyle = 'rgba(6, 182, 212, 0.25)';
-        ctx.fillRect(x + 14, y + 14, 3, 3);
+        // Ancient cracked flagstone with glowing cyan subterranean rune line
+        drawDungeonFloor(ctx, x, y, size, tileX, tileY, FLOOR1_THEME, this.animTimer, this.hasNorthWall(tileX, tileY));
+        const hash = tileHash(tileX, tileY);
+
+        ctx.save();
+        // Cyan abyssal rune line
+        ctx.strokeStyle = '#06b6d4';
+        ctx.lineWidth = 1.8;
+        ctx.shadowColor = '#22d3ee';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.moveTo(x + 5, y + 6);
+        ctx.lineTo(x + 14 + (hash * 4), y + 15);
+        ctx.lineTo(x + 20, y + 26);
+        ctx.stroke();
+
+        // Runic glyph dot
+        ctx.fillStyle = '#a5f3fc';
+        ctx.fillRect(x + 14 + (hash * 4), y + 15, 3, 3);
+        ctx.restore();
         break;
       }
       case DungeonTileType.WALL: {
-        // Heavy obsidian / slate dungeon wall
-        ctx.fillStyle = '#090d16';
-        ctx.fillRect(x, y, size, size);
-        // Stone block shading & mortar lines
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(x + 2, y + 2, size - 4, (size / 2) - 3);
-        ctx.fillRect(x + 2, y + (size / 2) + 1, size - 4, (size / 2) - 3);
-        // Highlight top rim
-        ctx.fillStyle = '#334155';
-        ctx.fillRect(x + 2, y + 2, size - 4, 1.5);
-        ctx.fillRect(x + 2, y + (size / 2) + 1, size - 4, 1.5);
+        drawDungeonWall3D(
+          ctx,
+          x,
+          y,
+          size,
+          tileX,
+          tileY,
+          this.isWallFacingFloor(tileX, tileY),
+          FLOOR1_THEME
+        );
         break;
       }
       case DungeonTileType.PILLAR: {
         // Floor underneath
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(x, y, size, size);
-        // Pillar Base
+        drawDungeonFloor(ctx, x, y, size, tileX, tileY, FLOOR1_THEME, this.animTimer, false);
+
+        // Ancient Chiseled Stone Pillar
+        // Base Plinth
         ctx.fillStyle = '#0f172a';
-        ctx.fillRect(x + 4, y + 22, 24, 8);
-        // Pillar Shaft
+        ctx.fillRect(x + 3, y + 21, size - 6, 9);
         ctx.fillStyle = '#334155';
-        ctx.fillRect(x + 6, y + 6, 20, 18);
-        // Pillar Highlights
+        ctx.fillRect(x + 5, y + 22, size - 10, 2);
+
+        // Pillar Shaft (Fluted Stone Column)
+        ctx.fillStyle = '#1e293b';
+        ctx.fillRect(x + 5, y + 6, size - 10, 16);
+        ctx.fillStyle = '#334155';
+        ctx.fillRect(x + 7, y + 6, 4, 16); // Left highlight flute
+        ctx.fillRect(x + 17, y + 6, 4, 16); // Right shadow flute
         ctx.fillStyle = '#475569';
-        ctx.fillRect(x + 8, y + 6, 4, 18);
-        // Pillar Capital (Top)
+        ctx.fillRect(x + 8, y + 6, 2, 16);
+
+        // Glowing Turquoise Rune Band around center
+        ctx.fillStyle = '#0891b2';
+        ctx.fillRect(x + 5, y + 13, size - 10, 3);
+        ctx.fillStyle = '#67e8f9';
+        ctx.fillRect(x + 8, y + 14, size - 16, 1);
+
+        // Pillar Capital (Top Block)
+        ctx.fillStyle = '#475569';
+        ctx.fillRect(x + 3, y + 2, size - 6, 5);
         ctx.fillStyle = '#64748b';
-        ctx.fillRect(x + 4, y + 2, 24, 5);
+        ctx.fillRect(x + 4, y + 2, size - 8, 1.5);
         break;
       }
       case DungeonTileType.LAVA: {
-        // Subterranean Crystal Pool / Mineral Magma
-        const bubble = Math.sin(this.animTimer * 1.5 + tileX + tileY) * 2;
+        // Subterranean Glowing Cyan Mineral Spring / Crystal Pool
         ctx.fillStyle = '#0f172a';
         ctx.fillRect(x, y, size, size);
-        ctx.fillStyle = '#0891b2'; // Deep cyan pool
-        ctx.fillRect(x + 2, y + 2, size - 4, size - 4);
+
+        // Water Basin
+        const ripple = Math.sin(this.animTimer * 2.5 + tileX * 2 + tileY * 2) * 2;
+        ctx.fillStyle = '#0e7490'; // Deep cyan
+        ctx.fillRect(x + 1, y + 1, size - 2, size - 2);
+
+        // Liquid Center
         ctx.fillStyle = '#06b6d4';
-        ctx.fillRect(x + 4, y + 6, size - 8, size - 12);
-        // Glowing bubble
-        ctx.fillStyle = '#67e8f9';
+        ctx.fillRect(x + 3, y + 3, size - 6, size - 6);
+
+        // Shimmering Caustics wave
+        ctx.fillStyle = 'rgba(165, 243, 252, 0.45)';
+        ctx.fillRect(x + 4, y + 6 + ripple, size - 8, 3.5);
+
+        // Floating Crystal Geode Bubbles
+        const bubbleX = x + 10 + Math.sin(this.animTimer * 2 + tileX) * 5;
+        const bubbleY = y + 12 + Math.cos(this.animTimer * 2 + tileY) * 4;
+        ctx.fillStyle = '#cffafe';
         ctx.beginPath();
-        ctx.arc(x + 12 + bubble, y + 14, 3, 0, Math.PI * 2);
+        ctx.arc(bubbleX, bubbleY, 3, 0, Math.PI * 2);
         ctx.fill();
         ctx.fillStyle = '#ffffff';
-        ctx.fillRect(x + 11 + bubble, y + 13, 1.5, 1.5);
+        ctx.fillRect(bubbleX - 1, bubbleY - 1, 1.5, 1.5);
+
+        // Basin stone rim
+        ctx.strokeStyle = '#164e63';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x + 1, y + 1, size - 2, size - 2);
         break;
       }
       case DungeonTileType.LADDER_EXIT: {
-        // Stone Floor base
-        ctx.fillStyle = '#1e293b';
-        ctx.fillRect(x, y, size, size);
-        // Hole in the ceiling with sunlight shaft
-        ctx.fillStyle = 'rgba(254, 240, 138, 0.2)';
+        // Floor underneath
+        drawDungeonFloor(ctx, x, y, size, tileX, tileY, FLOOR1_THEME, this.animTimer, false);
+
+        // Skylight shaft cutting down from ancient opening
+        const shaftGrad = ctx.createRadialGradient(x + 16, y + 16, 2, x + 16, y + 16, 16);
+        shaftGrad.addColorStop(0, 'rgba(254, 240, 138, 0.35)');
+        shaftGrad.addColorStop(0.7, 'rgba(253, 224, 71, 0.12)');
+        shaftGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = shaftGrad;
         ctx.beginPath();
-        ctx.ellipse(x + 16, y + 16, 14, 14, 0, 0, Math.PI * 2);
+        ctx.arc(x + 16, y + 16, 16, 0, Math.PI * 2);
         ctx.fill();
-        // Wooden Ladder
+
+        // Sturdy Oak Ladder with Iron Corner Braces
         ctx.fillStyle = '#78350f';
-        ctx.fillRect(x + 8, y + 2, 3, size - 4);
-        ctx.fillRect(x + 21, y + 2, 3, size - 4);
-        // Ladder rungs
+        ctx.fillRect(x + 7, y + 1, 3.5, size - 2);
+        ctx.fillRect(x + 21.5, y + 1, 3.5, size - 2);
         ctx.fillStyle = '#b45309';
-        for (let ry = 6; ry < size - 4; ry += 6) {
-          ctx.fillRect(x + 8, y + ry, 16, 2.5);
+        ctx.fillRect(x + 7.5, y + 1, 1.5, size - 2); // Highlight beam
+
+        // Iron Rungs
+        for (let ry = 5; ry < size - 3; ry += 5.5) {
+          ctx.fillStyle = '#d97706';
+          ctx.fillRect(x + 8, y + ry, 15, 2.5);
+          ctx.fillStyle = '#475569';
+          ctx.fillRect(x + 7, y + ry - 0.5, 2, 3.5);
+          ctx.fillRect(x + 22, y + ry - 0.5, 2, 3.5);
         }
+
+        // Exit Label indicator
+        ctx.font = 'bold 8px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#fef08a';
+        ctx.fillText('▲ Ke Desa', x + 16, y - 4);
         break;
       }
     }
   }
 
-  private drawWallTorch(ctx: CanvasRenderingContext2D, tx: number, ty: number): void {
-    // Torch bracket
-    ctx.fillStyle = '#475569';
-    ctx.fillRect(tx, ty, 6, 8);
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(tx + 1, ty - 4, 4, 8);
-
-    // Animated flame
-    const flicker = Math.sin(this.animTimer + tx) * 1.5;
-    ctx.fillStyle = '#ef4444';
-    ctx.fillRect(tx + flicker * 0.5, ty - 8, 6, 6);
-    ctx.fillStyle = '#f97316';
-    ctx.fillRect(tx + 1 + flicker * 0.5, ty - 10, 4, 5);
-    ctx.fillStyle = '#fef08a';
-    ctx.fillRect(tx + 2, ty - 11, 2, 3);
-  }
-
   /**
-   * Renders the atmospheric subterranean darkness overlay with radial lighting
+   * High-End Atmospheric Lighting Engine:
+   * Uses an offscreen composite buffer with 'destination-out' to punch crisp, smooth
+   * radial light holes in the subterranean darkness, followed by soft warm color halos.
    */
   public renderAtmosphericLighting(
     ctx: CanvasRenderingContext2D,
@@ -355,44 +462,101 @@ export class DungeonMap {
     playerCenterX: number,
     playerCenterY: number
   ): void {
+    const screenW = camera.viewportWidth;
+    const screenH = camera.viewportHeight;
+
+    // 1. Begin offscreen darkness mask
+    const offCtx = DungeonLightingEngine.begin(screenW, screenH, 'rgba(3, 7, 18, 0.65)');
+    if (offCtx) {
+      // Punch Player Lantern Light Aperture
+      const pScreenX = playerCenterX - camera.x;
+      const pScreenY = playerCenterY - camera.y;
+      DungeonLightingEngine.punchLight(pScreenX, pScreenY, 18, 125, 0.98);
+
+      // Punch Wall Torch Apertures
+      for (const t of this.torches) {
+        const tx = t.x * this.tileSize + 16 - camera.x;
+        const ty = t.y * this.tileSize + 12 - camera.y;
+        if (tx >= -80 && tx <= screenW + 80 && ty >= -80 && ty <= screenH + 80) {
+          const flicker = Math.sin(this.animTimer * 5 + t.x) * 4;
+          DungeonLightingEngine.punchLight(tx, ty, 8, 68 + flicker, 0.94);
+        }
+      }
+
+      // Punch Mineral Spring Pool Aperture in Crystal Cavern
+      const poolX = 33 * this.tileSize + 16 - camera.x;
+      const poolY = 20 * this.tileSize + 16 - camera.y;
+      if (poolX >= -80 && poolX <= screenW + 80 && poolY >= -80 && poolY <= screenH + 80) {
+        DungeonLightingEngine.punchLight(poolX, poolY, 20, 80, 0.82);
+      }
+
+      // Punch Floor 2 Ladder if unlocked
+      if (this.isFloor2Unlocked) {
+        const sx = this.floor2LadderX + 16 - camera.x;
+        const sy = this.floor2LadderY + 16 - camera.y;
+        if (sx >= -60 && sx <= screenW + 60 && sy >= -60 && sy <= screenH + 60) {
+          DungeonLightingEngine.punchLight(sx, sy, 12, 60, 0.9);
+        }
+      }
+
+      // Punch Boss Altar Mandala core if visible
+      const mandalaX = 20 * this.tileSize + 16 - camera.x;
+      const mandalaY = 5 * this.tileSize + 16 - camera.y;
+      if (mandalaX >= -80 && mandalaX <= screenW + 80 && mandalaY >= -80 && mandalaY <= screenH + 80) {
+        DungeonLightingEngine.punchLight(mandalaX, mandalaY, 15, 75, 0.85);
+      }
+
+      // 2. Render Darkness Mask over World Context
+      DungeonLightingEngine.renderToWorld(ctx, camera.x, camera.y);
+    }
+
+    // 3. Ambient Colored Glow Pass (Warm Torch Radiance & Cyan Crystal Pool)
     ctx.save();
-    // Ambient cave darkness
-    const darknessAlpha = 0.55;
-
-    // Use a secondary offscreen composite for lighting holes
-    const screenX = playerCenterX;
-    const screenY = playerCenterY;
-
-    // Draw dark overlay covering camera viewport
-    ctx.fillStyle = `rgba(3, 7, 18, ${darknessAlpha})`;
-    ctx.fillRect(camera.x, camera.y, camera.viewportWidth, camera.viewportHeight);
-
-    // Warm Player Torch Light
-    const pGrad = ctx.createRadialGradient(screenX, screenY, 15, screenX, screenY, 115);
-    pGrad.addColorStop(0, 'rgba(254, 240, 138, 0.45)');
-    pGrad.addColorStop(0.5, 'rgba(245, 158, 11, 0.2)');
+    // Warm Player Lantern Halo
+    const pGrad = ctx.createRadialGradient(playerCenterX, playerCenterY, 12, playerCenterX, playerCenterY, 120);
+    pGrad.addColorStop(0, 'rgba(254, 240, 138, 0.32)');
+    pGrad.addColorStop(0.5, 'rgba(245, 158, 11, 0.14)');
     pGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = pGrad;
     ctx.beginPath();
-    ctx.arc(screenX, screenY, 115, 0, Math.PI * 2);
+    ctx.arc(playerCenterX, playerCenterY, 120, 0, Math.PI * 2);
     ctx.fill();
 
-    // Wall Torch Lighting Auras
+    // Wall Torch Warm Orange Halos
     for (const t of this.torches) {
-      const tx = t.x * this.tileSize + 15;
+      const tx = t.x * this.tileSize + 16;
       const ty = t.y * this.tileSize + 12;
-      if (tx >= camera.x - 80 && tx <= camera.x + camera.viewportWidth + 80 &&
-          ty >= camera.y - 80 && ty <= camera.y + camera.viewportHeight + 80) {
-        const flicker = Math.sin(this.animTimer + t.x) * 4;
-        const tGrad = ctx.createRadialGradient(tx, ty, 6, tx, ty, 60 + flicker);
-        tGrad.addColorStop(0, 'rgba(254, 240, 138, 0.4)');
-        tGrad.addColorStop(0.6, 'rgba(239, 68, 68, 0.15)');
+      if (
+        tx >= camera.x - 80 && tx <= camera.x + camera.viewportWidth + 80 &&
+        ty >= camera.y - 80 && ty <= camera.y + camera.viewportHeight + 80
+      ) {
+        const flicker = Math.sin(this.animTimer * 5 + t.x) * 3;
+        const tGrad = ctx.createRadialGradient(tx, ty, 6, tx, ty, 64 + flicker);
+        tGrad.addColorStop(0, 'rgba(254, 240, 138, 0.28)');
+        tGrad.addColorStop(0.6, 'rgba(239, 68, 68, 0.12)');
         tGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = tGrad;
         ctx.beginPath();
-        ctx.arc(tx, ty, 60 + flicker, 0, Math.PI * 2);
+        ctx.arc(tx, ty, 64 + flicker, 0, Math.PI * 2);
         ctx.fill();
       }
+    }
+
+    // Crystal Spring Cyan Halo
+    const poolWorldX = 33 * this.tileSize + 16;
+    const poolWorldY = 20 * this.tileSize + 16;
+    if (
+      poolWorldX >= camera.x - 90 && poolWorldX <= camera.x + camera.viewportWidth + 90 &&
+      poolWorldY >= camera.y - 90 && poolWorldY <= camera.y + camera.viewportHeight + 90
+    ) {
+      const cGrad = ctx.createRadialGradient(poolWorldX, poolWorldY, 15, poolWorldX, poolWorldY, 75);
+      cGrad.addColorStop(0, 'rgba(103, 232, 249, 0.35)');
+      cGrad.addColorStop(0.6, 'rgba(6, 182, 212, 0.14)');
+      cGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+      ctx.fillStyle = cGrad;
+      ctx.beginPath();
+      ctx.arc(poolWorldX, poolWorldY, 75, 0, Math.PI * 2);
+      ctx.fill();
     }
 
     ctx.restore();

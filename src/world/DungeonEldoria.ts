@@ -1,5 +1,13 @@
 import { CONSTANTS } from '../core/Constants.ts';
 import { Camera } from '../core/Camera.ts';
+import {
+  drawDungeonWall3D,
+  drawDungeonFloor,
+  drawRoyalCarpet,
+  drawBossMandala,
+  DungeonLightingEngine,
+  DungeonTheme
+} from './DungeonVisuals.ts';
 
 export enum EldoriaTileType {
   FLOOR = 0,
@@ -9,6 +17,22 @@ export enum EldoriaTileType {
   SACRED_WATER = 4,
   LADDER_EXIT = 5
 }
+
+const ELDORIA_THEME: DungeonTheme = {
+  wallTopBase: '#064e3b',
+  wallTopHighlight: '#059669',
+  wallTopShadow: '#022c22',
+  wallFaceBase: '#022c22',
+  wallFaceBrick1: '#064e3b',
+  wallFaceBrick2: '#047857',
+  wallFaceMortar: '#022c22',
+  wallFaceCrack: '#34d399',
+  floorTones: ['#064e3b', '#065f46', '#047857', '#022c22'],
+  floorMortar: '#012018',
+  floorHighlight: '#34d399',
+  mossColor: '#10b981',
+  puddleColor: 'rgba(52, 211, 153, 0.4)'
+};
 
 interface SylvanOrb {
   x: number;
@@ -176,6 +200,17 @@ export class DungeonEldoria {
     return false;
   }
 
+  private isWallFacingFloor(tx: number, ty: number): boolean {
+    if (ty + 1 >= this.height) return false;
+    const below = this.tiles[ty + 1][tx];
+    return below !== EldoriaTileType.WALL;
+  }
+
+  private hasNorthWall(tx: number, ty: number): boolean {
+    if (ty - 1 < 0) return false;
+    return this.tiles[ty - 1][tx] === EldoriaTileType.WALL;
+  }
+
   public render(ctx: CanvasRenderingContext2D, camera: Camera): void {
     const ts = this.tileSize;
     const startCol = Math.max(0, Math.floor(camera.x / ts));
@@ -183,104 +218,78 @@ export class DungeonEldoria {
     const startRow = Math.max(0, Math.floor(camera.y / ts));
     const endRow = Math.min(this.height - 1, Math.ceil((camera.y + camera.viewportHeight) / ts));
 
+    // 1. Render Base Map Tiles
     for (let y = startRow; y <= endRow; y++) {
       for (let x = startCol; x <= endCol; x++) {
         const tile = this.tiles[y][x];
         const px = x * ts;
         const py = y * ts;
+        this.renderTile(ctx, tile, px, py, ts, x, y);
 
-        switch (tile) {
-          case EldoriaTileType.WALL:
-            ctx.fillStyle = '#064e3b';
-            ctx.fillRect(px, py, ts, ts);
-            ctx.fillStyle = '#022c22';
-            ctx.fillRect(px + 2, py + 2, ts - 4, ts - 4);
-            // Ancient moss cracks
-            ctx.strokeStyle = '#047857';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(px + 3, py + 3, ts - 6, ts - 6);
-            break;
-
-          case EldoriaTileType.FLOOR:
-            ctx.fillStyle = '#065f46';
-            ctx.fillRect(px, py, ts, ts);
-            ctx.strokeStyle = 'rgba(5, 150, 105, 0.4)';
-            ctx.lineWidth = 1;
-            ctx.strokeRect(px, py, ts, ts);
-            break;
-
-          case EldoriaTileType.MOSS_STONE:
-            ctx.fillStyle = '#047857';
-            ctx.fillRect(px, py, ts, ts);
-            ctx.fillStyle = '#10b981';
-            ctx.fillRect(px + 6, py + 6, 6, 6);
-            ctx.fillRect(px + 18, py + 16, 5, 5);
-            break;
-
-          case EldoriaTileType.ROOT_PILLAR:
-            ctx.fillStyle = '#451a03';
-            ctx.beginPath();
-            ctx.roundRect(px + 4, py + 2, ts - 8, ts - 4, 6);
-            ctx.fill();
-            ctx.fillStyle = '#16a34a';
-            ctx.fillRect(px + 6, py + 8, 8, 4);
-            ctx.fillRect(px + 16, py + 18, 6, 4);
-            break;
-
-          case EldoriaTileType.SACRED_WATER: {
-            const ripple = Math.sin(this.animTimer + x * 2 + y * 2) * 2;
-            ctx.fillStyle = '#0284c7';
-            ctx.fillRect(px, py, ts, ts);
-            ctx.fillStyle = 'rgba(56, 189, 248, 0.5)';
-            ctx.fillRect(px + 4, py + 6 + ripple, ts - 8, 3);
-            break;
-          }
-
-          case EldoriaTileType.LADDER_EXIT:
-            ctx.fillStyle = '#065f46';
-            ctx.fillRect(px, py, ts, ts);
-            // Ladder frame
-            ctx.fillStyle = '#78350f';
-            ctx.fillRect(px + 6, py + 2, 4, ts - 4);
-            ctx.fillRect(px + ts - 10, py + 2, 4, ts - 4);
-            for (let r = 6; r < ts - 4; r += 6) {
-              ctx.fillRect(px + 6, py + r, ts - 12, 2.5);
-            }
-            // Mystical glowing exit ring
-            ctx.strokeStyle = '#4ade80';
-            ctx.lineWidth = 1.5;
-            ctx.strokeRect(px + 2, py + 2, ts - 4, ts - 4);
-            break;
+        // Render Sylvan Floral Path in Central Trunk Corridor (x = 18)
+        if (x === 18 && y >= 15 && y <= 29 && tile !== EldoriaTileType.WALL && tile !== EldoriaTileType.SACRED_WATER) {
+          drawRoyalCarpet(ctx, px, py, ts, y === 15, y === 29);
         }
       }
     }
 
-    // Render Sylvan Orbs
-    for (const orb of this.sylvanOrbs) {
-      const bob = Math.sin(this.animTimer * 4 + orb.x) * 3;
-      ctx.fillStyle = orb.color;
-      ctx.beginPath();
-      ctx.arc(orb.x + 16, orb.y + 16 + bob, 5, 0, Math.PI * 2);
-      ctx.fill();
-      // Glow
-      ctx.fillStyle = 'rgba(52, 211, 153, 0.25)';
-      ctx.beginPath();
-      ctx.arc(orb.x + 16, orb.y + 16 + bob, 12, 0, Math.PI * 2);
-      ctx.fill();
+    // 2. Render Boss Arena Ancient Ent Mandala in North Sanctum (x: 18, y: 9)
+    const mandalaX = 18 * ts + 16;
+    const mandalaY = 9 * ts + 16;
+    if (
+      mandalaX >= camera.x - 80 && mandalaX <= camera.x + camera.viewportWidth + 80 &&
+      mandalaY >= camera.y - 80 && mandalaY <= camera.y + camera.viewportHeight + 80
+    ) {
+      drawBossMandala(ctx, mandalaX, mandalaY, 44, this.animTimer, '#34d399', '#facc15', '🌳');
     }
 
-    // Render Boss Danger Telegraphs
+    // 3. Render Sylvan Glowing Orbs with bobbing motion, layered halos, and fairy sparks
+    for (const orb of this.sylvanOrbs) {
+      const bob = Math.sin(this.animTimer * 4 + orb.x) * 3.5;
+      const ox = orb.x + 16;
+      const oy = orb.y + 16 + bob;
+
+      if (
+        ox >= camera.x - 40 && ox <= camera.x + camera.viewportWidth + 40 &&
+        oy >= camera.y - 40 && oy <= camera.y + camera.viewportHeight + 40
+      ) {
+        ctx.save();
+        // Outer soft halo
+        const oGrad = ctx.createRadialGradient(ox, oy, 2, ox, oy, 14);
+        oGrad.addColorStop(0, orb.color);
+        oGrad.addColorStop(0.5, 'rgba(52, 211, 153, 0.35)');
+        oGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = oGrad;
+        ctx.beginPath();
+        ctx.arc(ox, oy, 14, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Core orb
+        ctx.fillStyle = '#ffffff';
+        ctx.beginPath();
+        ctx.arc(ox, oy, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Trailing fairy dust spark
+        const sparkY = oy - 8 - ((this.animTimer * 12 + orb.x) % 8);
+        ctx.fillStyle = '#a7f3d0';
+        ctx.fillRect(ox - 1, sparkY, 1.5, 1.5);
+        ctx.restore();
+      }
+    }
+
+    // 4. Render Boss Danger Telegraphs (Nature Briar / Sylvan Burst)
     for (const tel of this.telegraphs) {
       const progress = 1 - (tel.timer / tel.maxTimer);
       ctx.save();
       ctx.strokeStyle = '#ef4444';
-      ctx.lineWidth = 2.6;
+      ctx.lineWidth = 2.8;
       ctx.beginPath();
       ctx.arc(tel.x, tel.y, tel.radius, 0, Math.PI * 2);
       ctx.stroke();
 
       const grad = ctx.createRadialGradient(tel.x, tel.y, 2, tel.x, tel.y, tel.radius * progress);
-      grad.addColorStop(0, 'rgba(74, 222, 128, 0.65)');
+      grad.addColorStop(0, 'rgba(74, 222, 128, 0.7)');
       grad.addColorStop(0.6, 'rgba(239, 68, 68, 0.45)');
       grad.addColorStop(1, 'rgba(185, 28, 28, 0.2)');
       ctx.fillStyle = grad;
@@ -299,6 +308,178 @@ export class DungeonEldoria {
     }
   }
 
+  private renderTile(
+    ctx: CanvasRenderingContext2D,
+    tile: EldoriaTileType,
+    px: number,
+    py: number,
+    ts: number,
+    x: number,
+    y: number
+  ): void {
+    switch (tile) {
+      case EldoriaTileType.WALL:
+        drawDungeonWall3D(
+          ctx,
+          px,
+          py,
+          ts,
+          x,
+          y,
+          this.isWallFacingFloor(x, y),
+          ELDORIA_THEME
+        );
+        break;
+
+      case EldoriaTileType.FLOOR:
+        drawDungeonFloor(
+          ctx,
+          px,
+          py,
+          ts,
+          x,
+          y,
+          ELDORIA_THEME,
+          this.animTimer,
+          this.hasNorthWall(x, y)
+        );
+        break;
+
+      case EldoriaTileType.MOSS_STONE: {
+        drawDungeonFloor(ctx, px, py, ts, x, y, ELDORIA_THEME, this.animTimer, this.hasNorthWall(x, y));
+        // Overgrown sylvan moss patches with tiny blooming flowers
+        ctx.fillStyle = '#10b981';
+        ctx.fillRect(px + 4, py + 5, 8, 7);
+        ctx.fillRect(px + 16, py + 16, 10, 8);
+        ctx.fillStyle = '#34d399';
+        ctx.fillRect(px + 6, py + 7, 4, 3);
+        ctx.fillRect(px + 18, py + 18, 5, 4);
+
+        // Tiny blooming white/gold sylvan flowers
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(px + 5, py + 6, 2, 2);
+        ctx.fillRect(px + 23, py + 17, 2, 2);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(px + 10, py + 10, 2, 2);
+        break;
+      }
+
+      case EldoriaTileType.ROOT_PILLAR: {
+        drawDungeonFloor(ctx, px, py, ts, x, y, ELDORIA_THEME, this.animTimer, false);
+        // Colossal Living Tree of Life Root Column
+        // Base roots spreading into floor
+        ctx.fillStyle = '#271003';
+        ctx.beginPath();
+        ctx.roundRect(px + 2, py + 20, ts - 4, 10, 4);
+        ctx.fill();
+
+        // Gnarled Tree Trunk
+        ctx.fillStyle = '#451a03';
+        ctx.beginPath();
+        ctx.roundRect(px + 5, py + 4, ts - 10, 18, 5);
+        ctx.fill();
+
+        // Bark highlights & wood grain
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(px + 7, py + 5, 3.5, 16);
+        ctx.fillRect(px + 17, py + 5, 3, 16);
+
+        // Climbing Ivy & Bioluminescent Moss
+        ctx.fillStyle = '#16a34a';
+        ctx.fillRect(px + 6, py + 8, 6, 4);
+        ctx.fillRect(px + 16, py + 14, 7, 5);
+        ctx.fillStyle = '#4ade80';
+        ctx.fillRect(px + 8, py + 9, 3, 2);
+
+        // Glowing Sylvan Spore Node in trunk
+        const sporePulse = Math.sin(this.animTimer * 4 + x + y) * 0.3 + 0.7;
+        ctx.fillStyle = `rgba(110, 231, 183, ${sporePulse})`;
+        ctx.beginPath();
+        ctx.arc(px + ts / 2, py + 13, 3, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Canopy Root Capital (Top)
+        ctx.fillStyle = '#271003';
+        ctx.fillRect(px + 3, py + 2, ts - 6, 4);
+        break;
+      }
+
+      case EldoriaTileType.SACRED_WATER: {
+        // Pure Crystal-Clear Sacred Spring Pool
+        ctx.fillStyle = '#022c22';
+        ctx.fillRect(px, py, ts, ts);
+
+        // Deep aquatic basin
+        const ripple = Math.sin(this.animTimer * 2.5 + x * 2 + y * 2) * 2;
+        ctx.fillStyle = '#0369a1';
+        ctx.fillRect(px + 1, py + 1, ts - 2, ts - 2);
+
+        // Radiant crystal turquoise water
+        ctx.fillStyle = '#0ea5e9';
+        ctx.fillRect(px + 2, py + 3, ts - 4, ts - 6);
+
+        // Shimmering caustics
+        ctx.fillStyle = 'rgba(186, 230, 253, 0.45)';
+        ctx.fillRect(px + 4, py + 6 + ripple, ts - 8, 3.5);
+
+        // Floating Green Water Lily Pad with Lotus Blossom
+        const padX = px + 10 + Math.sin(this.animTimer + x) * 3;
+        const padY = py + 12 + Math.cos(this.animTimer + y) * 2;
+        ctx.fillStyle = '#15803d';
+        ctx.beginPath();
+        ctx.arc(padX, padY, 4.5, 0, Math.PI * 1.8);
+        ctx.fill();
+
+        // Pink Lotus Blossom in center of lily pad
+        ctx.fillStyle = '#f472b6';
+        ctx.fillRect(padX - 1, padY - 1, 2.5, 2.5);
+        ctx.fillStyle = '#ffffff';
+        ctx.fillRect(padX - 0.5, padY - 0.5, 1.5, 1.5);
+
+        // Stone edge border
+        ctx.strokeStyle = '#064e3b';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(px + 1, py + 1, ts - 2, ts - 2);
+        break;
+      }
+
+      case EldoriaTileType.LADDER_EXIT: {
+        drawDungeonFloor(ctx, px, py, ts, x, y, ELDORIA_THEME, this.animTimer, false);
+
+        // Sunbeam ray cutting down through canopy
+        const beamGrad = ctx.createRadialGradient(px + 16, py + 16, 2, px + 16, py + 16, 16);
+        beamGrad.addColorStop(0, 'rgba(167, 243, 208, 0.45)');
+        beamGrad.addColorStop(0.7, 'rgba(52, 211, 153, 0.15)');
+        beamGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
+        ctx.fillStyle = beamGrad;
+        ctx.beginPath();
+        ctx.arc(px + 16, py + 16, 16, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Living Vine Ladder with Wood Rungs
+        ctx.fillStyle = '#14532d'; // Thick green vine side ropes
+        ctx.fillRect(px + 7, py + 1, 3.5, ts - 2);
+        ctx.fillRect(px + 21.5, py + 1, 3.5, ts - 2);
+
+        // Wooden Rungs with small leaf buds
+        for (let ry = 5; ry < ts - 3; ry += 5.5) {
+          ctx.fillStyle = '#78350f';
+          ctx.fillRect(px + 8, py + ry, 15, 2.5);
+          ctx.fillStyle = '#4ade80';
+          ctx.fillRect(px + 6, py + ry - 1, 2, 2); // Leaf bud
+        }
+
+        ctx.font = 'bold 8px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.fillStyle = '#86efac';
+        ctx.shadowColor = '#22c55e';
+        ctx.shadowBlur = 4;
+        ctx.fillText('▲ Ke Desa', px + 16, py - 4);
+        break;
+      }
+    }
+  }
+
   public renderAtmosphericLighting(
     ctx: CanvasRenderingContext2D,
     camera: Camera,
@@ -308,35 +489,75 @@ export class DungeonEldoria {
     const screenW = camera.viewportWidth;
     const screenH = camera.viewportHeight;
 
+    // 1. Begin offscreen sylvan deep emerald ambient darkness
+    const offCtx = DungeonLightingEngine.begin(screenW, screenH, 'rgba(1, 23, 16, 0.68)');
+    if (offCtx) {
+      // Punch Player Sylvan Aura Aperture
+      const pScreenX = playerCenterX - camera.x;
+      const pScreenY = playerCenterY - camera.y;
+      DungeonLightingEngine.punchLight(pScreenX, pScreenY, 18, 125, 0.98);
+
+      // Punch Sylvan Orbs light apertures
+      for (const orb of this.sylvanOrbs) {
+        const ox = orb.x + 16 - camera.x;
+        const oy = orb.y + 16 - camera.y;
+        if (ox >= -80 && ox <= screenW + 80 && oy >= -80 && oy <= screenH + 80) {
+          DungeonLightingEngine.punchLight(ox, oy, 10, 75, 0.95);
+        }
+      }
+
+      // Punch Sacred Spring Pool in Center
+      const poolX = 18 * this.tileSize + 16 - camera.x;
+      const poolY = 22 * this.tileSize + 16 - camera.y;
+      if (poolX >= -80 && poolX <= screenW + 80 && poolY >= -80 && poolY <= screenH + 80) {
+        DungeonLightingEngine.punchLight(poolX, poolY, 16, 80, 0.88);
+      }
+
+      // Punch Ancient Ent Mandala in North Sanctum
+      const mandalaX = 18 * this.tileSize + 16 - camera.x;
+      const mandalaY = 9 * this.tileSize + 16 - camera.y;
+      if (mandalaX >= -90 && mandalaX <= screenW + 90 && mandalaY >= -90 && mandalaY <= screenH + 90) {
+        DungeonLightingEngine.punchLight(mandalaX, mandalaY, 18, 90, 0.92);
+      }
+
+      // Punch Exit Ladder
+      const lx = this.ladderX + 16 - camera.x;
+      const ly = this.ladderY + 16 - camera.y;
+      if (lx >= -60 && lx <= screenW + 60 && ly >= -60 && ly <= screenH + 60) {
+        DungeonLightingEngine.punchLight(lx, ly, 12, 65, 0.9);
+      }
+
+      // 2. Render Darkness Mask over World Context
+      DungeonLightingEngine.renderToWorld(ctx, camera.x, camera.y);
+    }
+
+    // 3. Ambient Sylvan Glow Pass (Mint & Gold Orbs & Shimmering Waters)
     ctx.save();
-    ctx.fillStyle = 'rgba(2, 44, 34, 0.65)'; // Sylvan deep emerald ambient darkness
-    ctx.fillRect(0, 0, screenW, screenH);
-
-    ctx.globalCompositeOperation = 'destination-out';
-
-    // Player Sylvan Aura
-    const pScreenX = playerCenterX - camera.x;
-    const pScreenY = playerCenterY - camera.y;
-    const pGrad = ctx.createRadialGradient(pScreenX, pScreenY, 20, pScreenX, pScreenY, 115);
-    pGrad.addColorStop(0, 'rgba(0,0,0,1)');
-    pGrad.addColorStop(0.7, 'rgba(0,0,0,0.6)');
-    pGrad.addColorStop(1, 'rgba(0,0,0,0)');
+    // Warm Player Sylvan Halo
+    const pGrad = ctx.createRadialGradient(playerCenterX, playerCenterY, 15, playerCenterX, playerCenterY, 120);
+    pGrad.addColorStop(0, 'rgba(167, 243, 208, 0.35)');
+    pGrad.addColorStop(0.5, 'rgba(52, 211, 153, 0.15)');
+    pGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = pGrad;
     ctx.beginPath();
-    ctx.arc(pScreenX, pScreenY, 115, 0, Math.PI * 2);
+    ctx.arc(playerCenterX, playerCenterY, 120, 0, Math.PI * 2);
     ctx.fill();
 
-    // Sylvan Orbs light cutouts
+    // Sylvan Orbs Colored Halos
     for (const orb of this.sylvanOrbs) {
-      const ox = orb.x + 16 - camera.x;
-      const oy = orb.y + 16 - camera.y;
-      if (ox > -60 && ox < screenW + 60 && oy > -60 && oy < screenH + 60) {
-        const oGrad = ctx.createRadialGradient(ox, oy, 10, ox, oy, 70);
-        oGrad.addColorStop(0, 'rgba(0,0,0,0.9)');
-        oGrad.addColorStop(1, 'rgba(0,0,0,0)');
+      const ox = orb.x + 16;
+      const oy = orb.y + 16;
+      if (
+        ox >= camera.x - 80 && ox <= camera.x + camera.viewportWidth + 80 &&
+        oy >= camera.y - 80 && oy <= camera.y + camera.viewportHeight + 80
+      ) {
+        const oGrad = ctx.createRadialGradient(ox, oy, 6, ox, oy, 72);
+        oGrad.addColorStop(0, 'rgba(167, 243, 208, 0.38)');
+        oGrad.addColorStop(0.6, 'rgba(16, 185, 129, 0.15)');
+        oGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = oGrad;
         ctx.beginPath();
-        ctx.arc(ox, oy, 70, 0, Math.PI * 2);
+        ctx.arc(ox, oy, 72, 0, Math.PI * 2);
         ctx.fill();
       }
     }

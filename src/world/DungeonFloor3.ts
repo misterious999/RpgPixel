@@ -1,5 +1,13 @@
 import { CONSTANTS } from '../core/Constants.ts';
 import { Camera } from '../core/Camera.ts';
+import {
+  drawDungeonWall3D,
+  drawDungeonFloor,
+  drawBossMandala,
+  drawWallTorch3D,
+  DungeonLightingEngine,
+  DungeonTheme
+} from './DungeonVisuals.ts';
 
 export enum Floor3TileType {
   FLOOR = 0,
@@ -9,6 +17,22 @@ export enum Floor3TileType {
   LAVA = 4,
   PORTAL_UP = 5
 }
+
+const FLOOR3_THEME: DungeonTheme = {
+  wallTopBase: '#18181b',
+  wallTopHighlight: '#3f3f46',
+  wallTopShadow: '#050505',
+  wallFaceBase: '#09090b',
+  wallFaceBrick1: '#18181b',
+  wallFaceBrick2: '#27272a',
+  wallFaceMortar: '#050505',
+  wallFaceCrack: '#f97316',
+  floorTones: ['#18181b', '#202024', '#141416', '#27272a'],
+  floorMortar: '#09090b',
+  floorHighlight: '#dc2626',
+  mossColor: '#450a0a',
+  puddleColor: 'rgba(234, 88, 12, 0.45)'
+};
 
 export interface BossTelegraph {
   x: number;
@@ -201,6 +225,17 @@ export class DungeonFloor3 {
     return false;
   }
 
+  private isWallFacingFloor(tx: number, ty: number): boolean {
+    if (ty + 1 >= this.height) return false;
+    const below = this.tiles[ty + 1][tx];
+    return below !== Floor3TileType.WALL;
+  }
+
+  private hasNorthWall(tx: number, ty: number): boolean {
+    if (ty - 1 < 0) return false;
+    return this.tiles[ty - 1][tx] === Floor3TileType.WALL;
+  }
+
   public render(ctx: CanvasRenderingContext2D, camera: Camera): void {
     const ts = this.tileSize;
     const startCol = Math.max(0, Math.floor(camera.x / ts));
@@ -208,33 +243,55 @@ export class DungeonFloor3 {
     const startRow = Math.max(0, Math.floor(camera.y / ts));
     const endRow = Math.min(this.height - 1, Math.ceil((camera.y + camera.viewportHeight) / ts));
 
-    // Render Tiles
+    // 1. Render Map Tiles
     for (let r = startRow; r <= endRow; r++) {
       for (let c = startCol; c <= endCol; c++) {
         const tile = this.tiles[r][c];
         const x = c * ts;
         const y = r * ts;
-        this.renderTile(ctx, tile, x, y, ts);
+        this.renderTile(ctx, tile, x, y, ts, c, r);
       }
     }
 
-    // Render Boss Red Telegraph Warning Zones (Meteors & Fire Breath)
+    // 2. Render Dragon King Molten Altar Mandala in North Boss Arena (c: 20, r: 7.5)
+    const mandalaX = 20 * ts + 16;
+    const mandalaY = 7.5 * ts + 16;
+    if (
+      mandalaX >= camera.x - 80 && mandalaX <= camera.x + camera.viewportWidth + 80 &&
+      mandalaY >= camera.y - 80 && mandalaY <= camera.y + camera.viewportHeight + 80
+    ) {
+      drawBossMandala(ctx, mandalaX, mandalaY, 44, this.animTimer, '#f97316', '#dc2626', '🐲');
+    }
+
+    // 3. Render Hellfire Braziers (Torches)
+    for (const t of this.torches) {
+      const tx = t.x * ts;
+      const ty = t.y * ts;
+      if (
+        tx >= camera.x - ts && tx <= camera.x + camera.viewportWidth + ts &&
+        ty >= camera.y - ts && ty <= camera.y + camera.viewportHeight + ts
+      ) {
+        drawWallTorch3D(ctx, tx + 13, ty + 12, this.animTimer, ['#dc2626', '#f97316', '#fef08a']);
+      }
+    }
+
+    // 4. Render Boss Red Danger Telegraph Warning Zones (Meteors & Fire Breath)
     for (const tel of this.telegraphs) {
       const progress = 1 - (tel.timer / tel.maxTimer);
       ctx.save();
 
       // Outer Danger Ring
       ctx.strokeStyle = '#ef4444';
-      ctx.lineWidth = 2.8;
+      ctx.lineWidth = 3.0;
       ctx.beginPath();
       ctx.arc(tel.x, tel.y, tel.radius, 0, Math.PI * 2);
       ctx.stroke();
 
       // Internal Magma Fill Area
       const grad = ctx.createRadialGradient(tel.x, tel.y, 2, tel.x, tel.y, tel.radius * progress);
-      grad.addColorStop(0, 'rgba(250, 204, 21, 0.65)');
-      grad.addColorStop(0.6, 'rgba(239, 68, 68, 0.45)');
-      grad.addColorStop(1, 'rgba(185, 28, 28, 0.2)');
+      grad.addColorStop(0, 'rgba(250, 204, 21, 0.75)');
+      grad.addColorStop(0.55, 'rgba(239, 68, 68, 0.5)');
+      grad.addColorStop(1, 'rgba(185, 28, 28, 0.25)');
       ctx.fillStyle = grad;
       ctx.beginPath();
       ctx.arc(tel.x, tel.y, tel.radius * progress, 0, Math.PI * 2);
@@ -251,12 +308,14 @@ export class DungeonFloor3 {
       ctx.restore();
     }
 
-    // Render Rising Floating Embers
+    // 5. Render Rising Floating Volcanic Embers
     ctx.save();
     for (const em of this.embers) {
-      if (em.x >= camera.x && em.x <= camera.x + camera.viewportWidth &&
-          em.y >= camera.y && em.y <= camera.y + camera.viewportHeight) {
-        const alpha = Math.sin((em.life / em.maxLife) * Math.PI) * 0.8;
+      if (
+        em.x >= camera.x && em.x <= camera.x + camera.viewportWidth &&
+        em.y >= camera.y && em.y <= camera.y + camera.viewportHeight
+      ) {
+        const alpha = Math.sin((em.life / em.maxLife) * Math.PI) * 0.85;
         ctx.fillStyle = `rgba(251, 146, 60, ${alpha})`;
         ctx.fillRect(em.x, em.y, em.size, em.size);
       }
@@ -264,90 +323,165 @@ export class DungeonFloor3 {
     ctx.restore();
   }
 
-  private renderTile(ctx: CanvasRenderingContext2D, tile: Floor3TileType, x: number, y: number, size: number): void {
+  private renderTile(
+    ctx: CanvasRenderingContext2D,
+    tile: Floor3TileType,
+    x: number,
+    y: number,
+    size: number,
+    tileX: number,
+    tileY: number
+  ): void {
     switch (tile) {
       case Floor3TileType.FLOOR:
-        // Dark scorched volcanic basalt
-        ctx.fillStyle = '#18181b';
-        ctx.fillRect(x, y, size, size);
-        ctx.strokeStyle = '#27272a';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x, y, size, size);
+        drawDungeonFloor(
+          ctx,
+          x,
+          y,
+          size,
+          tileX,
+          tileY,
+          FLOOR3_THEME,
+          this.animTimer,
+          this.hasNorthWall(tileX, tileY)
+        );
         break;
 
-      case Floor3TileType.MAGMA_CRACK:
-        ctx.fillStyle = '#18181b';
-        ctx.fillRect(x, y, size, size);
-        // Glowing magma veins
-        const pulse = (Math.sin(this.animTimer * 4 + x) + 1) * 0.5;
-        ctx.fillStyle = pulse > 0.5 ? '#f97316' : '#ea580c';
-        ctx.fillRect(x + 4, y + 8, 10, 2);
-        ctx.fillRect(x + 12, y + 6, 2, 12);
-        ctx.fillRect(x + 18, y + 16, 8, 2);
-        ctx.fillStyle = '#fde047';
-        ctx.fillRect(x + 12, y + 8, 2, 4);
+      case Floor3TileType.MAGMA_CRACK: {
+        drawDungeonFloor(ctx, x, y, size, tileX, tileY, FLOOR3_THEME, this.animTimer, this.hasNorthWall(tileX, tileY));
+        // Glowing magma veins pulsating through volcanic basalt
+        const pulse = Math.sin(this.animTimer * 4 + tileX + tileY) * 0.3 + 0.7;
+        ctx.save();
+        ctx.strokeStyle = `rgba(249, 115, 22, ${pulse})`;
+        ctx.lineWidth = 2;
+        ctx.shadowColor = '#ea580c';
+        ctx.shadowBlur = 6;
+        ctx.beginPath();
+        ctx.moveTo(x + 4, y + 8);
+        ctx.lineTo(x + 14, y + 15);
+        ctx.lineTo(x + 24, y + 22);
+        ctx.stroke();
+
+        ctx.strokeStyle = `rgba(253, 224, 71, ${pulse * 0.9})`;
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Molten core dot
+        ctx.fillStyle = '#fef08a';
+        ctx.fillRect(x + 13, y + 14, 2.5, 2.5);
+        ctx.restore();
         break;
+      }
 
       case Floor3TileType.WALL:
-        // Dark Obsidian demon fortress block
+        drawDungeonWall3D(
+          ctx,
+          x,
+          y,
+          size,
+          tileX,
+          tileY,
+          this.isWallFacingFloor(tileX, tileY),
+          FLOOR3_THEME
+        );
+        break;
+
+      case Floor3TileType.PILLAR: {
+        drawDungeonFloor(ctx, x, y, size, tileX, tileY, FLOOR3_THEME, this.animTimer, false);
+        // Demonic Obsidian Spire Pillar
+        // Heavy base
         ctx.fillStyle = '#09090b';
-        ctx.fillRect(x, y, size, size);
-        ctx.fillStyle = '#18181b';
-        ctx.fillRect(x + 2, y + 2, size - 4, size - 4);
-        ctx.strokeStyle = '#450a0a';
-        ctx.lineWidth = 1;
-        ctx.strokeRect(x + 2, y + 2, size - 4, size - 4);
-        break;
+        ctx.fillRect(x + 3, y + 21, size - 6, 9);
+        ctx.fillStyle = '#450a0a';
+        ctx.fillRect(x + 5, y + 22, size - 10, 2);
 
-      case Floor3TileType.PILLAR:
+        // Obsidian Spire Shaft
         ctx.fillStyle = '#18181b';
-        ctx.fillRect(x, y, size, size);
-        // Demonic Obsidian Spire
+        ctx.fillRect(x + 5, y + 6, size - 10, 16);
         ctx.fillStyle = '#27272a';
-        ctx.beginPath();
-        ctx.roundRect(x + 4, y + 2, size - 8, size - 4, 4);
-        ctx.fill();
-        ctx.strokeStyle = '#dc2626';
-        ctx.lineWidth = 1.5;
-        ctx.stroke();
-        // Molten rune band
-        ctx.fillStyle = '#f97316';
-        ctx.fillRect(x + 5, y + size / 2 - 2, size - 10, 4);
-        break;
+        ctx.fillRect(x + 7, y + 6, 4, 16);
+        ctx.fillStyle = '#3f3f46';
+        ctx.fillRect(x + 8, y + 6, 2, 16);
 
-      case Floor3TileType.LAVA:
-        // Flowing Lava
-        const lavaWave = Math.sin(this.animTimer * 5 + x * 0.1) * 2;
+        // Molten Hellfire Rune Band
+        const pulse = Math.sin(this.animTimer * 5 + tileX) * 0.25 + 0.75;
+        ctx.fillStyle = `rgba(234, 88, 12, ${pulse})`;
+        ctx.fillRect(x + 5, y + 13, size - 10, 3);
+        ctx.fillStyle = '#fde047';
+        ctx.fillRect(x + 7, y + 14, size - 14, 1);
+
+        // Jagged Spire Capital (Top)
+        ctx.fillStyle = '#27272a';
+        ctx.fillRect(x + 3, y + 2, size - 6, 5);
         ctx.fillStyle = '#dc2626';
+        ctx.fillRect(x + 4, y + 2, size - 8, 1.5);
+        break;
+      }
+
+      case Floor3TileType.LAVA: {
+        // Multi-Layer Flowing Boiling Magma River
+        ctx.fillStyle = '#2b0606';
         ctx.fillRect(x, y, size, size);
+
+        // Molten bed
+        const lavaWave = Math.sin(this.animTimer * 4 + tileX * 1.5 + tileY * 1.5) * 2;
+        ctx.fillStyle = '#dc2626';
+        ctx.fillRect(x + 1, y + 1, size - 2, size - 2);
+
+        // Fiery molten flow
         ctx.fillStyle = '#ea580c';
         ctx.fillRect(x + 2, y + 3 + lavaWave, size - 4, size - 6);
-        ctx.fillStyle = '#fde047';
-        ctx.fillRect(x + 6, y + 8 + lavaWave * 0.5, 8, 4);
-        break;
 
-      case Floor3TileType.PORTAL_UP:
-        ctx.fillStyle = '#18181b';
-        ctx.fillRect(x, y, size, size);
-        // Stone ring
-        ctx.fillStyle = '#334155';
+        // Blazing white-gold heat crest
+        ctx.fillStyle = 'rgba(254, 240, 138, 0.75)';
+        ctx.fillRect(x + 5, y + 7 + lavaWave * 0.5, size - 10, 3.5);
+
+        // Bursting Sulfur Bubble
+        const bubbleProg = (this.animTimer * 2 + tileX * 3 + tileY * 5) % 3;
+        if (bubbleProg < 2) {
+          const bRadius = bubbleProg * 2;
+          ctx.fillStyle = '#fde047';
+          ctx.beginPath();
+          ctx.arc(x + 12 + lavaWave, y + 15, bRadius, 0, Math.PI * 2);
+          ctx.fill();
+        }
+
+        // Obsidian Basin Rim
+        ctx.strokeStyle = '#450a0a';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(x + 1, y + 1, size - 2, size - 2);
+        break;
+      }
+
+      case Floor3TileType.PORTAL_UP: {
+        drawDungeonFloor(ctx, x, y, size, tileX, tileY, FLOOR3_THEME, this.animTimer, false);
+
+        // Stone Ring
+        ctx.fillStyle = '#27272a';
         ctx.beginPath();
-        ctx.arc(x + 16, y + 16, 13, 0, Math.PI * 2);
+        ctx.arc(x + 16, y + 16, 14, 0, Math.PI * 2);
         ctx.fill();
-        // Purple/cyan return vortex to Floor 2
-        const grad = ctx.createRadialGradient(x + 16, y + 16, 2, x + 16, y + 16, 12);
-        grad.addColorStop(0, '#bae6fd');
-        grad.addColorStop(0.6, '#38bdf8');
+
+        // Celestial Blue/Cyan return vortex to Floor 2
+        const pulse = Math.sin(this.animTimer * 4) * 1.5;
+        const grad = ctx.createRadialGradient(x + 16, y + 16, 2, x + 16, y + 16, 13 + pulse);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.3, '#bae6fd');
+        grad.addColorStop(0.7, '#38bdf8');
         grad.addColorStop(1, '#6366f1');
         ctx.fillStyle = grad;
         ctx.beginPath();
-        ctx.arc(x + 16, y + 16, 11, 0, Math.PI * 2);
+        ctx.arc(x + 16, y + 16, 12, 0, Math.PI * 2);
         ctx.fill();
+
         ctx.font = 'bold 8px sans-serif';
         ctx.textAlign = 'center';
         ctx.fillStyle = '#93c5fd';
-        ctx.fillText('▲ Ke Lt.2', x + 16, y - 3);
+        ctx.shadowColor = '#38bdf8';
+        ctx.shadowBlur = 4;
+        ctx.fillText('▲ Ke Lt.2', x + 16, y - 4);
         break;
+      }
     }
   }
 
@@ -357,22 +491,65 @@ export class DungeonFloor3 {
     playerCenterX: number,
     playerCenterY: number
   ): void {
-    ctx.save();
-    // Warm infernal darkness overlay
-    ctx.fillStyle = 'rgba(23, 5, 5, 0.62)';
-    ctx.fillRect(camera.x, camera.y, camera.viewportWidth, camera.viewportHeight);
+    const screenW = camera.viewportWidth;
+    const screenH = camera.viewportHeight;
 
-    // Warm Player Golden Torchlight
-    const pGrad = ctx.createRadialGradient(playerCenterX, playerCenterY, 15, playerCenterX, playerCenterY, 115);
-    pGrad.addColorStop(0, 'rgba(254, 240, 138, 0.45)');
-    pGrad.addColorStop(0.5, 'rgba(249, 115, 22, 0.2)');
+    // 1. Begin offscreen infernal darkness mask
+    const offCtx = DungeonLightingEngine.begin(screenW, screenH, 'rgba(23, 5, 5, 0.68)');
+    if (offCtx) {
+      // Punch Player Torch Light
+      const pScreenX = playerCenterX - camera.x;
+      const pScreenY = playerCenterY - camera.y;
+      DungeonLightingEngine.punchLight(pScreenX, pScreenY, 18, 125, 0.98);
+
+      // Punch Hellfire Braziers
+      for (const t of this.torches) {
+        const tx = t.x * this.tileSize + 16 - camera.x;
+        const ty = t.y * this.tileSize + 16 - camera.y;
+        if (tx >= -80 && tx <= screenW + 80 && ty >= -80 && ty <= screenH + 80) {
+          const flicker = Math.sin(this.animTimer * 5 + t.x) * 5;
+          DungeonLightingEngine.punchLight(tx, ty, 10, 75 + flicker, 0.96);
+        }
+      }
+
+      // Punch Dragon King Molten Altar in North Arena
+      const mandalaX = 20 * this.tileSize + 16 - camera.x;
+      const mandalaY = 7.5 * this.tileSize + 16 - camera.y;
+      if (mandalaX >= -90 && mandalaX <= screenW + 90 && mandalaY >= -90 && mandalaY <= screenH + 90) {
+        DungeonLightingEngine.punchLight(mandalaX, mandalaY, 20, 90, 0.92);
+      }
+
+      // Punch Lava River Chasm on Bridge of Cinders
+      const bridgeLavaX = 20 * this.tileSize + 16 - camera.x;
+      const bridgeLavaY = 31 * this.tileSize + 16 - camera.y;
+      if (bridgeLavaX >= -80 && bridgeLavaX <= screenW + 80 && bridgeLavaY >= -80 && bridgeLavaY <= screenH + 80) {
+        DungeonLightingEngine.punchLight(bridgeLavaX, bridgeLavaY, 16, 75, 0.85);
+      }
+
+      // Punch Portal Up
+      const px = this.portalUpX + 16 - camera.x;
+      const py = this.portalUpY + 16 - camera.y;
+      if (px >= -60 && px <= screenW + 60 && py >= -60 && py <= screenH + 60) {
+        DungeonLightingEngine.punchLight(px, py, 12, 65, 0.9);
+      }
+
+      // 2. Render Darkness Mask over World Context
+      DungeonLightingEngine.renderToWorld(ctx, camera.x, camera.y);
+    }
+
+    // 3. Ambient Fiery Glow Pass (Hellfire Braziers & Lava Rivers)
+    ctx.save();
+    // Warm Player Golden Torchlight Halo
+    const pGrad = ctx.createRadialGradient(playerCenterX, playerCenterY, 15, playerCenterX, playerCenterY, 120);
+    pGrad.addColorStop(0, 'rgba(254, 240, 138, 0.35)');
+    pGrad.addColorStop(0.5, 'rgba(249, 115, 22, 0.15)');
     pGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = pGrad;
     ctx.beginPath();
-    ctx.arc(playerCenterX, playerCenterY, 115, 0, Math.PI * 2);
+    ctx.arc(playerCenterX, playerCenterY, 120, 0, Math.PI * 2);
     ctx.fill();
 
-    // Hellfire Braziers (Bright Orange/Red Glows)
+    // Hellfire Brazier Glowing Orange Halos
     for (const t of this.torches) {
       const tx = t.x * this.tileSize + 16;
       const ty = t.y * this.tileSize + 16;
@@ -381,13 +558,13 @@ export class DungeonFloor3 {
         ty >= camera.y - 80 && ty <= camera.y + camera.viewportHeight + 80
       ) {
         const flicker = Math.sin(this.animTimer * 5 + t.x) * 5;
-        const tGrad = ctx.createRadialGradient(tx, ty, 6, tx, ty, 70 + flicker);
-        tGrad.addColorStop(0, 'rgba(254, 215, 170, 0.5)');
-        tGrad.addColorStop(0.5, 'rgba(234, 88, 12, 0.25)');
+        const tGrad = ctx.createRadialGradient(tx, ty, 6, tx, ty, 74 + flicker);
+        tGrad.addColorStop(0, 'rgba(254, 215, 170, 0.45)');
+        tGrad.addColorStop(0.5, 'rgba(234, 88, 12, 0.22)');
         tGrad.addColorStop(1, 'rgba(0, 0, 0, 0)');
         ctx.fillStyle = tGrad;
         ctx.beginPath();
-        ctx.arc(tx, ty, 70 + flicker, 0, Math.PI * 2);
+        ctx.arc(tx, ty, 74 + flicker, 0, Math.PI * 2);
         ctx.fill();
       }
     }
