@@ -72,6 +72,12 @@ export class CookingSystem {
       font-family: system-ui, -apple-system, sans-serif;
     `;
 
+    this.container.onclick = (e) => {
+      if (e.target === this.container) {
+        this.close();
+      }
+    };
+
     document.body.appendChild(this.container);
   }
 

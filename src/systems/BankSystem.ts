@@ -32,6 +32,8 @@ export class BankSystem {
 
   private animTimer: number = 0;
   private coinSparkleTimer: number = 0;
+  private openTime: number = 0;
+  private modalRect = { x: 0, y: 0, w: 0, h: 0 };
 
   public update(deltaTime: number): void {
     if (this.isOpen) {
@@ -42,6 +44,7 @@ export class BankSystem {
 
   public open(): void {
     this.isOpen = true;
+    this.openTime = Date.now();
     this.activeTab = 'EXCHANGE';
     AudioEngine.playButtonClick();
   }
@@ -191,6 +194,18 @@ export class BankSystem {
   ): boolean {
     if (!this.isOpen) return false;
 
+    // Debounce sentuhan awal saat modal baru dibuka
+    if (Date.now() - this.openTime < 180) {
+      return true;
+    }
+
+    // Sentuhan di luar modal menutup jendela bank
+    const { x: mx, y: my, w: mw, h: mh } = this.modalRect;
+    if (mw > 0 && mh > 0 && (touchX < mx || touchX > mx + mw || touchY < my || touchY > my + mh)) {
+      this.close();
+      return true;
+    }
+
     // 1. Close Button
     const { x: cx, y: cy, w: cw, h: ch } = this.closeBtnRect;
     if (touchX >= cx && touchX <= cx + cw && touchY >= cy && touchY <= cy + ch) {
@@ -269,6 +284,7 @@ export class BankSystem {
     const modalHeight = Math.min(300, screenHeight - 16);
     const modalX = (screenWidth - modalWidth) / 2;
     const modalY = (screenHeight - modalHeight) / 2;
+    this.modalRect = { x: modalX, y: modalY, w: modalWidth, h: modalHeight };
 
     // Backdrop shadow wash
     ctx.fillStyle = 'rgba(0, 0, 0, 0.75)';

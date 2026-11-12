@@ -138,8 +138,13 @@ export class MarketSystem {
   public activeCategory: 'ALL' | 'POTION' | 'SCROLL' | 'MATERIAL' = 'ALL';
   public selectedItemIndex: number = 0;
   public selectedSellIndex: number = 0;
+  public buyPage: number = 0;
+  public sellPage: number = 0;
   public selectedPetType: PetType = 'SLIME_PET';
   public onBuySuccess?: () => void;
+
+  private openTime: number = 0;
+  private modalRect = { x: 0, y: 0, w: 0, h: 0 };
 
   // Saved hitboxes for mobile touch interaction
   private closeBtnRect = { x: 0, y: 0, w: 0, h: 0 };
@@ -151,17 +156,22 @@ export class MarketSystem {
   private itemCardRects: { index: number; x: number; y: number; w: number; h: number }[] = [];
   private buy1BtnRect = { x: 0, y: 0, w: 0, h: 0 };
   private buy5BtnRect = { x: 0, y: 0, w: 0, h: 0 };
+  private buyPrevPageBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+  private buyNextPageBtnRect = { x: 0, y: 0, w: 0, h: 0 };
 
   // Sell Mode hitboxes
   private sellCardRects: { slotIndex: number; listIndex: number; x: number; y: number; w: number; h: number }[] = [];
   private sell1BtnRect = { x: 0, y: 0, w: 0, h: 0 };
   private sellAllBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+  private sellPrevPageBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+  private sellNextPageBtnRect = { x: 0, y: 0, w: 0, h: 0 };
 
   // Pet Shop hitboxes
   private petCardsRects: { type: PetType; x: number; y: number; w: number; h: number }[] = [];
   private petAdoptBtnRect = { x: 0, y: 0, w: 0, h: 0 };
   private petSellBtnRect = { x: 0, y: 0, w: 0, h: 0 };
   private petReleaseBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+  private petOpenAdoptBtnRect = { x: 0, y: 0, w: 0, h: 0 };
 
   private animTimer: number = 0;
 
@@ -173,11 +183,14 @@ export class MarketSystem {
 
   public open(shopId: MarketShopId = 'GENERAL'): void {
     this.isOpen = true;
+    this.openTime = Date.now();
     this.activeShopId = shopId;
     this.activeMode = 'BUY';
     this.activeCategory = 'ALL';
     this.selectedItemIndex = 0;
     this.selectedSellIndex = 0;
+    this.buyPage = 0;
+    this.sellPage = 0;
     this.selectedPetType = 'SLIME_PET';
     AudioEngine.playButtonClick();
   }
@@ -295,8 +308,12 @@ export class MarketSystem {
       );
     }
 
-    // Perbarui index seleksi jika item habis
+    // Perbarui index seleksi dan paginasi jika item habis
     const remainingItems = this.getSellableInventory(player);
+    const totalSellPages = Math.max(1, Math.ceil(remainingItems.length / 6));
+    if (this.sellPage >= totalSellPages) {
+      this.sellPage = totalSellPages - 1;
+    }
     if (this.selectedSellIndex >= remainingItems.length) {
       this.selectedSellIndex = Math.max(0, remainingItems.length - 1);
     }
@@ -398,6 +415,18 @@ export class MarketSystem {
   ): boolean {
     if (!this.isOpen) return false;
 
+    // 0. Debounce sentuhan awal saat modal baru dibuka (mencegah klik tembus)
+    if (Date.now() - this.openTime < 180) {
+      return true;
+    }
+
+    // 0.1 Sentuhan di luar kotak modal menutup dialog toko
+    const { x: mx, y: my, w: mw, h: mh } = this.modalRect;
+    if (mw > 0 && mh > 0 && (touchX < mx || touchX > mx + mw || touchY < my || touchY > my + mh)) {
+      this.close();
+      return true;
+    }
+
     // 1. Tombol Tutup [✕]
     const { x: cx, y: cy, w: cw, h: ch } = this.closeBtnRect;
     if (touchX >= cx && touchX <= cx + cw && touchY >= cy && touchY <= cy + ch) {
@@ -444,19 +473,35 @@ export class MarketSystem {
         // Tombol Adopsi
         const { x: abx, y: aby, w: abw, h: abh } = this.petAdoptBtnRect;
         if (touchX >= abx && touchX <= abx + abw && touchY >= aby && touchY <= aby + abh) {
+          if (currentPet) {
+            // Langsung alihkan ke tab status pet agar pemain bisa langsung menitipkan atau melepas pet aktif
+            this.activeMode = 'PET_STATUS';
+            AudioEngine.playButtonClick();
+            return true;
+          }
           this.adoptPet(this.selectedPetType, player, currentPet, floatingText, onAdoptPet);
           return true;
         }
       } else {
+        // Tombol Buka Katalog Adopsi jika belum punya pet
+        if (!currentPet) {
+          const { x: oax, y: oay, w: oaw, h: oah } = this.petOpenAdoptBtnRect;
+          if (oaw > 0 && touchX >= oax && touchX <= oax + oaw && touchY >= oay && touchY <= oay + oah) {
+            this.activeMode = 'BUY';
+            AudioEngine.playButtonClick();
+            return true;
+          }
+        }
+
         // Mode Pet Status & Jual / Lepas
         const { x: psx, y: psy, w: psw, h: psh } = this.petSellBtnRect;
-        if (touchX >= psx && touchX <= psx + psw && touchY >= psy && touchY <= psy + psh) {
+        if (psw > 0 && touchX >= psx && touchX <= psx + psw && touchY >= psy && touchY <= psy + psh) {
           this.sellPet(player, currentPet, floatingText, onDismissPet);
           return true;
         }
 
         const { x: prx, y: pry, w: prw, h: prh } = this.petReleaseBtnRect;
-        if (touchX >= prx && touchX <= prx + prw && touchY >= pry && touchY <= pry + prh) {
+        if (prw > 0 && touchX >= prx && touchX <= prx + prw && touchY >= pry && touchY <= pry + prh) {
           this.releasePet(player, currentPet, floatingText, onDismissPet);
           return true;
         }
@@ -472,10 +517,33 @@ export class MarketSystem {
       for (const cat of this.categoryRects) {
         if (touchX >= cat.x && touchX <= cat.x + cat.w && touchY >= cat.y && touchY <= cat.y + cat.h) {
           this.activeCategory = cat.category;
+          this.buyPage = 0;
           this.selectedItemIndex = 0;
           AudioEngine.playButtonClick();
           return true;
         }
+      }
+
+      // Navigasi Halaman Katalog Beli
+      const { x: bpx, y: bpy, w: bpw, h: bph } = this.buyPrevPageBtnRect;
+      if (bpw > 0 && touchX >= bpx && touchX <= bpx + bpw && touchY >= bpy && touchY <= bpy + bph) {
+        if (this.buyPage > 0) {
+          this.buyPage--;
+          this.selectedItemIndex = this.buyPage * 6;
+          AudioEngine.playButtonClick();
+        }
+        return true;
+      }
+
+      const { x: bnx, y: bny, w: bnw, h: bnh } = this.buyNextPageBtnRect;
+      if (bnw > 0 && touchX >= bnx && touchX <= bnx + bnw && touchY >= bny && touchY <= bny + bnh) {
+        const totalBuyPages = Math.ceil(this.getFilteredItems().length / 6);
+        if (this.buyPage < totalBuyPages - 1) {
+          this.buyPage++;
+          this.selectedItemIndex = this.buyPage * 6;
+          AudioEngine.playButtonClick();
+        }
+        return true;
       }
 
       // 4.2 Pemilihan Item Card
@@ -507,6 +575,28 @@ export class MarketSystem {
       }
     } else if (this.activeMode === 'SELL') {
       const invItems = this.getSellableInventory(player);
+
+      // Navigasi Halaman Tas Jual
+      const { x: spx, y: spy, w: spw, h: sph } = this.sellPrevPageBtnRect;
+      if (spw > 0 && touchX >= spx && touchX <= spx + spw && touchY >= spy && touchY <= spy + sph) {
+        if (this.sellPage > 0) {
+          this.sellPage--;
+          this.selectedSellIndex = this.sellPage * 6;
+          AudioEngine.playButtonClick();
+        }
+        return true;
+      }
+
+      const { x: snx, y: sny, w: snw, h: snh } = this.sellNextPageBtnRect;
+      if (snw > 0 && touchX >= snx && touchX <= snx + snw && touchY >= sny && touchY <= sny + snh) {
+        const totalSellPages = Math.ceil(invItems.length / 6);
+        if (this.sellPage < totalSellPages - 1) {
+          this.sellPage++;
+          this.selectedSellIndex = this.sellPage * 6;
+          AudioEngine.playButtonClick();
+        }
+        return true;
+      }
 
       // 4.4 Pemilihan Item Tas
       for (const card of this.sellCardRects) {
@@ -562,6 +652,7 @@ export class MarketSystem {
     const modalH = Math.min(300, screenHeight - 16);
     const modalX = Math.round((screenWidth - modalW) / 2);
     const modalY = Math.round((screenHeight - modalH) / 2);
+    this.modalRect = { x: modalX, y: modalY, w: modalW, h: modalH };
 
     const meta = SHOP_METADATA[this.activeShopId] || SHOP_METADATA.GENERAL;
 
@@ -793,8 +884,11 @@ export class MarketSystem {
 
     // --- KOLOM KIRI: DAFTAR ITEM TOKO ---
     const filteredItems = this.getFilteredItems();
+    const totalBuyPages = Math.max(1, Math.ceil(filteredItems.length / 6));
+    if (this.buyPage >= totalBuyPages) this.buyPage = totalBuyPages - 1;
+
     if (this.selectedItemIndex >= filteredItems.length) {
-      this.selectedItemIndex = 0;
+      this.selectedItemIndex = this.buyPage * 6;
     }
 
     ctx.fillStyle = 'rgba(15, 23, 42, 0.6)';
@@ -806,23 +900,32 @@ export class MarketSystem {
     ctx.stroke();
 
     this.itemCardRects = [];
+    this.buyPrevPageBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+    this.buyNextPageBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+
+    const hasPagination = totalBuyPages > 1;
+    const gridH = hasPagination ? contentH - 22 : contentH;
 
     const itemCols = 2;
     const itemRows = 3;
     const cardGap = 4;
     const cardW = Math.floor((col1W - cardGap * 3) / itemCols);
-    const cardH = Math.floor((contentH - cardGap * 4) / itemRows);
+    const cardH = Math.floor((gridH - cardGap * 4) / itemRows);
 
-    for (let i = 0; i < Math.min(filteredItems.length, itemCols * itemRows); i++) {
-      const item = filteredItems[i];
+    const startIndex = this.buyPage * 6;
+    const pageItems = filteredItems.slice(startIndex, startIndex + 6);
+
+    for (let i = 0; i < pageItems.length; i++) {
+      const globalIndex = startIndex + i;
+      const item = pageItems[i];
       const col = i % itemCols;
       const row = Math.floor(i / itemCols);
       const cx = col1X + cardGap + col * (cardW + cardGap);
       const cy = contentY + cardGap + row * (cardH + cardGap);
 
-      this.itemCardRects.push({ index: i, x: cx, y: cy, w: cardW, h: cardH });
+      this.itemCardRects.push({ index: globalIndex, x: cx, y: cy, w: cardW, h: cardH });
 
-      const isSelected = this.selectedItemIndex === i;
+      const isSelected = this.selectedItemIndex === globalIndex;
       const canAfford = player.val >= item.price;
 
       ctx.fillStyle = isSelected ? '#1e3a8a' : canAfford ? 'rgba(30, 41, 59, 0.85)' : 'rgba(15, 23, 42, 0.7)';
@@ -850,6 +953,51 @@ export class MarketSystem {
       ctx.font = 'bold 7.5px sans-serif';
       ctx.fillStyle = canAfford ? '#facc15' : '#ef4444';
       ctx.fillText(`${item.price.toLocaleString()} 𝒱`, cx + cardH, cy + cardH - 12);
+    }
+
+    // Navigasi Paginasi Halaman Beli
+    if (hasPagination) {
+      const pageBarY = contentY + gridH + 2;
+      const pageBarH = 18;
+      const navBtnW = 22;
+
+      const pbx = col1X + cardGap + 4;
+      const nbx = col1X + col1W - cardGap - navBtnW - 4;
+
+      this.buyPrevPageBtnRect = { x: pbx, y: pageBarY, w: navBtnW, h: pageBarH };
+      this.buyNextPageBtnRect = { x: nbx, y: pageBarY, w: navBtnW, h: pageBarH };
+
+      // Tombol Prev
+      ctx.fillStyle = this.buyPage > 0 ? '#1e293b' : 'rgba(15, 23, 42, 0.4)';
+      ctx.beginPath();
+      ctx.roundRect(pbx, pageBarY, navBtnW, pageBarH, 3);
+      ctx.fill();
+      ctx.strokeStyle = this.buyPage > 0 ? '#38bdf8' : '#334155';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.font = 'bold 9px sans-serif';
+      ctx.fillStyle = this.buyPage > 0 ? '#38bdf8' : '#475569';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('◀', pbx + navBtnW / 2, pageBarY + pageBarH / 2);
+
+      // Label Halaman
+      ctx.font = 'bold 8px sans-serif';
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillText(`Halaman ${this.buyPage + 1} / ${totalBuyPages}`, col1X + col1W / 2, pageBarY + pageBarH / 2);
+
+      // Tombol Next
+      ctx.fillStyle = this.buyPage < totalBuyPages - 1 ? '#1e293b' : 'rgba(15, 23, 42, 0.4)';
+      ctx.beginPath();
+      ctx.roundRect(nbx, pageBarY, navBtnW, pageBarH, 3);
+      ctx.fill();
+      ctx.strokeStyle = this.buyPage < totalBuyPages - 1 ? '#38bdf8' : '#334155';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      ctx.fillStyle = this.buyPage < totalBuyPages - 1 ? '#38bdf8' : '#475569';
+      ctx.fillText('▶', nbx + navBtnW / 2, pageBarY + pageBarH / 2);
     }
 
     // --- KOLOM KANAN: DETAIL ITEM TERPILIH & TOMBOL BELI ---
@@ -976,9 +1124,11 @@ export class MarketSystem {
     const col2X = col1X + col1W + colGap;
 
     const sellableList = this.getSellableInventory(player);
+    const totalSellPages = Math.max(1, Math.ceil(sellableList.length / 6));
+    if (this.sellPage >= totalSellPages) this.sellPage = totalSellPages - 1;
 
     if (this.selectedSellIndex >= sellableList.length) {
-      this.selectedSellIndex = Math.max(0, sellableList.length - 1);
+      this.selectedSellIndex = this.sellPage * 6;
     }
 
     // --- KOLOM KIRI: DAFTAR BARANG DALAM TAS ---
@@ -991,6 +1141,8 @@ export class MarketSystem {
     ctx.stroke();
 
     this.sellCardRects = [];
+    this.sellPrevPageBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+    this.sellNextPageBtnRect = { x: 0, y: 0, w: 0, h: 0 };
 
     if (sellableList.length === 0) {
       ctx.font = 'italic 8.5px sans-serif';
@@ -999,22 +1151,29 @@ export class MarketSystem {
       ctx.textBaseline = 'middle';
       ctx.fillText('Tas kosong! Tidak ada item untuk dijual.', col1X + col1W / 2, contentY + contentH / 2);
     } else {
+      const hasPagination = totalSellPages > 1;
+      const gridH = hasPagination ? contentH - 22 : contentH;
+
       const itemCols = 2;
       const itemRows = 3;
       const cardGap = 4;
       const cardW = Math.floor((col1W - cardGap * 3) / itemCols);
-      const cardH = Math.floor((contentH - cardGap * 4) / itemRows);
+      const cardH = Math.floor((gridH - cardGap * 4) / itemRows);
 
-      for (let i = 0; i < Math.min(sellableList.length, itemCols * itemRows); i++) {
-        const itemInfo = sellableList[i];
+      const startIndex = this.sellPage * 6;
+      const pageItems = sellableList.slice(startIndex, startIndex + 6);
+
+      for (let i = 0; i < pageItems.length; i++) {
+        const globalIndex = startIndex + i;
+        const itemInfo = pageItems[i];
         const col = i % itemCols;
         const row = Math.floor(i / itemCols);
         const cx = col1X + cardGap + col * (cardW + cardGap);
         const cy = contentY + cardGap + row * (cardH + cardGap);
 
-        this.sellCardRects.push({ slotIndex: itemInfo.slotIndex, listIndex: i, x: cx, y: cy, w: cardW, h: cardH });
+        this.sellCardRects.push({ slotIndex: itemInfo.slotIndex, listIndex: globalIndex, x: cx, y: cy, w: cardW, h: cardH });
 
-        const isSelected = this.selectedSellIndex === i;
+        const isSelected = this.selectedSellIndex === globalIndex;
         const sellable = isItemSellable(itemInfo.itemId);
 
         ctx.fillStyle = isSelected ? '#854d0e' : sellable ? 'rgba(30, 41, 59, 0.85)' : 'rgba(30, 20, 20, 0.8)';
@@ -1049,6 +1208,51 @@ export class MarketSystem {
         ctx.fillStyle = sellable ? '#4ade80' : '#ef4444';
         const priceTxt = sellable ? `+${(unitVal * itemInfo.count).toLocaleString()} 𝒱` : 'Terikat';
         ctx.fillText(priceTxt, cx + cardH, cy + cardH - 11);
+      }
+
+      // Navigasi Paginasi Halaman Jual
+      if (hasPagination) {
+        const pageBarY = contentY + gridH + 2;
+        const pageBarH = 18;
+        const navBtnW = 22;
+
+        const pbx = col1X + cardGap + 4;
+        const nbx = col1X + col1W - cardGap - navBtnW - 4;
+
+        this.sellPrevPageBtnRect = { x: pbx, y: pageBarY, w: navBtnW, h: pageBarH };
+        this.sellNextPageBtnRect = { x: nbx, y: pageBarY, w: navBtnW, h: pageBarH };
+
+        // Tombol Prev
+        ctx.fillStyle = this.sellPage > 0 ? '#1e293b' : 'rgba(15, 23, 42, 0.4)';
+        ctx.beginPath();
+        ctx.roundRect(pbx, pageBarY, navBtnW, pageBarH, 3);
+        ctx.fill();
+        ctx.strokeStyle = this.sellPage > 0 ? '#facc15' : '#334155';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.font = 'bold 9px sans-serif';
+        ctx.fillStyle = this.sellPage > 0 ? '#facc15' : '#475569';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('◀', pbx + navBtnW / 2, pageBarY + pageBarH / 2);
+
+        // Label Halaman
+        ctx.font = 'bold 8px sans-serif';
+        ctx.fillStyle = '#f8fafc';
+        ctx.fillText(`Halaman ${this.sellPage + 1} / ${totalSellPages}`, col1X + col1W / 2, pageBarY + pageBarH / 2);
+
+        // Tombol Next
+        ctx.fillStyle = this.sellPage < totalSellPages - 1 ? '#1e293b' : 'rgba(15, 23, 42, 0.4)';
+        ctx.beginPath();
+        ctx.roundRect(nbx, pageBarY, navBtnW, pageBarH, 3);
+        ctx.fill();
+        ctx.strokeStyle = this.sellPage < totalSellPages - 1 ? '#facc15' : '#334155';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        ctx.fillStyle = this.sellPage < totalSellPages - 1 ? '#facc15' : '#475569';
+        ctx.fillText('▶', nbx + navBtnW / 2, pageBarY + pageBarH / 2);
       }
     }
 
@@ -1281,6 +1485,34 @@ export class MarketSystem {
 
     // Cost info box
     const priceBoxY = contentY + contentH - 58;
+
+    // Showcase Box Avatar Pet Animasi
+    const showcaseY = descY + 36;
+    const showcaseH = Math.max(30, priceBoxY - showcaseY - 6);
+    if (showcaseH >= 30) {
+      ctx.fillStyle = 'rgba(6, 95, 70, 0.2)';
+      ctx.beginPath();
+      ctx.roundRect(col2X + 8, showcaseY, col2W - 16, showcaseH, 4);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(52, 211, 153, 0.4)';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+
+      const bob = Math.sin(this.animTimer * 1.8) * 2;
+      ctx.font = '20px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(selectedInfo.avatarIcon, col2X + 28, showcaseY + showcaseH / 2 + bob);
+
+      ctx.font = 'bold 8.5px sans-serif';
+      ctx.fillStyle = '#fef08a';
+      ctx.textAlign = 'left';
+      ctx.fillText('Keahlian: Auto-Loot Koin & Drop', col2X + 46, showcaseY + showcaseH / 2 - 5);
+      ctx.font = '7.5px sans-serif';
+      ctx.fillStyle = '#94a3b8';
+      ctx.fillText(`Kecepatan: ${selectedInfo.speed} SPD · Radius Magnet: ${selectedInfo.pickupRadius}px`, col2X + 46, showcaseY + showcaseH / 2 + 7);
+    }
+
     ctx.fillStyle = 'rgba(30, 41, 59, 0.6)';
     ctx.beginPath();
     ctx.roundRect(col2X + 8, priceBoxY, col2W - 16, 20, 3);
@@ -1356,21 +1588,47 @@ export class MarketSystem {
     ctx.stroke();
 
     if (!currentPet) {
-      ctx.font = '18px sans-serif';
+      this.petSellBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+      this.petReleaseBtnRect = { x: 0, y: 0, w: 0, h: 0 };
+
+      ctx.font = '22px sans-serif';
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
-      ctx.fillText('🐾', colX + colW / 2, contentY + contentH / 2 - 20);
+      ctx.fillText('🐾', colX + colW / 2, contentY + contentH / 2 - 30);
 
-      ctx.font = 'bold 10px sans-serif';
+      ctx.font = 'bold 10.5px sans-serif';
       ctx.fillStyle = '#fef08a';
       const safeNoPet = CanvasText.truncate(ctx, 'Kamu Belum Memiliki Hewan Peliharaan Aktif', colW - 20);
-      ctx.fillText(safeNoPet, colX + colW / 2, contentY + contentH / 2);
+      ctx.fillText(safeNoPet, colX + colW / 2, contentY + contentH / 2 - 8);
 
       ctx.font = '8px sans-serif';
       ctx.fillStyle = '#94a3b8';
-      CanvasText.drawWrappedText(ctx, 'Kunjungi tab "🐾 ADOPSI PET" untuk memilih kawan setia petualanganmu!', colX + 16, contentY + contentH / 2 + 10, colW - 32, 11);
+      CanvasText.drawWrappedText(ctx, 'Kunjungi katalog adopsi untuk memilih kawan setia yang mengumpulkan koin & drop otomatis!', colX + 20, contentY + contentH / 2 + 8, colW - 40, 11);
+
+      // Tombol Buka Katalog Adopsi
+      const btnW = Math.min(220, colW - 40);
+      const btnH = 26;
+      const btnX = colX + (colW - btnW) / 2;
+      const btnY = contentY + contentH / 2 + 34;
+      this.petOpenAdoptBtnRect = { x: btnX, y: btnY, w: btnW, h: btnH };
+
+      ctx.fillStyle = '#059669';
+      ctx.beginPath();
+      ctx.roundRect(btnX, btnY, btnW, btnH, 5);
+      ctx.fill();
+      ctx.strokeStyle = '#34d399';
+      ctx.lineWidth = 1.2;
+      ctx.stroke();
+
+      ctx.font = 'bold 9.5px sans-serif';
+      ctx.fillStyle = '#ffffff';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🐾 Buka Katalog Adopsi Pet', btnX + btnW / 2, btnY + btnH / 2);
       return;
     }
+
+    this.petOpenAdoptBtnRect = { x: 0, y: 0, w: 0, h: 0 };
 
     const info = PET_DATA[currentPet.type];
 
@@ -1456,8 +1714,5 @@ export class MarketSystem {
     ctx.fillStyle = '#e2e8f0';
     const safeRelLabel = CanvasText.truncate(ctx, '🕊️ Lepas ke Alam Rimba', bW - 6);
     ctx.fillText(safeRelLabel, bRelX + bW / 2, btnAreaY + btnH / 2);
-
-    ctx.fillStyle = '#e2e8f0';
-    ctx.fillText(`🕊️ Lepas ke Alam Rimba`, bRelX + bW / 2, btnAreaY + btnH / 2);
   }
 }

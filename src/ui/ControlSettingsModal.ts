@@ -18,6 +18,10 @@ export class ControlSettingsModal {
     this.isOpen = !this.isOpen;
   }
 
+  public close(): void {
+    this.isOpen = false;
+  }
+
   public handleTouch(touchX: number, touchY: number, screenWidth: number, screenHeight: number): boolean {
     this.gearBtn.x = screenWidth - 86;
 

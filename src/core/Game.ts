@@ -331,9 +331,67 @@ export class Game {
 
     this.setupOnboardingFlow();
 
-    // Setup Desktop Keyboard Shortcuts (1: HP Potion, 2: MP Potion, M: MiniMap, B: Tas)
+    // Setup Desktop Keyboard Shortcuts (1: HP Potion, 2: MP Potion, M: MiniMap, B: Tas, Escape: Tutup Dialog/Modal)
     window.addEventListener('keydown', (e) => {
       if (this.onboardingUI.state !== 'PLAYING') return;
+
+      // Escape key to close active modal or dialog
+      if (e.key === 'Escape') {
+        if (NotificationModal.isOpen) {
+          NotificationModal.close();
+          return;
+        }
+        if (this.controlSettingsModal.isOpen) {
+          this.controlSettingsModal.close();
+          return;
+        }
+        if (this.marketSystem.isOpen) {
+          this.marketSystem.close();
+          return;
+        }
+        if (this.bankSystem.isOpen) {
+          this.bankSystem.close();
+          return;
+        }
+        if (this.inventoryUI.isOpen) {
+          this.inventoryUI.close();
+          return;
+        }
+        if (this.cookingSystem.isOpen) {
+          this.cookingSystem.close();
+          return;
+        }
+        if (this.titleSystem.isOpen) {
+          this.titleSystem.close();
+          return;
+        }
+        if (this.leaderboardUI.isOpen) {
+          this.leaderboardUI.close();
+          return;
+        }
+        if (this.guildNPC.isAppraisalOpen) {
+          this.guildNPC.closeAppraisal();
+          return;
+        }
+        if (this.blacksmithNPC.isWorkshopOpen) {
+          this.blacksmithNPC.closeWorkshop();
+          return;
+        }
+        if (this.villageManager.isDialogOpen) {
+          this.villageManager.closeDialog();
+          return;
+        }
+        const companionModal = document.getElementById('companion-hire-modal');
+        if (companionModal) {
+          companionModal.remove();
+          return;
+        }
+        return;
+      }
+
+      // Do not trigger game shortcuts if any modal is open
+      if (this.isAnyModalOpen()) return;
+
       if (e.key === '1') {
         this.quickPotionUI.useHpPotion();
       } else if (e.key === '2') {
@@ -372,6 +430,58 @@ export class Game {
         return true;
       }
 
+      // 0. Village Dialog Modal (Bekerja di Overworld maupun di dalam Interior Ruangan)
+      if (this.villageManager.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight, this.player, this.floatingText)) {
+        return true;
+      }
+
+      // 0.1 Bank Royal Val Modal (Pertukaran, Tabungan & Bunga)
+      if (this.bankSystem.handleTouch(touchX, touchY, this.player, this.floatingText)) {
+        return true;
+      }
+
+      // 0.2 Market System Modal (Distrik Pasar Raya Oakhaven)
+      if (
+        this.marketSystem.handleTouch(
+          touchX,
+          touchY,
+          this.player,
+          this.pet,
+          this.floatingText,
+          (petType) => {
+            this.pet = new Pet(petType, this.player.x + 20, this.player.y);
+            this.titleSystem.unlockTitle('BEAST_TAMER', this.player, this.floatingText);
+            AudioEngine.playLevelUp();
+            this.saveSessionSnapshot();
+          },
+          () => {
+            this.pet = null;
+            this.saveSessionSnapshot();
+          }
+        )
+      ) {
+        return true;
+      }
+
+      // 1. Guild Appraisal Modal
+      if (this.guildNPC.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight, this.player, this.floatingText)) {
+        return true;
+      }
+      // 2. Blacksmith Weaponsmith Workshop Modal
+      if (this.blacksmithNPC.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight, this.player, this.floatingText)) {
+        return true;
+      }
+      // 4. Inventory Backpack & Card Modal
+      if (this.inventoryUI.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight)) {
+        return true;
+      }
+
+      // Jika ada modal apapun yang sedang aktif, telan sentuhan agar tidak memicu tombol latar belakang
+      if (this.isAnyModalOpen()) {
+        return true;
+      }
+
+      // --- KONTROL HUD HANYA DAPAT DISENTUH SAAT TIDAK ADA MODAL AKTIF ---
       // 0.1 Mini-Map Touch
       if (this.miniMapUI.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight)) {
         return true;
@@ -420,45 +530,6 @@ export class Game {
         }
       }
 
-      // 0. Village Dialog Modal (Bekerja di Overworld maupun di dalam Interior Ruangan)
-      if (this.villageManager.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight, this.player, this.floatingText)) {
-        return true;
-      }
-
-      // 0.1 Bank Royal Val Modal (Pertukaran, Tabungan & Bunga)
-      if (this.bankSystem.handleTouch(touchX, touchY, this.player, this.floatingText)) {
-        return true;
-      }
-
-      // 0.2 Market System Modal (Distrik Pasar Raya Oakhaven)
-      if (
-        this.marketSystem.handleTouch(
-          touchX,
-          touchY,
-          this.player,
-          this.pet,
-          this.floatingText,
-          (petType) => {
-            this.pet = new Pet(petType, this.player.x + 20, this.player.y);
-            this.saveSessionSnapshot();
-          },
-          () => {
-            this.pet = null;
-            this.saveSessionSnapshot();
-          }
-        )
-      ) {
-        return true;
-      }
-
-      // 1. Guild Appraisal Modal
-      if (this.guildNPC.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight, this.player, this.floatingText)) {
-        return true;
-      }
-      // 2. Blacksmith Weaponsmith Workshop Modal
-      if (this.blacksmithNPC.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight, this.player, this.floatingText)) {
-        return true;
-      }
       // 2. Auth Profile / Logout buttons
       if (this.authUI.handleTouch(touchX, touchY, this.screenWidth)) {
         return true;
@@ -467,13 +538,9 @@ export class Game {
       if (this.skillBarUI.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight)) {
         return true;
       }
-      // 4. Inventory Backpack
-      if (this.inventoryUI.handleTouch(touchX, touchY, this.screenWidth, this.screenHeight)) {
-        return true;
-      }
 
       // 5. Sentuhan langsung pada Banner Prompt Aksi Bawah Layar (Mobile Friendly Action Tap)
-      if (!this.isAnyModalOpen() && this.bottomActionPromptRect) {
+      if (this.bottomActionPromptRect) {
         const { x, y, w, h } = this.bottomActionPromptRect;
         if (touchX >= x && touchX <= x + w && touchY >= y && touchY <= y + h) {
           this.input.state.isAction = true;
@@ -1016,6 +1083,8 @@ export class Game {
       // Saat gugur di Dungeon, pemain sadar dengan selamat di balai serikat desa
       this.player.x = 50 * CONSTANTS.TILE_SIZE + 6;
       this.player.y = 50 * CONSTANTS.TILE_SIZE + 3;
+      this.player.hp = this.player.maxHp;
+      this.player.mp = this.player.maxMp;
       if (this.player.val > 0) {
         const lostVal = Math.min(this.player.val, Math.max(10, Math.floor(this.player.val * 0.1)));
         this.player.removeVal(lostVal);
@@ -1695,6 +1764,10 @@ export class Game {
     `;
     document.body.appendChild(modal);
 
+    modal.onclick = (e) => {
+      if (e.target === modal) modal.remove();
+    };
+
     const closeBtn = document.getElementById('close-companion-btn');
     if (closeBtn) closeBtn.onclick = () => modal.remove();
 
@@ -1724,100 +1797,7 @@ export class Game {
   }
 
   public openPetAdoptionDialog(): void {
-    if (this.pet) {
-      NotificationModal.confirm({
-        title: `Lepas ${this.pet.name}?`,
-        message: `${this.pet.name} saat ini aktif mengumpulkan koin & item secara otomatis. Apakah kamu ingin melepasnya?`,
-        confirmText: 'Lepas Pet',
-        cancelText: 'Tetap Rawat',
-        onConfirm: () => {
-          this.pet = null;
-          this.saveSessionSnapshot();
-          this.floatingText.spawn(this.player.x + 12, this.player.y - 16, 'Hewan peliharaan dilepas ke alam!', '#94a3b8');
-        }
-      });
-      return;
-    }
-
-    let existing = document.getElementById('pet-adoption-modal');
-    if (existing) existing.remove();
-
-    const modal = document.createElement('div');
-    modal.id = 'pet-adoption-modal';
-    modal.style.cssText = `
-      position: fixed; inset: 0; background: rgba(3, 7, 18, 0.82); backdrop-filter: blur(4px);
-      display: flex; align-items: center; justify-content: center; z-index: 1000; font-family: system-ui, sans-serif;
-    `;
-
-    modal.innerHTML = `
-      <div style="background: linear-gradient(180deg, #0f172a, #1e293b); border: 2px solid #facc15; border-radius: 12px; width: 92%; max-width: 440px; padding: 16px; color: #ffffff; box-shadow: 0 10px 30px rgba(0,0,0,0.8);">
-        <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(250, 204, 21, 0.4); padding-bottom: 8px; margin-bottom: 12px;">
-          <div>
-            <div style="font-size: 16px; font-weight: 900; color: #facc15;">🐾 SUAKA HEWAN DESA (PET AUTO-LOOT)</div>
-            <div style="font-size: 11px; color: #94a3b8;">Pet pendamping akan berlari memungut koin & drop item otomatis!</div>
-          </div>
-          <button id="close-pet-btn" style="background: none; border: none; font-size: 20px; color: #94a3b8; cursor: pointer;">✕</button>
-        </div>
-
-        <div style="display: flex; flex-direction: column; gap: 8px;">
-          <div style="background: rgba(30, 41, 59, 0.85); border: 1px solid #38bdf8; border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div style="font-weight: bold; font-size: 13px; color: #38bdf8;">🟢 Puni (Slime Kristal Mungil)</div>
-              <div style="font-size: 11px; color: #cbd5e1;">Slime mini yang lincah menyerap item drop. [Butuh: 2 Jeli Slime]</div>
-            </div>
-            <button id="adopt-slime-btn" style="background: linear-gradient(135deg, #0284c7, #0369a1); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">Adopsi</button>
-          </div>
-
-          <div style="background: rgba(30, 41, 59, 0.85); border: 1px solid #f59e0b; border-radius: 8px; padding: 10px; display: flex; justify-content: space-between; align-items: center;">
-            <div>
-              <div style="font-weight: bold; font-size: 13px; color: #f59e0b;">🐺 Lobo (Anak Serigala Rimba)</div>
-              <div style="font-size: 11px; color: #cbd5e1;">Anak serigala berbulu lebat pengendus harta. [Butuh: 2 Bunga Mistis]</div>
-            </div>
-            <button id="adopt-wolf-btn" style="background: linear-gradient(135deg, #d97706, #b45309); color: white; border: none; padding: 6px 12px; border-radius: 6px; font-size: 11px; font-weight: bold; cursor: pointer;">Adopsi</button>
-          </div>
-        </div>
-      </div>
-    `;
-    document.body.appendChild(modal);
-
-    const closeBtn = document.getElementById('close-pet-btn');
-    if (closeBtn) closeBtn.onclick = () => modal.remove();
-
-    const sBtn = document.getElementById('adopt-slime-btn');
-    if (sBtn) {
-      sBtn.onclick = () => {
-        const count = this.player.inventory.getItemCount('SLIME_JELLY');
-        if (count < 2) {
-          this.floatingText.spawn(this.player.x + 12, this.player.y - 16, 'Butuh 2 Jeli Slime!', '#ef4444');
-          return;
-        }
-        this.player.inventory.removeItemsById('SLIME_JELLY', 2);
-        this.pet = new Pet('SLIME_PET', this.player.x + 20, this.player.y);
-        this.saveSessionSnapshot();
-        this.titleSystem.unlockTitle('BEAST_TAMER', this.player, this.floatingText);
-        AudioEngine.playLevelUp();
-        this.floatingText.spawn(this.player.x + 12, this.player.y - 20, '🐾 Puni diadopsi & siap auto-loot!', '#38bdf8', 2.5);
-        modal.remove();
-      };
-    }
-
-    const wBtn = document.getElementById('adopt-wolf-btn');
-    if (wBtn) {
-      wBtn.onclick = () => {
-        const count = this.player.inventory.getItemCount('MAGIC_FLOWER');
-        if (count < 2) {
-          this.floatingText.spawn(this.player.x + 12, this.player.y - 16, 'Butuh 2 Bunga Mistis!', '#ef4444');
-          return;
-        }
-        this.player.inventory.removeItemsById('MAGIC_FLOWER', 2);
-        this.pet = new Pet('WOLF_PET', this.player.x + 20, this.player.y);
-        this.saveSessionSnapshot();
-        this.titleSystem.unlockTitle('BEAST_TAMER', this.player, this.floatingText);
-        AudioEngine.playLevelUp();
-        this.floatingText.spawn(this.player.x + 12, this.player.y - 20, '🐾 Lobo diadopsi & siap auto-loot!', '#facc15', 2.5);
-        modal.remove();
-      };
-    }
+    this.marketSystem.open('PET');
   }
 
   private handleMonsterDefeated(monster: Monster): void {
@@ -2345,6 +2325,17 @@ export class Game {
         this.input.consumeAction();
         this.marketSystem.open(nearShop.id);
         return;
+      }
+
+      // Kandang Satwa Alun-alun (Pet Pen Outpost) at (54, 52)
+      const petPenX = 54 * CONSTANTS.TILE_SIZE + 16;
+      const petPenY = 52 * CONSTANTS.TILE_SIZE + 16;
+      if (Math.hypot(petPenX - playerCenterX, petPenY - playerCenterY) < 38) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.input.consumeAction();
+          this.marketSystem.open('PET');
+          return;
+        }
       }
 
       // Village NPC Interaction (Quest & Ambient Warga Luar Ruangan)
@@ -3918,28 +3909,8 @@ export class Game {
       // 9. Auth Status Pill / Logout
       this.authUI.render(ctx, screenWidth);
 
-      // 10. Inventory UI Overlay
-      this.inventoryUI.render(ctx, screenWidth, screenHeight);
-
-      // 11. Guild Appraisal Ceremony Modal
-      this.guildNPC.renderModal(ctx, screenWidth, screenHeight, this.player);
-
-      // 12. Weaponsmith Workshop Modal
-      this.blacksmithNPC.renderModal(ctx, screenWidth, screenHeight, this.player);
-
-      // 12.0 Village NPC Dialog Modal (Quest & Ambient)
-      this.villageManager.renderDialogModal(ctx, screenWidth, screenHeight);
-
-      // 12.01 Royal Bank Modal (Exchange & Savings)
-      this.bankSystem.renderModal(ctx, screenWidth, screenHeight, this.player);
-
-      // 12.02 Market System Modal (Distrik Pasar Raya Oakhaven)
-      this.marketSystem.renderModal(ctx, screenWidth, screenHeight, this.player, this.pet);
-
-      // 12. Control Settings Modal (Gear ⚙️ & customization)
-      this.controlSettingsModal.render(ctx, screenWidth, screenHeight);
-
-      // 12.1 Render Mini-Map UI
+      // --- IN-GAME HUD & PROMPT LAYERS (Ditempatkan di bawah layer modal dialog) ---
+      // 10. Render Mini-Map UI
       const activeMonsters =
         this.isCurrentMapInterior()
           ? []
@@ -3992,10 +3963,10 @@ export class Game {
         this.dungeonStonewatch
       );
 
-      // 12.2 Render Active Quest HUD Tracker (Top-Left)
+      // 10.1 Render Active Quest HUD Tracker (Top-Left)
       this.renderQuestTrackerHUD(ctx);
 
-      // Top Center: Day/Night Cycle & Weather Banner
+      // 10.2 Top Center: Day/Night Cycle & Weather Banner
       ctx.save();
       const timeStr = this.timeWeatherEngine.getFormattedTime();
       ctx.font = 'bold 9.5px sans-serif';
@@ -4013,7 +3984,7 @@ export class Game {
       ctx.fillText(timeStr, timeX + timeWidth / 2, timeY + 11);
       ctx.restore();
 
-      // Top-Center: Active Food Buffs HUD Badges (placed directly beneath Day/Night banner)
+      // 10.3 Top-Center: Active Food Buffs HUD Badges
       let activeBuffsCount = 0;
       if (this.player.foodBuffAtkTimer > 0) activeBuffsCount++;
       if (this.player.foodBuffMpTimer > 0) activeBuffsCount++;
@@ -4046,7 +4017,7 @@ export class Game {
         }
       }
 
-      // Top HUD: Gelar & Title Button (👑)
+      // 10.4 Top HUD: Gelar & Title Button (👑)
       const titleBtnX = screenWidth - 128;
       const titleBtnY = 10;
       const titleBtnSize = 34;
@@ -4067,7 +4038,7 @@ export class Game {
       ctx.fillText('👑', titleBtnX + titleBtnSize / 2, titleBtnY + titleBtnSize / 2);
       ctx.restore();
 
-      // 13. Top HUD: Fullscreen Icon (⛶)
+      // 10.5 Top HUD: Fullscreen Icon (⛶)
       const fsX = screenWidth - 170;
       const fsY = 10;
       const fsSize = 34;
@@ -4087,7 +4058,7 @@ export class Game {
       ctx.textBaseline = 'middle';
       ctx.fillText(PwaService.isFullscreen() ? '🗗' : '⛶', fsX + fsSize / 2, fsY + fsSize / 2);
 
-      // Top HUD: Install Web App Button (📲) if installable
+      // 10.6 Top HUD: Install Web App Button (📲) if installable
       if (PwaService.isInstallable) {
         const instX = screenWidth - 254;
         const instY = 10;
@@ -4109,29 +4080,7 @@ export class Game {
       }
       ctx.restore();
 
-      // 14. Floating Auto-Update Banner (Muncul saat ada pembaruan file baru)
-      if (UpdateService.isUpdateAvailable) {
-        const upW = 236;
-        const upH = 28;
-        const upX = (screenWidth - upW) / 2;
-        const upY = 10;
-
-        ctx.save();
-        ctx.fillStyle = 'rgba(2, 132, 199, 0.95)';
-        ctx.fillRect(upX, upY, upW, upH);
-        ctx.strokeStyle = '#38bdf8';
-        ctx.lineWidth = 1.5;
-        ctx.strokeRect(upX, upY, upW, upH);
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 9.5px sans-serif';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'middle';
-        ctx.fillText('🚀 Versi Baru Siap · Sentuh Muat Ulang ↻', upX + upW / 2, upY + upH / 2);
-        ctx.restore();
-      }
-
-      // 15. Action Prompt Bubbles (Dynamic Width, Centered & Overflow-Proof)
+      // 10.7 Action Prompt Bubbles (Dynamic Width, Centered & Overflow-Proof)
       this.bottomActionPromptRect = null;
 
       if (!this.isAnyModalOpen()) {
@@ -4156,12 +4105,20 @@ export class Game {
           const eldEntDist = Math.hypot(21 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 13 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
           const stoneEntDist = Math.hypot(85 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 58 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
           const nearDoor = this.buildingInteriors.getNearbyOverworldDoor(playerCenterX, playerCenterY);
-
           const nearMarketShop = this.villageManager.getNearbyMarketShop(playerCenterX, playerCenterY);
+          const petPenDist = Math.hypot(54 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 52 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
+          const nearNPC = this.villageManager.isNearAnyNPC(playerCenterX, playerCenterY);
+
           if (nearDoor) {
             this.renderBottomActionPrompt(ctx, `[A] Masuk ${nearDoor.name} ${nearDoor.icon}`, nearDoor.accentColor, nearDoor.accentColor);
           } else if (nearMarketShop) {
             this.renderBottomActionPrompt(ctx, nearMarketShop.prompt, nearMarketShop.accentColor, nearMarketShop.accentColor);
+          } else if (petPenDist < 38) {
+            this.renderBottomActionPrompt(ctx, '[A] Kunjungi Suaka & Toko Pet Mia 🐾', '#059669', '#34d399');
+          } else if (this.caveEntrance.isNearPlayer(playerCenterX, playerCenterY)) {
+            this.renderBottomActionPrompt(ctx, '[A] Masuk Dungeon Goa Serena ⛰️', '#38bdf8', '#93c5fd');
+          } else if (nearNPC) {
+            this.renderBottomActionPrompt(ctx, `[A] Bicara dengan ${nearNPC.name} 💬`, '#facc15', '#fef08a');
           } else if (eldEntDist < 38) {
             this.renderBottomActionPrompt(
               ctx,
@@ -4186,6 +4143,58 @@ export class Game {
             }
           }
         }
+
+        // Generic chest prompt jika pemain mendekati peti yang belum dibuka
+        if (!this.bottomActionPromptRect) {
+          const nearChest = activeChests.find((c) => !c.isOpen && c.isNearPlayer(playerCenterX, playerCenterY));
+          if (nearChest) {
+            this.renderBottomActionPrompt(ctx, '[A] Buka Peti Harta Karun 🎁', '#facc15', '#fef08a');
+          }
+        }
+      }
+
+      // --- MODAL DIALOG OVERLAYS (Di-render di atas seluruh elemen dunia & HUD) ---
+      // 11. Inventory UI Overlay
+      this.inventoryUI.render(ctx, screenWidth, screenHeight);
+
+      // 12. Guild Appraisal Ceremony Modal
+      this.guildNPC.renderModal(ctx, screenWidth, screenHeight, this.player);
+
+      // 13. Weaponsmith Workshop Modal
+      this.blacksmithNPC.renderModal(ctx, screenWidth, screenHeight, this.player);
+
+      // 14. Village NPC Dialog Modal (Quest & Ambient)
+      this.villageManager.renderDialogModal(ctx, screenWidth, screenHeight);
+
+      // 15. Royal Bank Modal (Exchange & Savings)
+      this.bankSystem.renderModal(ctx, screenWidth, screenHeight, this.player);
+
+      // 16. Market System Modal (Distrik Pasar Raya Oakhaven)
+      this.marketSystem.renderModal(ctx, screenWidth, screenHeight, this.player, this.pet);
+
+      // 17. Control Settings Modal (Gear ⚙️ & customization)
+      this.controlSettingsModal.render(ctx, screenWidth, screenHeight);
+
+      // 18. Floating Auto-Update Banner (Muncul saat ada pembaruan file baru)
+      if (UpdateService.isUpdateAvailable) {
+        const upW = 236;
+        const upH = 28;
+        const upX = (screenWidth - upW) / 2;
+        const upY = 10;
+
+        ctx.save();
+        ctx.fillStyle = 'rgba(2, 132, 199, 0.95)';
+        ctx.fillRect(upX, upY, upW, upH);
+        ctx.strokeStyle = '#38bdf8';
+        ctx.lineWidth = 1.5;
+        ctx.strokeRect(upX, upY, upW, upH);
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 9.5px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        ctx.fillText('🚀 Versi Baru Siap · Sentuh Muat Ulang ↻', upX + upW / 2, upY + upH / 2);
+        ctx.restore();
       }
 
       // 16. Anime Location Title Card

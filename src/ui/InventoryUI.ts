@@ -46,6 +46,11 @@ export class InventoryUI {
     }
   }
 
+  public close(): void {
+    this.isOpen = false;
+    this.isCardModalOpen = false;
+  }
+
   /**
    * Handles touch/click on the screen. Returns true if the touch was consumed by UI.
    */
