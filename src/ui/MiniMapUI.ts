@@ -8,6 +8,7 @@ import { DungeonFloor2 } from '../world/DungeonFloor2.ts';
 import { DungeonFloor3 } from '../world/DungeonFloor3.ts';
 import { DungeonEldoria } from '../world/DungeonEldoria.ts';
 import { DungeonStonewatch } from '../world/DungeonStonewatch.ts';
+import { RegionManager } from '../world/RegionManager.ts';
 
 export type MiniMapMode = 'NORMAL' | 'EXPANDED' | 'MINIMIZED';
 
@@ -270,13 +271,18 @@ export class MiniMapUI {
       this.stonewatchCanvas = this.generateStonewatchCache(dungeonStonewatch);
     }
 
+    const pTileX = player.x / CONSTANTS.TILE_SIZE;
+    const pTileY = player.y / CONSTANTS.TILE_SIZE;
+
     const isOverworld = currentMap === 'OVERWORLD';
     let sourceCanvas = this.overworldCanvas;
     let mapTileWidth = CONSTANTS.MAP_WIDTH;
     let mapTileHeight = CONSTANTS.MAP_HEIGHT;
-    let mapTitle = '🌍 Lembah';
-    let fullMapTitle = '🗺️ Peta Wilayah Lembah Serikat Tiga Desa';
-    let titleColor = '#4ade80';
+
+    const currentRegion = RegionManager.getInstance().getRegion(currentMap, Math.floor(pTileX), Math.floor(pTileY));
+    let mapTitle = `${currentRegion.icon} ${currentRegion.name}`;
+    let fullMapTitle = `${currentRegion.icon} ${currentRegion.name} ${currentRegion.subtitle}`;
+    let titleColor = currentRegion.themeColor;
 
     if (currentMap.startsWith('INTERIOR_')) {
       if (!this.interiorCanvas) {
@@ -370,9 +376,6 @@ export class MiniMapUI {
       fullMapTitle = '⛏️ Peta Tambang Terkutuk Besi Abisal Stonewatch';
       titleColor = '#f59e0b';
     }
-
-    const pTileX = player.x / CONSTANTS.TILE_SIZE;
-    const pTileY = player.y / CONSTANTS.TILE_SIZE;
 
     // --- MODE NORMAL (POJOK KANAN ATAS HUD) ---
     if (this.mode === 'NORMAL') {
@@ -697,6 +700,75 @@ export class MiniMapUI {
         ctx.beginPath();
         ctx.arc(cx, cy, 5, 0, Math.PI * 2);
         ctx.fill();
+
+        // Dusun Nelayan Tirta Kencana (Marker)
+        const tkX = toMapX(33);
+        const tkY = toMapY(73);
+        ctx.fillStyle = '#06b6d4';
+        ctx.beginPath();
+        ctx.arc(tkX, tkY, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Dusun Pertanian Ambervale (Marker)
+        const avX = toMapX(77);
+        const avY = toMapY(25);
+        ctx.fillStyle = '#ca8a04';
+        ctx.beginPath();
+        ctx.arc(avX, avY, 4, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#ffffff';
+        ctx.lineWidth = 1;
+        ctx.stroke();
+
+        // Desa Eldoria (Marker)
+        const elX = toMapX(22);
+        const elY = toMapY(20);
+        ctx.fillStyle = '#10b981';
+        ctx.beginPath();
+        ctx.arc(elX, elY, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Desa Stonewatch (Marker)
+        const swX = toMapX(84);
+        const swY = toMapY(65);
+        ctx.fillStyle = '#f97316';
+        ctx.beginPath();
+        ctx.arc(swX, swY, 4, 0, Math.PI * 2);
+        ctx.fill();
+
+        // Label Nama-Nama Wilayah Utama di Canvas Peta Besar
+        const regionLabels = [
+          { name: '🌿 Eldoria', x: 22, y: 15, color: '#6ee7b7' },
+          { name: '🏰 Oakhaven', x: 50, y: 44, color: '#fde047' },
+          { name: '🎪 Pasar Raya', x: 68, y: 44, color: '#fef08a' },
+          { name: '⛏️ Stonewatch', x: 84, y: 58, color: '#fdba74' },
+          { name: '🐟 Tirta Kencana', x: 33, y: 69, color: '#67e8f9' },
+          { name: '🌾 Ambervale', x: 77, y: 19, color: '#fde047' },
+          { name: '💀 Gua Kripta', x: 50, y: 28, color: '#d8b4fe' },
+          { name: '🌊 Danau Azure', x: 36, y: 84, color: '#7dd3fc' },
+          { name: '🌲 Whisperwood', x: 18, y: 48, color: '#86efac' },
+          { name: '🪨 Cadas Karang', x: 88, y: 44, color: '#cbd5e1' }
+        ];
+
+        ctx.save();
+        ctx.font = 'bold 7px sans-serif';
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        for (const rl of regionLabels) {
+          const rx = toMapX(rl.x);
+          const ry = toMapY(rl.y);
+          const tw = ctx.measureText(rl.name).width;
+          ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+          ctx.beginPath();
+          ctx.roundRect(rx - tw / 2 - 2, ry - 5, tw + 4, 10, 2);
+          ctx.fill();
+          ctx.fillStyle = rl.color;
+          ctx.fillText(rl.name, rx, ry);
+        }
+        ctx.restore();
       } else if (currentMap === 'DUNGEON') {
         // Tangga Keluar Dungeon ke Permukaan
         const lx = toMapX(dungeonMap.ladderX / CONSTANTS.TILE_SIZE);
@@ -844,12 +916,14 @@ export class MiniMapUI {
 
       let legends = [
         { color: '#38bdf8', label: 'Posisi Kamu (Hero)' },
-        { color: '#eab308', label: 'Resepsionis Guild Elaine' },
-        { color: '#f97316', label: 'Pandai Besi Brokk' },
-        { color: '#c084fc', label: 'Pintu Goa (Dungeon)' },
+        { color: '#eab308', label: 'Guild & Alun-Alun Oakhaven' },
+        { color: '#06b6d4', label: 'Dusun Tirta Kencana (Danau)' },
+        { color: '#ca8a04', label: 'Dusun Ambervale (Kincir)' },
+        { color: '#10b981', label: 'Desa Rimba Peri Eldoria' },
+        { color: '#f97316', label: 'Benteng Tambang Stonewatch' },
+        { color: '#c084fc', label: 'Pintu Gua Makam Kuno' },
         { color: '#fde047', label: 'Peti Harta Karun' },
-        { color: '#22c55e', label: 'Monster Tingkat Bawah (Rimba)' },
-        { color: '#f59e0b', label: 'Monster Tingkat Menengah (Goa)' }
+        { color: '#22c55e', label: 'Monster Rimba Liar' }
       ];
 
       if (currentMap === 'DUNGEON') {

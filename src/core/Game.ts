@@ -35,6 +35,7 @@ import { DungeonFloor3 } from '../world/DungeonFloor3.ts';
 import { DungeonEldoria } from '../world/DungeonEldoria.ts';
 import { DungeonStonewatch } from '../world/DungeonStonewatch.ts';
 import { BuildingInteriors, InteriorId } from '../world/BuildingInteriors.ts';
+import { RegionManager } from '../world/RegionManager.ts';
 import { Companion, CompanionType } from '../entities/Companion.ts';
 import { CookingSystem } from '../systems/CookingSystem.ts';
 import { Pet } from '../systems/TamingSystem.ts';
@@ -949,7 +950,7 @@ export class Game {
       // Slime Hutan menghuni padang glade rimba luar (Rimba Timur & Rimba Utara, jarak > 14 tile dari pintu dungeon)
       new Monster('ow_slime_1', 'FOREST_SLIME', 64 * ts + 10, 30 * ts + 10), // Glade Rimba Timur 1
       new Monster('ow_slime_2', 'FOREST_SLIME', 65 * ts + 8, 32 * ts + 12),  // Glade Rimba Timur 1
-      new Monster('ow_slime_3', 'FOREST_SLIME', 70 * ts + 8, 25 * ts + 10),  // Glade Rimba Timur Jauh
+      new Monster('ow_slime_3', 'FOREST_SLIME', 64 * ts + 8, 24 * ts + 10),  // Glade Rimba Timur Jauh (di luar Dusun Ambervale)
       new Monster('ow_slime_4', 'FOREST_SLIME', 66 * ts + 10, 38 * ts + 8),  // Glade Rimba Tenggara
       new Monster('ow_slime_5', 'FOREST_SLIME', 58 * ts + 8, 20 * ts + 10),  // Glade Rimba Utara
       new Monster('ow_slime_6', 'FOREST_SLIME', 66 * ts + 10, 21 * ts + 10), // Glade Rimba Timur Laut
@@ -2135,6 +2136,11 @@ export class Game {
     }
     this.skillBarUI.update(deltaTime);
     this.miniMapUI.update(deltaTime);
+
+    // Update Region Manager (Deteksi Wilayah Aktif & Territory Discovery Banner)
+    const pTileX = Math.floor(this.player.x / CONSTANTS.TILE_SIZE);
+    const pTileY = Math.floor(this.player.y / CONSTANTS.TILE_SIZE);
+    RegionManager.getInstance().update(deltaTime, this.currentMap, pTileX, pTileY);
 
     // 3. Update Player & Collisions
     const playerCenterX = this.player.x + this.player.width / 2;
@@ -4016,6 +4022,9 @@ export class Game {
           buffX += buffBadgeW + buffSpacing;
         }
       }
+
+      // 10.35 Cinematic Territory Discovery Banner (Notifikasi Masuk Wilayah)
+      RegionManager.getInstance().renderTerritoryBanner(ctx, screenWidth, screenHeight);
 
       // 10.4 Top HUD: Gelar & Title Button (👑)
       const titleBtnX = screenWidth - 128;

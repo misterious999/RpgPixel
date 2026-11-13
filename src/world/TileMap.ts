@@ -362,6 +362,114 @@ export class TileMap {
         }
       }
     }
+
+    // --- 5. WILAYAH DUSUN NELAYAN TIRTA KENCANA (PESISIR DANAU AZURE - BARAT DAYA) ---
+    // Area pedesaan nelayan (x=26..42, y=68..80) dibersihkan dari rintangan pohon liar
+    for (let ny = 68; ny <= 80; ny++) {
+      for (let nx = 26; nx <= 42; nx++) {
+        if (this.tiles[ny] && this.tiles[ny][nx] !== undefined) {
+          if (this.tiles[ny][nx] !== TileType.WATER) {
+            this.tiles[ny][nx] = TileType.GRASS;
+          }
+        }
+      }
+    }
+
+    // Tepian pantai pasir alami Dusun Nelayan (y=76..79, x=26..42)
+    for (let ny = 76; ny <= 79; ny++) {
+      for (let nx = 26; nx <= 42; nx++) {
+        if (this.tiles[ny] && this.tiles[ny][nx] !== undefined) {
+          if (this.tiles[ny][nx] !== TileType.WATER) {
+            this.tiles[ny][nx] = TileType.SAND;
+          }
+        }
+      }
+    }
+
+    // Pelataran Dermaga Nelayan Berlapis Batu Ubin & Kayu (x=30..37, y=72..75)
+    for (let ny = 72; ny <= 75; ny++) {
+      for (let nx = 30; nx <= 37; nx++) {
+        if (this.tiles[ny] && this.tiles[ny][nx] !== undefined) {
+          if (this.tiles[ny][nx] !== TileType.WATER) {
+            this.tiles[ny][nx] = TileType.COBBLESTONE;
+          }
+        }
+      }
+    }
+
+    // Jalan Setapak Penghubung Gerbang Selatan Oakhaven ke Dusun Nelayan Tirta Kencana
+    // Jalur selatan: dari (x=49..51, y=56..72) ke selatan, lalu belok ke barat (y=71..72, x=34..51)
+    for (let ny = 56; ny <= 72; ny++) {
+      for (let nx = 49; nx <= 51; nx++) {
+        if (this.tiles[ny] && this.tiles[ny][nx] !== undefined && this.tiles[ny][nx] !== TileType.WATER) {
+          this.tiles[ny][nx] = TileType.DIRT_PATH;
+        }
+      }
+    }
+    for (let nx = 34; nx <= 51; nx++) {
+      for (let ny = 71; ny <= 72; ny++) {
+        if (this.tiles[ny] && this.tiles[ny][nx] !== undefined && this.tiles[ny][nx] !== TileType.WATER) {
+          this.tiles[ny][nx] = TileType.DIRT_PATH;
+        }
+      }
+    }
+
+    // --- 6. WILAYAH DUSUN PERTANIAN AMBERVALE (LEMBAH GANDUM KINCIR ANGIN - TIMUR LAUT) ---
+    // Area lembah pertanian gandum (x=68..88, y=17..35) dibersihkan dari rintangan pohon liar
+    for (let ay = 17; ay <= 35; ay++) {
+      for (let ax = 68; ax <= 88; ax++) {
+        if (this.tiles[ay] && this.tiles[ay][ax] !== undefined) {
+          if (this.tiles[ay][ax] !== TileType.WATER) {
+            this.tiles[ay][ax] = TileType.GRASS;
+          }
+        }
+      }
+    }
+
+    // Petak Ladang Gandum Emas Ambervale 1 (Utara: x=78..86, y=19..24)
+    for (let ay = 19; ay <= 24; ay++) {
+      for (let ax = 78; ax <= 86; ax++) {
+        if (this.tiles[ay] && this.tiles[ay][ax] !== undefined) {
+          this.tiles[ay][ax] = (ax + ay) % 2 === 0 ? TileType.SAND : TileType.GRASS_FLOWERS;
+        }
+      }
+    }
+
+    // Petak Ladang Gandum Emas Ambervale 2 (Selatan: x=78..86, y=27..32)
+    for (let ay = 27; ay <= 32; ay++) {
+      for (let ax = 78; ax <= 86; ax++) {
+        if (this.tiles[ay] && this.tiles[ay][ax] !== undefined) {
+          this.tiles[ay][ax] = (ax + ay) % 2 === 0 ? TileType.SAND : TileType.GRASS_FLOWERS;
+        }
+      }
+    }
+
+    // Pelataran Kincir Angin & Lumbung Ambervale (x=72..77, y=23..27)
+    for (let ay = 23; ay <= 27; ay++) {
+      for (let ax = 72; ax <= 77; ax++) {
+        if (this.tiles[ay] && this.tiles[ay][ax] !== undefined) {
+          this.tiles[ay][ax] = TileType.COBBLESTONE;
+        }
+      }
+    }
+
+    // Jalan Setapak Penghubung Distrik Pasar Raya Oakhaven ke Dusun Pertanian Ambervale
+    // Jalur utara: dari (x=69..71, y=43..26) lurus menuju pelataran Ambervale
+    for (let ay = 26; ay <= 44; ay++) {
+      for (let ax = 69; ax <= 71; ax++) {
+        if (this.tiles[ay] && this.tiles[ay][ax] !== undefined && this.tiles[ay][ax] !== TileType.WATER) {
+          this.tiles[ay][ax] = TileType.DIRT_PATH;
+        }
+      }
+    }
+    // Jalan pemisah antar ladang (y=25..26, x=72..86)
+    for (let ay = 25; ay <= 26; ay++) {
+      for (let ax = 72; ax <= 86; ax++) {
+        if (this.tiles[ay] && this.tiles[ay][ax] !== undefined) {
+          this.tiles[ay][ax] = TileType.DIRT_PATH;
+        }
+      }
+    }
   }
 
   /**
@@ -374,8 +482,12 @@ export class TileMap {
     const inEldoria = tileX >= 12 && tileX <= 32 && tileY >= 12 && tileY <= 28;
     // 3. Desa Stonewatch (Benteng Tambang Kurcaci)
     const inStonewatch = tileX >= 74 && tileX <= 94 && tileY >= 56 && tileY <= 74;
+    // 4. Dusun Nelayan Tirta Kencana (Pesisir Danau Azure - Barat Daya)
+    const inTirtaKencana = tileX >= 26 && tileX <= 42 && tileY >= 68 && tileY <= 80;
+    // 5. Dusun Pertanian Ambervale (Lembah Gandum - Timur Laut)
+    const inAmbervale = tileX >= 68 && tileX <= 88 && tileY >= 17 && tileY <= 35;
 
-    return inSerena || inEldoria || inStonewatch;
+    return inSerena || inEldoria || inStonewatch || inTirtaKencana || inAmbervale;
   }
 
   /**
@@ -393,6 +505,12 @@ export class TileMap {
     }
     if (tileX >= 74 && tileX <= 94 && tileY >= 56 && tileY <= 74) {
       return 'Desa Stonewatch (Benteng Tambang)';
+    }
+    if (tileX >= 26 && tileX <= 42 && tileY >= 68 && tileY <= 80) {
+      return 'Dusun Nelayan Tirta Kencana';
+    }
+    if (tileX >= 68 && tileX <= 88 && tileY >= 17 && tileY <= 35) {
+      return 'Dusun Pertanian Ambervale';
     }
     return null;
   }

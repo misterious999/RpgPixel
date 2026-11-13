@@ -417,6 +417,44 @@ export class VillageManager {
         greetingText: 'Selamat datang di Pasar Raya Oakhaven, petualang terhormat!',
         loreText: 'Kios pasarku menyediakan pasokan dungeon paling komplit: Ramuan HP/MP, Elixir Pemulih Penuh, Gulungan Teleportasi Portal, hingga bahan masakan lezat! Belanjalah dengan uang Val (𝒱) hasil petualanganmu!',
         actionPrompt: '🛒 [A] Belanja di Pasar'
+      },
+
+      // --- NPC DUSUN NELAYAN TIRTA KENCANA (PESISIR DANAU AZURE) ---
+      {
+        id: 'fisherman_aris',
+        name: 'Nelayan Aris',
+        title: 'Tetua Pesisir Dusun Tirta Kencana',
+        roleType: 'AMBIENT',
+        x: 33 * ts,
+        y: 73 * ts,
+        width: 32,
+        height: 32,
+        hairColor: '#475569',
+        outfitColor: '#0284c7',
+        accentColor: '#38bdf8',
+        avatarIcon: '🎣',
+        greetingText: 'Semilir angin Danau Azure membawa kedamaian, bukan? Selamat datang di Tirta Kencana!',
+        loreText: 'Dusun kecil kami memasok ikan mas danau dan udang segar ke seluruh penjuru kerajaan. Nikmatilah ketenangan dermaga ini sejenak sebelum kau melanjutkan petualanganmu!',
+        actionPrompt: '🎣 [A] Sapa Nelayan Aris'
+      },
+
+      // --- NPC DUSUN PERTANIAN AMBERVALE (LEMBAH GANDUM KINCIR ANGIN) ---
+      {
+        id: 'farmer_bram',
+        name: 'Pak Tani Bram',
+        title: 'Pengelola Lumbung Dusun Ambervale',
+        roleType: 'AMBIENT',
+        x: 76 * ts,
+        y: 26 * ts,
+        width: 32,
+        height: 32,
+        hairColor: '#b45309',
+        outfitColor: '#ca8a04',
+        accentColor: '#fde047',
+        avatarIcon: '🌾',
+        greetingText: 'Selamat datang di Dusun Ambervale! Dengarlah derit kincir angin yang berputar menenangkan!',
+        loreText: 'Ladang gandum emas di lembah ini digiling di kincir angin kami menjadi tepung terbaik. Dari sinilah pasokan roti hangat untuk para prajurit dan petualang Serikat berasal!',
+        actionPrompt: '🌾 [A] Sapa Pak Bram'
       }
     ];
   }
@@ -635,6 +673,33 @@ export class VillageManager {
     const sfX = 79 * ts;
     const sfY = 60 * ts;
     if (box.x < sfX + 38 && box.x + box.width > sfX && box.y < sfY + 36 && box.y + box.height > sfY + 12) return true;
+
+    // --- DUSUN NELAYAN TIRTA KENCANA ---
+    // 10. Pondok Nelayan (x: 31*ts, y: 70*ts, w: 76, h: 58)
+    const fnX = 31 * ts;
+    const fnY = 70 * ts;
+    if (box.x < fnX + 76 && box.x + box.width > fnX && box.y < fnY + 58 && box.y + box.height > fnY + 20) return true;
+
+    // 11. Rak Pengering Ikan Asin (x: 35.5*ts, y: 71.5*ts, w: 32, h: 22)
+    const frX = 35.5 * ts;
+    const frY = 71.5 * ts;
+    if (box.x < frX + 32 && box.x + box.width > frX && box.y < frY + 22 && box.y + box.height > frY + 6) return true;
+
+    // --- DUSUN PERTANIAN AMBERVALE ---
+    // 12. Menara Kincir Angin Ambervale (x: 73*ts, y: 22*ts, w: 60, h: 64)
+    const wmX = 73 * ts;
+    const wmY = 22 * ts;
+    if (box.x < wmX + 60 && box.x + box.width > wmX && box.y < wmY + 64 && box.y + box.height > wmY + 22) return true;
+
+    // 13. Lumbung Gandum Ambervale (x: 77.5*ts, y: 26*ts, w: 78, h: 60)
+    const agX = 77.5 * ts;
+    const agY = 26 * ts;
+    if (box.x < agX + 78 && box.x + box.width > agX && box.y < agY + 60 && box.y + box.height > agY + 20) return true;
+
+    // 14. Gerobak Gandum & Tumpukan Jerami (x: 73.5*ts, y: 27.5*ts, w: 34, h: 22)
+    const hyX = 73.5 * ts;
+    const hyY = 27.5 * ts;
+    if (box.x < hyX + 34 && box.x + box.width > hyX && box.y < hyY + 22 && box.y + box.height > hyY + 6) return true;
 
     return false;
   }
@@ -897,6 +962,8 @@ export class VillageManager {
     this.drawSignpost(ctx, 45 * ts + 16, 50 * ts - 8, '⬅️ Desa Eldoria (Rimba Peri)');
     this.drawSignpost(ctx, 58 * ts, 49 * ts, '🎪 Distrik Pasar Raya ➡️ | Tambang Stonewatch ➡️');
     this.drawSignpost(ctx, 50 * ts + 16, 44 * ts, '⬆️ Goa Kripta Kuno (Dungeon)');
+    this.drawSignpost(ctx, 50 * ts + 16, 58 * ts, '⬇️ Danau Azure | ⬅️ Dusun Nelayan Tirta Kencana');
+    this.drawSignpost(ctx, 70 * ts, 43 * ts, '⬆️ Dusun Pertanian Ambervale (Kincir Angin)');
 
     // 10. ARSITEKTUR DESA ELDORIA (DESA PERI HUTAN KUNO - BARAT LAUT)
     // Paviliun Suci Pohon Eldoria
@@ -948,7 +1015,13 @@ export class VillageManager {
     this.drawStreetlamp(ctx, 81 * ts, 65 * ts);
     this.drawStreetlamp(ctx, 88 * ts, 65 * ts);
 
-    // 12. RENDER SELURUH NPC DESA (Quest, Ambient, & Riddle)
+    // 12. ARSITEKTUR DUSUN NELAYAN TIRTA KENCANA (Barat Daya - Pesisir Danau)
+    this.drawLakesideHamlet(ctx);
+
+    // 13. ARSITEKTUR DUSUN PERTANIAN AMBERVALE (Timur Laut - Lembah Gandum)
+    this.drawAmbervaleFarmstead(ctx);
+
+    // 14. RENDER SELURUH NPC DESA (Quest, Ambient, & Riddle)
     for (const npc of this.npcs) {
       if (npc.isInsideBuilding) continue;
       this.renderNPC(ctx, npc, playerCenterX, playerCenterY, isSuppressed);
@@ -1069,18 +1142,25 @@ export class VillageManager {
       this.drawBlacksmithWorkshop(ctx, bsX, bsY, 76, 64);
     }
 
-    // 8. RUMAH & BALAI DESA (Aldrich, Lily, Dapur Petualang, Eldoria, Stonewatch)
+    // 8. RUMAH & BALAI DESA (Aldrich, Lily, Dapur Petualang, Eldoria, Stonewatch, Tirta Kencana, Ambervale)
     const cottages = [
       { x: 41.5 * ts, y: 43 * ts, w: 74, h: 64, r: '#991b1b', wall: '#b45309', name: 'Balai Desa Aldrich' },
       { x: 56 * ts, y: 43 * ts, w: 74, h: 64, r: '#15803d', wall: '#d97706', name: 'Toko Bunga Lily' },
       { x: 56 * ts, y: 51 * ts, w: 78, h: 66, r: '#78350f', wall: '#ca8a04', name: 'Dapur & Kedai Petualang' },
       { x: 19 * ts, y: 15 * ts, w: 74, h: 56, r: '#047857', wall: '#065f46', name: 'Paviliun Roh Eldoria' },
-      { x: 82.5 * ts, y: 61 * ts, w: 80, h: 58, r: '#1e1b4b', wall: '#334155', name: 'Benteng Tambang Stonewatch' }
+      { x: 82.5 * ts, y: 61 * ts, w: 80, h: 58, r: '#1e1b4b', wall: '#334155', name: 'Benteng Tambang Stonewatch' },
+      { x: 31 * ts, y: 70 * ts, w: 76, h: 58, r: '#0369a1', wall: '#78350f', name: 'Pondok Nelayan Tirta Kencana' },
+      { x: 77.5 * ts, y: 26 * ts, w: 78, h: 60, r: '#b45309', wall: '#ca8a04', name: 'Lumbung Gandum Ambervale' }
     ];
     for (const c of cottages) {
       if (this.isPlayerBehindStructure(playerX, playerW, playerFeetY, c.x, c.y, c.w, c.h)) {
         this.drawCottage(ctx, c.x, c.y, c.w, c.h, c.r, c.wall, c.name);
       }
+    }
+
+    // 8.5 KINCIR ANGIN AMBERVALE
+    if (this.isPlayerBehindStructure(playerX, playerW, playerFeetY, 73 * ts, 22 * ts, 60, 64)) {
+      this.drawWindmill(ctx, 74 * ts, 22 * ts);
     }
 
     // 9. SELURUH TIANG LENTERA JALAN (Streetlamps)
@@ -1095,7 +1175,11 @@ export class VillageManager {
       { x: 61 * ts, y: 52.2 * ts },
       { x: 67 * ts, y: 52.2 * ts },
       { x: 81 * ts, y: 65 * ts },
-      { x: 88 * ts, y: 65 * ts }
+      { x: 88 * ts, y: 65 * ts },
+      { x: 30.5 * ts, y: 73 * ts },
+      { x: 36.5 * ts, y: 73.5 * ts },
+      { x: 73 * ts, y: 26 * ts },
+      { x: 81 * ts, y: 26 * ts }
     ];
     for (const l of streetlamps) {
       if (
@@ -1112,7 +1196,9 @@ export class VillageManager {
     const signposts = [
       { x: 45 * ts + 16, y: 50 * ts - 8, text: '⬅️ Desa Eldoria (Rimba Peri)' },
       { x: 58 * ts, y: 49 * ts, text: '🎪 Distrik Pasar Raya ➡️ | Tambang Stonewatch ➡️' },
-      { x: 50 * ts + 16, y: 44 * ts, text: '⬆️ Goa Kripta Kuno (Dungeon)' }
+      { x: 50 * ts + 16, y: 44 * ts, text: '⬆️ Goa Kripta Kuno (Dungeon)' },
+      { x: 50 * ts + 16, y: 58 * ts, text: '⬇️ Danau Azure | ⬅️ Dusun Nelayan Tirta Kencana' },
+      { x: 70 * ts, y: 43 * ts, text: '⬆️ Dusun Pertanian Ambervale (Kincir Angin)' }
     ];
     for (const s of signposts) {
       if (
@@ -1538,6 +1624,426 @@ export class VillageManager {
     ctx.beginPath();
     ctx.arc(x + 14, y + 10, 8, 0, Math.PI * 2);
     ctx.fill();
+  }
+
+  /**
+   * Render Dusun Nelayan Tirta Kencana (Pesisir Danau Azure Barat Daya)
+   * Dilengkapi Pondok Nelayan, Dermaga Kayu, Perahu Dayung Terapung Berayun,
+   * Rak Ikan Asin Kering, Jaring Nelayan, & Pelampung.
+   */
+  private drawLakesideHamlet(ctx: CanvasRenderingContext2D): void {
+    const ts = CONSTANTS.TILE_SIZE;
+
+    // 1. PONDOK NELAYAN TRADISIONAL (31*ts, 70*ts)
+    const hx = 31 * ts;
+    const hy = 70 * ts;
+    this.drawCottage(ctx, hx, hy, 76, 58, '#0369a1', '#78350f', 'Pondok Nelayan Tirta Kencana');
+
+    // Ornamen Pelampung Laut di Dinding Pondok
+    ctx.save();
+    ctx.fillStyle = '#f8fafc';
+    ctx.beginPath();
+    ctx.arc(hx + 18, hy + 38, 4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(hx + 18, hy + 38, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#ef4444';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+    ctx.restore();
+
+    // 2. DERMAGA KAYU MENJOROK KE AIR DANAU (Wooden Pier: x: 32*ts .. 36*ts, y: 74*ts .. 76.5*ts)
+    const pierX = 32 * ts;
+    const pierY = 74.2 * ts;
+    const pierW = 4 * ts;
+    const pierH = 26;
+
+    // Tiang Kayu Penyangga Dermaga Menancap ke Air
+    ctx.fillStyle = '#3b1d06';
+    const pilings = [pierX + 6, pierX + pierW / 2, pierX + pierW - 6];
+    for (const px of pilings) {
+      ctx.fillRect(px - 3, pierY + 12, 6, 18);
+      // Efek air mengitari tiang
+      ctx.fillStyle = 'rgba(125, 211, 252, 0.4)';
+      ctx.fillRect(px - 5, pierY + 28, 10, 2);
+      ctx.fillStyle = '#3b1d06';
+    }
+
+    // Papan Lantai Kayu Dermaga
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(pierX, pierY, pierW, pierH);
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 1;
+    for (let px = pierX + 8; px < pierX + pierW; px += 8) {
+      ctx.beginPath();
+      ctx.moveTo(px, pierY);
+      ctx.lineTo(px, pierY + pierH);
+      ctx.stroke();
+    }
+    // Lis tepi dermaga
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(pierX, pierY, pierW, 3);
+    ctx.fillRect(pierX, pierY + pierH - 3, pierW, 3);
+
+    // Tali & Tiang Tambatan Perahu
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(pierX + 4, pierY + pierH - 7, 5, 8);
+    ctx.fillRect(pierX + pierW - 8, pierY + pierH - 7, 5, 8);
+
+    // 3. PERAHU DAYUNG TRADISIONAL BERAYUN DI AIR
+    const boatX = pierX + pierW + 4;
+    const boatBaseY = pierY + 6;
+    const boatBobY = Math.sin(this.animTimer * 1.5) * 2.2;
+    const by = boatBaseY + boatBobY;
+
+    // Riak Air di Bawah Perahu
+    ctx.strokeStyle = 'rgba(186, 230, 253, 0.55)';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.ellipse(boatX + 16, by + 16, 20, 5, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Lambung Perahu Kayu
+    ctx.fillStyle = '#78350f';
+    ctx.beginPath();
+    ctx.moveTo(boatX, by + 4);
+    ctx.lineTo(boatX + 30, by + 4);
+    ctx.lineTo(boatX + 26, by + 14);
+    ctx.lineTo(boatX + 4, by + 14);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Bagian Dalam Perahu
+    ctx.fillStyle = '#451a03';
+    ctx.beginPath();
+    ctx.moveTo(boatX + 3, by + 5);
+    ctx.lineTo(boatX + 27, by + 5);
+    ctx.lineTo(boatX + 24, by + 11);
+    ctx.lineTo(boatX + 6, by + 11);
+    ctx.closePath();
+    ctx.fill();
+
+    // Bangku Pendayung
+    ctx.fillStyle = '#92400e';
+    ctx.fillRect(boatX + 12, by + 6, 6, 4);
+
+    // Dayung Kayu Menyilang
+    ctx.strokeStyle = '#b45309';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.moveTo(boatX + 14, by + 7);
+    ctx.lineTo(boatX + 26, by + 18);
+    ctx.stroke();
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(boatX + 24, by + 16, 4, 3);
+
+    // Tali Tambat Perahu ke Dermaga
+    ctx.strokeStyle = '#ca8a04';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(boatX + 4, by + 6);
+    ctx.lineTo(pierX + pierW - 6, pierY + pierH - 4);
+    ctx.stroke();
+
+    // 4. RAK PENJEMURAN IKAN ASIN (x: 35.5*ts, y: 71.5*ts)
+    const rx = 35.5 * ts;
+    const ry = 71.5 * ts;
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(rx, ry + 18);
+    ctx.lineTo(rx + 6, ry);
+    ctx.lineTo(rx + 12, ry + 18);
+    ctx.moveTo(rx + 24, ry + 18);
+    ctx.lineTo(rx + 30, ry);
+    ctx.lineTo(rx + 36, ry + 18);
+    ctx.moveTo(rx + 6, ry + 4);
+    ctx.lineTo(rx + 30, ry + 4);
+    ctx.moveTo(rx + 6, ry + 10);
+    ctx.lineTo(rx + 30, ry + 10);
+    ctx.stroke();
+
+    // Ikan Asin Bergantung
+    const fishes = [rx + 10, rx + 15, rx + 20, rx + 25];
+    for (const fx of fishes) {
+      ctx.fillStyle = '#94a3b8';
+      ctx.beginPath();
+      ctx.ellipse(fx, ry + 6, 1.8, 3.5, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#64748b';
+      ctx.beginPath();
+      ctx.moveTo(fx, ry + 9.5);
+      ctx.lineTo(fx - 2, ry + 12);
+      ctx.lineTo(fx + 2, ry + 12);
+      ctx.closePath();
+      ctx.fill();
+    }
+
+    // Keranjang Anyaman Rotan Ikan
+    ctx.fillStyle = '#ca8a04';
+    ctx.beginPath();
+    ctx.roundRect(rx + 28, ry + 12, 10, 8, 2);
+    ctx.fill();
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(rx + 29, ry + 10, 8, 3);
+
+    // 5. LENTERA DERMAGA
+    this.drawStreetlamp(ctx, 30.5 * ts, 73 * ts);
+    this.drawStreetlamp(ctx, 36.5 * ts, 73.5 * ts);
+
+    // 6. PAPAN PETUNJUK DUSUN
+    this.drawSignpost(ctx, 33 * ts, 69 * ts, '🐟 Dusun Nelayan Tirta Kencana');
+  }
+
+  /**
+   * Render Dusun Pertanian Ambervale (Lembah Gandum Kincir Angin Timur Laut)
+   * Dilengkapi Kincir Angin Megah dengan 4 Baling-Baling Berputar Halus,
+   * Lumbung Gandum Pedesaan, Tumpukan Jerami Emas, Gerobak Gandum, & Pagar Kayu.
+   */
+  private drawAmbervaleFarmstead(ctx: CanvasRenderingContext2D): void {
+    const ts = CONSTANTS.TILE_SIZE;
+
+    // 1. KINCIR ANGIN MEGAH BERPUTAR (74*ts, 22*ts)
+    this.drawWindmill(ctx, 74 * ts, 22 * ts);
+
+    // 2. LUMBUNG GANDUM AMBERVALE (77.5*ts, 26*ts)
+    this.drawCottage(ctx, 77.5 * ts, 26 * ts, 78, 60, '#b45309', '#ca8a04', 'Lumbung Gandum Ambervale');
+
+    // 3. TUMPUKAN JERAMI EMAS (Hay Bales) di Samping Lumbung (73.5*ts, 27.5*ts)
+    const hyX = 73.5 * ts;
+    const hyY = 27.5 * ts;
+    // Jerami 1
+    ctx.fillStyle = '#eab308';
+    ctx.beginPath();
+    ctx.roundRect(hyX, hyY + 8, 16, 12, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#b45309';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(hyX + 4, hyY + 8, 1.5, 12);
+    ctx.fillRect(hyX + 10, hyY + 8, 1.5, 12);
+
+    // Jerami 2
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.roundRect(hyX + 14, hyY + 9, 16, 11, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#b45309';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(hyX + 18, hyY + 9, 1.5, 11);
+    ctx.fillRect(hyX + 24, hyY + 9, 1.5, 11);
+
+    // Jerami 3
+    ctx.fillStyle = '#fef08a';
+    ctx.beginPath();
+    ctx.roundRect(hyX + 7, hyY, 15, 10, 4);
+    ctx.fill();
+    ctx.strokeStyle = '#ca8a04';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(hyX + 11, hyY, 1.5, 10);
+    ctx.fillRect(hyX + 17, hyY, 1.5, 10);
+
+    // 4. GEROBAK KAYU PENGANGKUT GANDUM (Grain Handcart)
+    const cartX = 81 * ts;
+    const cartY = 29 * ts;
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(cartX, cartY, 22, 12);
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(cartX, cartY, 22, 12);
+    // Karung gandum
+    ctx.fillStyle = '#f8fafc';
+    ctx.beginPath();
+    ctx.arc(cartX + 6, cartY + 4, 4, 0, Math.PI * 2);
+    ctx.arc(cartX + 15, cartY + 3, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ca8a04';
+    ctx.fillRect(cartX + 13, cartY + 1, 3, 2);
+    // Roda Ruji Kayu
+    ctx.fillStyle = '#451a03';
+    ctx.beginPath();
+    ctx.arc(cartX + 11, cartY + 13, 5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ca8a04';
+    ctx.beginPath();
+    ctx.arc(cartX + 11, cartY + 13, 2, 0, Math.PI * 2);
+    ctx.fill();
+    // Gagang Penarik
+    ctx.strokeStyle = '#92400e';
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(cartX + 22, cartY + 6);
+    ctx.lineTo(cartX + 30, cartY + 10);
+    ctx.stroke();
+
+    // 5. PAGAR KAYU PEMBATAS LADANG (y: 25*ts, x: 78*ts .. 86*ts)
+    for (let fx = 78 * ts; fx <= 86 * ts; fx += 10) {
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(fx, 25 * ts + 4, 3, 12);
+    }
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(78 * ts, 25 * ts + 6, 8 * ts, 2);
+    ctx.fillRect(78 * ts, 25 * ts + 11, 8 * ts, 2);
+
+    // 6. LENTERA PEDESAAN
+    this.drawStreetlamp(ctx, 73 * ts, 26 * ts);
+    this.drawStreetlamp(ctx, 81 * ts, 26 * ts);
+
+    // 7. PAPAN PETUNJUK DUSUN
+    this.drawSignpost(ctx, 74 * ts, 21 * ts, '🌾 Dusun Pertanian Ambervale');
+  }
+
+  /**
+   * Render Menara Kincir Angin Tradisional 2.5D dengan 4 Baling-Baling Berlayar Kanvas yang Berputar Halus
+   */
+  private drawWindmill(ctx: CanvasRenderingContext2D, wx: number, wy: number): void {
+    ctx.save();
+
+    // 1. Bayangan Menara di Tanah
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.28)';
+    ctx.beginPath();
+    ctx.ellipse(wx + 28, wy + 62, 30, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. Pondasi Batu Granit Bawah (Stone Foundation Base)
+    ctx.fillStyle = '#334155';
+    ctx.beginPath();
+    ctx.moveTo(wx + 8, wy + 62);
+    ctx.lineTo(wx + 48, wy + 62);
+    ctx.lineTo(wx + 45, wy + 48);
+    ctx.lineTo(wx + 11, wy + 48);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Tekstur Batu Pondasi
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(wx + 14, wy + 52, 8, 4);
+    ctx.fillRect(wx + 26, wy + 54, 9, 4);
+    ctx.fillRect(wx + 36, wy + 51, 6, 4);
+
+    // Pintu Kayu Melengkung Bawah Menara
+    ctx.fillStyle = '#451a03';
+    ctx.beginPath();
+    ctx.roundRect(wx + 23, wy + 50, 10, 12, [5, 5, 0, 0]);
+    ctx.fill();
+    ctx.strokeStyle = '#ca8a04';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // 3. Badan Menara Kayu Mengerucut (Conical Timber Tower)
+    ctx.fillStyle = '#78350f';
+    ctx.beginPath();
+    ctx.moveTo(wx + 11, wy + 48);
+    ctx.lineTo(wx + 45, wy + 48);
+    ctx.lineTo(wx + 41, wy + 20);
+    ctx.lineTo(wx + 15, wy + 20);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Garis Papan Kayu Vertikal Menara
+    ctx.strokeStyle = '#92400e';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(wx + 22, wy + 48); ctx.lineTo(wx + 24, wy + 20);
+    ctx.moveTo(wx + 34, wy + 48); ctx.lineTo(wx + 32, wy + 20);
+    ctx.stroke();
+
+    // Jendela Kayu Menara dengan Cahaya Hangat
+    ctx.fillStyle = '#fde047';
+    ctx.fillRect(wx + 25, wy + 28, 6, 8);
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(wx + 25, wy + 28, 6, 8);
+    ctx.beginPath();
+    ctx.moveTo(wx + 28, wy + 28); ctx.lineTo(wx + 28, wy + 36);
+    ctx.moveTo(wx + 25, wy + 32); ctx.lineTo(wx + 31, wy + 32);
+    ctx.stroke();
+
+    // 4. Kubah Atap Kerucut Merah Bata (Cone Tiled Roof)
+    ctx.fillStyle = '#b91c1c';
+    ctx.beginPath();
+    ctx.moveTo(wx + 12, wy + 20);
+    ctx.lineTo(wx + 44, wy + 20);
+    ctx.lineTo(wx + 28, wy + 4);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#7f1d1d';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    // Lis Teritisan Atap
+    ctx.fillStyle = '#991b1b';
+    ctx.fillRect(wx + 11, wy + 19, 34, 3);
+
+    // 5. POROS PUSAT & 4 BILAH BALING-BALING BERPUTAR (Rotating Sails)
+    const hubX = wx + 28;
+    const hubY = wy + 22;
+    const rotationAngle = this.animTimer * 0.45;
+
+    ctx.save();
+    ctx.translate(hubX, hubY);
+    ctx.rotate(rotationAngle);
+
+    // Render 4 Bilah Baling-Baling Kincir
+    const bladeLength = 34;
+    const angles = [0, Math.PI / 2, Math.PI, (3 * Math.PI) / 2];
+
+    for (const ang of angles) {
+      ctx.save();
+      ctx.rotate(ang);
+
+      // Balok Rangka Kayu Utama Baling-Baling (Wooden Spar)
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(-1.5, 0, 3, bladeLength);
+
+      // Layar Kanvas Bergaris Kisi-Kisi (Canvas Sail Lattice)
+      ctx.fillStyle = 'rgba(254, 243, 199, 0.95)';
+      ctx.fillRect(1.5, 6, 8, bladeLength - 8);
+      ctx.strokeStyle = '#d97706';
+      ctx.lineWidth = 0.8;
+      ctx.strokeRect(1.5, 6, 8, bladeLength - 8);
+
+      // Kisi-kisi rusuk layar kain
+      ctx.strokeStyle = '#b45309';
+      ctx.lineWidth = 0.6;
+      for (let sy = 12; sy < bladeLength - 2; sy += 6) {
+        ctx.beginPath();
+        ctx.moveTo(1.5, sy);
+        ctx.lineTo(9.5, sy);
+        ctx.stroke();
+      }
+
+      ctx.restore();
+    }
+
+    // Poros Logam Tengah (Hub Center Cap)
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.arc(0, 0, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    ctx.restore(); // Restore rotate
+
+    ctx.restore(); // Restore base
   }
 
   /**
