@@ -478,6 +478,21 @@ export class VillageManager {
   public checkCollision(box: { x: number; y: number; width: number; height: number }): boolean {
     const ts = CONSTANTS.TILE_SIZE;
 
+    // 0. Balai Besar Serikat Petualang Serena (Grand Guild Hall: 50*ts - 24, 47*ts - 8, w: 80, h: 52)
+    const gx = 50 * ts - 24;
+    const gy = 47 * ts - 8;
+    const gw = 80;
+    const gh = 52;
+    if (box.x < gx + gw && box.x + box.width > gx && box.y < gy + gh && box.y + box.height > gy + 18) {
+      // Izinkan melangkah ke pintu tengah (doorWorldX = 50*ts, doorWorldY = 48.5*ts)
+      const doorL = 50 * ts - 6;
+      const doorR = 50 * ts + 18;
+      if (box.x >= doorL && box.x + box.width <= doorR + 12 && box.y >= gy + gh - 16) {
+        return false;
+      }
+      return true;
+    }
+
     // 1. Air Mancur Alun-alun Desa (Center: 50*ts + 16, 52*ts + 16)
     const fx = 49.5 * ts;
     const fy = 51.5 * ts;
@@ -487,27 +502,46 @@ export class VillageManager {
       return true;
     }
 
-    // 2. Balai Desa / Rumah Kakek Aldrich (Barat Laut: 43*ts, 44*ts)
-    const h1x = 42.5 * ts;
+    // 2. Balai Desa / Rumah Kakek Aldrich (Barat Laut: 41.5*ts, 43*ts)
+    const h1x = 41.5 * ts;
     const h1y = 43 * ts;
-    const h1w = 76;
+    const h1w = 74;
     const h1h = 64;
     if (box.x < h1x + h1w && box.x + box.width > h1x && box.y < h1y + h1h && box.y + box.height > h1y + 24) {
       return true;
     }
 
-    // 3. Toko Bunga Lily (Timur Laut: 56.5*ts, 43*ts)
+    // 3. Toko Bunga Lily / Apothecary Inn (Timur Laut: 56*ts, 43*ts)
     const h2x = 56 * ts;
     const h2y = 43 * ts;
     const h2w = 74;
     const h2h = 64;
     if (box.x < h2x + h2w && box.x + box.width > h2x && box.y < h2y + h2h && box.y + box.height > h2y + 24) {
+      const doorL = 57 * ts - 6;
+      const doorR = 57 * ts + 18;
+      if (box.x >= doorL && box.x + box.width <= doorR + 12 && box.y >= h2y + h2h - 16) {
+        return false;
+      }
       return true;
     }
 
-    // 3.5 Bengkel Pandai Besi Brokk (Barat Daya Balai: 44.8*ts, 47*ts)
+    // 3.2 Bank Kerajaan Val (Utara Alun-Alun Barat: 44.8*ts, 41.5*ts, Pintu di 46*ts, 44*ts)
+    const bkX = 44.8 * ts;
+    const bkY = 41.5 * ts;
+    const bkW = 78;
+    const bkH = 64;
+    if (box.x < bkX + bkW && box.x + box.width > bkX && box.y < bkY + bkH && box.y + box.height > bkY + 22) {
+      const doorL = 46 * ts - 8;
+      const doorR = 46 * ts + 16;
+      if (box.x >= doorL && box.x + box.width <= doorR + 12 && box.y >= bkY + bkH - 16) {
+        return false;
+      }
+      return true;
+    }
+
+    // 3.5 Bengkel Pandai Besi Brokk (Barat Daya Balai: 44.8*ts, 47.5*ts)
     const bsX = 44.8 * ts;
-    const bsY = 47 * ts;
+    const bsY = 47.5 * ts;
     const bsW = 76;
     const bsH = 64;
     if (box.x < bsX + bsW && box.x + box.width > bsX && box.y < bsY + bsH && box.y + box.height > bsY + 22) {
@@ -520,12 +554,17 @@ export class VillageManager {
       return true;
     }
 
-    // 4. Kedai Petualang Oakhaven (Tenggara: 56*ts, 51.5*ts)
+    // 4. Kedai & Dapur Petualang Gaston (Tenggara: 56*ts, 51*ts)
     const h3x = 56 * ts;
     const h3y = 51 * ts;
     const h3w = 78;
     const h3h = 66;
     if (box.x < h3x + h3w && box.x + box.width > h3x && box.y < h3y + h3h && box.y + box.height > h3y + 24) {
+      const doorL = 57 * ts - 6;
+      const doorR = 57 * ts + 18;
+      if (box.x >= doorL && box.x + box.width <= doorR + 12 && box.y >= h3y + h3h - 16) {
+        return false;
+      }
       return true;
     }
 
@@ -747,14 +786,8 @@ export class VillageManager {
     const gw = 80;
     const gh = 52;
 
-    // Guild Grand Wooden Flooring
-    ctx.fillStyle = '#451a03';
-    ctx.fillRect(gx - 4, gy + 14, gw + 8, gh - 10);
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(gx - 2, gy + 16, gw + 4, gh - 14);
-
-    // Carved Guild Stone Pillars, Canopy, Roof & Ribbon
-    this.drawGuildPillarsAndRoof(ctx, gx, gy, gw, gh);
+    // Balai Besar Serikat Petualang Serena (Grand Guild Hall)
+    this.drawGuildHall(ctx, gx, gy, gw, gh);
 
     // Papan Pengumuman Misi Serikat (Notice Board) di kanan
     const nbX = 53 * ts + 18;
@@ -974,7 +1007,7 @@ export class VillageManager {
       this.drawSouthVillageGate(ctx, gxGate, gyGate);
     }
 
-    // 4. BALAI BESAR SERIKAT GUILD (Pilar batu, atap kanopi, plang & papan misi)
+    // 4. BALAI BESAR SERIKAT GUILD (Atap & Kanopi saat pemain melintas di belakang teritisan)
     const gx = 50 * ts - 24;
     const gy = 47 * ts - 8;
     const gw = 80;
@@ -983,9 +1016,9 @@ export class VillageManager {
       playerX + playerW >= gx - 16 &&
       playerX <= gx + gw + 16 &&
       playerFeetY >= gy - 10 &&
-      playerFeetY <= gy + gh + 4
+      playerFeetY <= gy + 24
     ) {
-      this.drawGuildPillarsAndRoof(ctx, gx, gy, gw, gh);
+      this.drawGuildRoofOverhang(ctx, gx, gy, gw, gh);
     }
 
     // 4.1 PAPAN MISI GUILD OAKHAVEN
@@ -1139,34 +1172,234 @@ export class VillageManager {
       playerX + playerW >= structX - 12 &&
       playerX <= structX + structW + 12 &&
       playerFeetY >= structY - 14 &&
-      playerFeetY <= structBaseY + 6
+      playerFeetY <= structBaseY - 14
     );
   }
 
-  private drawGuildPillarsAndRoof(ctx: CanvasRenderingContext2D, gx: number, gy: number, gw: number, gh: number): void {
-    const pillY = gy + 14;
-    ctx.fillStyle = '#334155';
-    ctx.fillRect(gx - 2, pillY, 8, gh - 14);
-    ctx.fillRect(gx + gw - 6, pillY, 8, gh - 14);
-    ctx.fillStyle = '#64748b';
-    ctx.fillRect(gx, pillY, 4, gh - 14);
-    ctx.fillRect(gx + gw - 4, pillY, 4, gh - 14);
+  /**
+   * Render Balai Besar Serikat Petualang Oakhaven (Grand Adventurer Guild Lodge)
+   * Bangunan 2 lantai megah berbatu ashlar & kayu mahoni berukir, pintu ganda mahoni bertabur paku kuningan,
+   * pilar batu berukir, lentera tembaga bercahaya, jendela timbal berlian, dan atap biru safir berlis emas megah.
+   */
+  private drawGuildHall(ctx: CanvasRenderingContext2D, gx: number, gy: number, gw: number, gh: number): void {
+    // 1. Soft Ambient Ground Shadow
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
+    ctx.beginPath();
+    ctx.ellipse(gx + gw / 2, gy + gh + 1, gw / 2 + 7, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
 
-    // Guild Roof Eaves & Canopy (Royal Blue with Golden Trim)
+    // 2. Teras Kayu Hardwood Serambi Depan
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(gx - 4, gy + 16, gw + 8, gh - 12);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(gx - 2, gy + 18, gw + 4, gh - 16);
+    // Papan teras lantai
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 0.8;
+    for (let py = gy + 22; py < gy + gh; py += 6) {
+      ctx.beginPath();
+      ctx.moveTo(gx - 2, py);
+      ctx.lineTo(gx + gw + 2, py);
+      ctx.stroke();
+    }
+
+    // 3. Fasad Dinding Bawah (Batu Ashlar Masonry & Balok Kayu Tudor)
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(gx + 2, gy + 14, gw - 4, gh - 14);
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(gx + 4, gy + 14, gw - 8, gh - 16);
+
+    // 4. Pintu Utama Ganda Balai Serikat (Grand Double Oak Doors)
+    const dw = 22;
+    const dh = 26;
+    const dx = Math.round(gx + gw / 2 - dw / 2);
+    const dy = gy + gh - dh - 2;
+
+    // Bingkai Lengkung Batu Pintu
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.roundRect(dx - 3, dy - 3, dw + 6, dh + 4, [6, 6, 0, 0]);
+    ctx.fill();
+    ctx.strokeStyle = '#ca8a04';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    // Daun Pintu Kayu Mahoni
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(dx, dy, dw, dh);
+    // Garis sambungan pintu kiri dan kanan
+    ctx.fillStyle = '#270e02';
+    ctx.fillRect(dx + dw / 2 - 0.5, dy, 1, dh);
+    // Paku keling emas / besi
+    ctx.fillStyle = '#facc15';
+    for (const studX of [dx + 3, dx + dw / 2 - 3, dx + dw / 2 + 3, dx + dw - 3]) {
+      ctx.fillRect(studX, dy + 5, 1.5, 1.5);
+      ctx.fillRect(studX, dy + 13, 1.5, 1.5);
+      ctx.fillRect(studX, dy + 21, 1.5, 1.5);
+    }
+    // Handle cincin kuningan
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.arc(dx + dw / 2 - 3, dy + 14, 1.8, 0, Math.PI * 2);
+    ctx.arc(dx + dw / 2 + 3, dy + 14, 1.8, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Ambang Pintu Batu
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(dx - 2, dy + dh - 1, dw + 4, 3);
+
+    // 5. Jendela Kaca Timbal Berlian Kiri & Kanan (Diamond Leaded Windows)
+    for (const wx of [gx + 10, gx + gw - 22]) {
+      const wy = gy + 22;
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(wx - 1, wy - 1, 13, 15);
+      ctx.fillStyle = '#facc15'; // Golden interior glow
+      ctx.fillRect(wx, wy, 11, 13);
+      // Specular sheen
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.beginPath();
+      ctx.moveTo(wx + 1, wy + 1);
+      ctx.lineTo(wx + 6, wy + 1);
+      ctx.lineTo(wx + 1, wy + 6);
+      ctx.closePath();
+      ctx.fill();
+      // Kisi timbal
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(wx + 5.5, wy);
+      ctx.lineTo(wx + 5.5, wy + 13);
+      ctx.moveTo(wx, wy + 6.5);
+      ctx.lineTo(wx + 11, wy + 6.5);
+      ctx.stroke();
+    }
+
+    // 6. Lentera Dinding Tembaga Flanking Entrance (Warm Ambient Lanterns)
+    for (const lx of [dx - 8, dx + dw + 5]) {
+      const ly = dy + 8;
+      ctx.fillStyle = '#451a03';
+      ctx.fillRect(lx, ly, 3, 5);
+      ctx.fillStyle = '#fef08a';
+      ctx.fillRect(lx - 1, ly - 3, 5, 5);
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 0.8;
+      ctx.strokeRect(lx - 1, ly - 3, 5, 5);
+      // Soft radial glow
+      const flicker = Math.sin(this.animTimer * 5 + lx) * 1.5;
+      const rad = ctx.createRadialGradient(lx + 1.5, ly - 0.5, 1, lx + 1.5, ly - 0.5, 10 + flicker);
+      rad.addColorStop(0, 'rgba(254, 240, 138, 0.45)');
+      rad.addColorStop(1, 'rgba(245, 158, 11, 0)');
+      ctx.fillStyle = rad;
+      ctx.beginPath();
+      ctx.arc(lx + 1.5, ly - 0.5, 10 + flicker, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    // 7. Panji / Bendera Serikat Biru & Emas di Pilar Depan
+    for (const bx of [gx + 4, gx + gw - 12]) {
+      const by = gy + 17;
+      ctx.fillStyle = '#1e3a8a';
+      ctx.fillRect(bx, by, 8, 15);
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 1;
+      ctx.strokeRect(bx, by, 8, 15);
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(bx + 3, by + 4, 2, 7); // Gold center motif
+    }
+
+    // 8. Pilar Marmer & Atap Kanopi Balai
+    this.drawGuildRoofOverhang(ctx, gx, gy, gw, gh);
+  }
+
+  /**
+   * Render Bagian Atas / Kanopi & Pilar Balai Serikat (Dipakai untuk Occlusion Layer)
+   */
+  private drawGuildRoofOverhang(ctx: CanvasRenderingContext2D, gx: number, gy: number, gw: number, gh: number): void {
+    const pillY = gy + 14;
+
+    // Pilar Batu Berukir di Sisi Kiri & Kanan
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(gx - 3, pillY, 9, gh - 14);
+    ctx.fillRect(gx + gw - 6, pillY, 9, gh - 14);
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(gx - 1, pillY, 5, gh - 14);
+    ctx.fillRect(gx + gw - 4, pillY, 5, gh - 14);
+    // Capital & Base Pilar Emas
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(gx - 4, pillY, 11, 3);
+    ctx.fillRect(gx + gw - 7, pillY, 11, 3);
+    ctx.fillRect(gx - 4, gy + gh - 4, 11, 3);
+    ctx.fillRect(gx + gw - 7, gy + gh - 4, 11, 3);
+
+    // Atap Kanopi Bersusun Biru Safir & Lis Emas Kerajaan (Multi-tiered Hip Roof)
+    // Tier 1: Atap Utama
     ctx.fillStyle = '#1e3a8a';
     ctx.beginPath();
     ctx.moveTo(gx - 8, gy + 18);
-    ctx.lineTo(gx + gw / 2, gy - 6);
+    ctx.lineTo(gx + 12, gy + 2);
+    ctx.lineTo(gx + gw - 12, gy + 2);
     ctx.lineTo(gx + gw + 8, gy + 18);
     ctx.closePath();
     ctx.fill();
 
-    ctx.strokeStyle = '#ca8a04';
-    ctx.lineWidth = 2;
+    // Shingle rows highlights on Tier 1
+    ctx.strokeStyle = '#3b82f6';
+    ctx.lineWidth = 1;
+    ctx.beginPath();
+    ctx.moveTo(gx - 4, gy + 14);
+    ctx.lineTo(gx + gw + 4, gy + 14);
+    ctx.moveTo(gx + 2, gy + 8);
+    ctx.lineTo(gx + gw - 2, gy + 8);
     ctx.stroke();
 
-    // Guild Royal Emblem Ribbon
-    this.drawFittedSignboard(ctx, gx + gw / 2, gy + 17.5, gw - 16, 11, '★ SERIKAT GUILD OAKHAVEN ★', '#ca8a04', '#fef08a', '#1e293b');
+    // Tier 2: Pedimen Atas & Puncak Menara Serikat
+    ctx.fillStyle = '#172554';
+    ctx.beginPath();
+    ctx.moveTo(gx + 10, gy + 4);
+    ctx.lineTo(gx + gw / 2, gy - 8);
+    ctx.lineTo(gx + gw - 10, gy + 4);
+    ctx.closePath();
+    ctx.fill();
+
+    // Lis Emas Atap
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(gx - 8, gy + 18);
+    ctx.lineTo(gx + 10, gy + 3);
+    ctx.lineTo(gx + gw / 2, gy - 8);
+    ctx.lineTo(gx + gw - 10, gy + 3);
+    ctx.lineTo(gx + gw + 8, gy + 18);
+    ctx.stroke();
+
+    // Apex Finial / Guild Crest Star di Puncak
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(gx + gw / 2 - 2, gy - 13, 4, 5);
+    ctx.beginPath();
+    ctx.arc(gx + gw / 2, gy - 13, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Bayangan Teritisan Atap (Drop Shadow)
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
+    ctx.fillRect(gx - 4, gy + 18, gw + 8, 3.5);
+
+    // Plang Nama Utama Serikat Guild Oakhaven
+    this.drawFittedSignboard(
+      ctx,
+      gx + gw / 2,
+      gy + 17,
+      gw - 12,
+      12,
+      '★ SERIKAT GUILD OAKHAVEN ★',
+      '#0f172a',
+      '#facc15',
+      '#fef08a'
+    );
+  }
+
+  private drawGuildPillarsAndRoof(ctx: CanvasRenderingContext2D, gx: number, gy: number, gw: number, gh: number): void {
+    this.drawGuildRoofOverhang(ctx, gx, gy, gw, gh);
   }
 
   private drawNoticeBoardStructure(ctx: CanvasRenderingContext2D, nbX: number, nbY: number): void {
@@ -1307,6 +1540,29 @@ export class VillageManager {
     ctx.fill();
   }
 
+  /**
+   * Helper utilitas untuk mengatur terang/gelap warna hex (shading/highlighting arsitektur)
+   */
+  private shadeColor(color: string, percent: number): string {
+    if (!color.startsWith('#') || color.length < 7) return color;
+    let R = parseInt(color.substring(1, 3), 16);
+    let G = parseInt(color.substring(3, 5), 16);
+    let B = parseInt(color.substring(5, 7), 16);
+    if (isNaN(R) || isNaN(G) || isNaN(B)) return color;
+    R = Math.min(255, Math.max(0, Math.round(R * (100 + percent) / 100)));
+    G = Math.min(255, Math.max(0, Math.round(G * (100 + percent) / 100)));
+    B = Math.min(255, Math.max(0, Math.round(B * (100 + percent) / 100)));
+    const RR = R.toString(16).padStart(2, '0');
+    const GG = G.toString(16).padStart(2, '0');
+    const BB = B.toString(16).padStart(2, '0');
+    return `#${RR}${GG}${BB}`;
+  }
+
+  /**
+   * Render Pondok / Balai Desa / Toko Arsitektur Pedesaan Klasik 2.5D RPG
+   * Fasad kayu-plester Tudor, atap sirap bertingkat dengan bayangan teritisan,
+   * jendela berkisi hangat dengan specular glint & kotak bunga, pintu lengkung berukir, cerobong asap & plang terintegrasi.
+   */
   private drawCottage(
     ctx: CanvasRenderingContext2D,
     x: number,
@@ -1314,61 +1570,295 @@ export class VillageManager {
     w: number,
     h: number,
     roofColor: string,
-    wallColor: string,
+    _wallColor: string,
     nameTag: string
   ): void {
-    // Stone foundation
-    ctx.fillStyle = '#334155';
-    ctx.fillRect(x + 2, y + h - 10, w - 4, 10);
+    const isLily = nameTag.includes('Lily') || nameTag.includes('Bunga');
+    const isEldoria = nameTag.includes('Eldoria') || nameTag.includes('Roh');
+    const isStonewatch = nameTag.includes('Stonewatch') || nameTag.includes('Benteng');
+    const isKitchen = nameTag.includes('Dapur') || nameTag.includes('Kedai');
+    const isTownHall = nameTag.includes('Balai') || nameTag.includes('Aldrich');
 
-    // Wooden timber walls
-    ctx.fillStyle = wallColor;
-    ctx.fillRect(x + 4, y + 20, w - 8, h - 28);
-    ctx.fillStyle = '#451a03';
-    ctx.fillRect(x + 4, y + 20, 4, h - 28);
-    ctx.fillRect(x + w - 8, y + 20, 4, h - 28);
-
-    // Door
-    ctx.fillStyle = '#451a03';
-    ctx.fillRect(x + w / 2 - 8, y + h - 26, 16, 24);
-    ctx.fillStyle = '#fbbf24';
-    ctx.fillRect(x + w / 2 + 3, y + h - 14, 2, 2); // Doorknob
-
-    // Shuttered Windows
-    ctx.fillStyle = '#fde047'; // Warm glowing window
-    ctx.fillRect(x + 12, y + 28, 12, 12);
-    ctx.fillRect(x + w - 24, y + 28, 12, 12);
-    ctx.fillStyle = '#78350f';
-    ctx.strokeRect(x + 12, y + 28, 12, 12);
-    ctx.strokeRect(x + w - 24, y + 28, 12, 12);
-
-    // Pitched Roof
-    ctx.fillStyle = roofColor;
+    // 1. Bayangan Jatuh Lembut ke Tanah (Ground Drop Shadow)
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.28)';
     ctx.beginPath();
-    ctx.moveTo(x - 4, y + 22);
-    ctx.lineTo(x + w / 2, y);
-    ctx.lineTo(x + w + 4, y + 22);
-    ctx.closePath();
+    ctx.ellipse(x + w / 2, y + h + 1, w / 2 + 5, 8, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = '#1e293b';
-    ctx.lineWidth = 1.5;
+
+    // 2. Fondasi Batu Alam / Cobblestone Plinth di Bagian Bawah
+    const plinthH = 9;
+    const plinthY = y + h - plinthH;
+    ctx.fillStyle = isStonewatch ? '#1e293b' : '#334155';
+    ctx.fillRect(x + 2, plinthY, w - 4, plinthH);
+    ctx.fillStyle = isStonewatch ? '#334155' : '#475569';
+    ctx.fillRect(x + 2, plinthY, w - 4, 2); // 1px highlight edge
+    // Blok batu vertikal
+    ctx.fillStyle = '#1e293b';
+    for (let bx = x + 12; bx < x + w - 10; bx += 14) {
+      ctx.fillRect(bx, plinthY + 2, 1.5, plinthH - 2);
+    }
+
+    // 3. Fasad Dinding Utama (Setengah-Kayu Tudor / Batu Halus)
+    const wallY = y + 24;
+    const wallH = h - 33;
+    // Base plaster wall (hangat & bersih)
+    ctx.fillStyle = isStonewatch ? '#475569' : isEldoria ? '#064e3b' : '#fef3c7';
+    ctx.fillRect(x + 4, wallY, w - 8, wallH);
+
+    // Tekstur Kayu Balok Tudor (Corner posts, mid-rail, & diagonal braces)
+    const timberColor = isStonewatch ? '#0f172a' : isEldoria ? '#065f46' : '#5c2b09';
+    const timberLight = isStonewatch ? '#1e293b' : isEldoria ? '#047857' : '#78350f';
+    ctx.fillStyle = timberColor;
+    // Balok tiang sudut kiri dan kanan
+    ctx.fillRect(x + 4, wallY, 5, wallH);
+    ctx.fillRect(x + w - 9, wallY, 5, wallH);
+    // Balok sabuk horizontal tengah
+    const midY = wallY + Math.round(wallH * 0.42);
+    ctx.fillRect(x + 4, midY, w - 8, 3.5);
+    // Balok atas dinding (wall-plate)
+    ctx.fillRect(x + 4, wallY, w - 8, 3);
+    // Sorotan cahaya pada balok kayu
+    ctx.fillStyle = timberLight;
+    ctx.fillRect(x + 5, wallY, 1.2, wallH);
+    ctx.fillRect(x + w - 8, wallY, 1.2, wallH);
+
+    // Diagonal Tudor Braces (jika bukan Stonewatch/Eldoria)
+    if (!isStonewatch && !isEldoria) {
+      ctx.strokeStyle = timberColor;
+      ctx.lineWidth = 2.2;
+      // Kiri
+      ctx.beginPath();
+      ctx.moveTo(x + 9, midY);
+      ctx.lineTo(x + 20, wallY + 3);
+      ctx.stroke();
+      // Kanan
+      ctx.beginPath();
+      ctx.moveTo(x + w - 9, midY);
+      ctx.lineTo(x + w - 20, wallY + 3);
+      ctx.stroke();
+    }
+
+    // Aksen Khusus Eldoria (Rune Cahaya Hijau/Biru)
+    if (isEldoria) {
+      const runeGlow = Math.sin(this.animTimer * 4 + x) * 0.3;
+      ctx.fillStyle = `rgba(52, 211, 153, ${0.75 + runeGlow})`;
+      ctx.font = 'bold 7px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.fillText('ᚱ ᛖ ᛚ', x + w / 2, wallY + 11);
+    }
+
+    // 4. Jendela Berkisi Kaca Hangat & Kotak Bunga Cantik
+    const winW = 12;
+    const winH = 13;
+    const winY = wallY + 6;
+    const winX1 = x + 11;
+    const winX2 = x + w - 23;
+
+    for (const wx of [winX1, winX2]) {
+      // Bingkai jendela kayu / batu
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(wx - 1, winY - 1, winW + 2, winH + 2);
+      // Kaca bercahaya amber keemasan dari dalam rumah
+      ctx.fillStyle = isEldoria ? '#34d399' : isStonewatch ? '#38bdf8' : '#fbbf24';
+      ctx.fillRect(wx, winY, winW, winH);
+      // Pantulan kilau kaca diagonal (Specular shine)
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.55)';
+      ctx.beginPath();
+      ctx.moveTo(wx + 1, winY + 1);
+      ctx.lineTo(wx + 6, winY + 1);
+      ctx.lineTo(wx + 1, winY + 6);
+      ctx.closePath();
+      ctx.fill();
+      // Kisi jendela kayu (cross mullions)
+      ctx.strokeStyle = '#451a03';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(wx + winW / 2, winY);
+      ctx.lineTo(wx + winW / 2, winY + winH);
+      ctx.moveTo(wx, winY + winH / 2);
+      ctx.lineTo(wx + winW, winY + winH / 2);
+      ctx.stroke();
+
+      // Kotak Bunga di Bawah Jendela (Window Flower Box)
+      if (isLily || isTownHall || isKitchen) {
+        ctx.fillStyle = '#78350f';
+        ctx.fillRect(wx - 2, winY + winH, winW + 4, 3.5);
+        // Daun hijau
+        ctx.fillStyle = '#16a34a';
+        ctx.fillRect(wx - 1, winY + winH - 1.5, winW + 2, 2.5);
+        // Bunga mekar warna-warni (merah, merah muda, kuning, putih)
+        const flowerColors = isLily ? ['#f43f5e', '#fb7185', '#fde047', '#ffffff'] : ['#ef4444', '#facc15'];
+        for (let fi = 0; fi < 4; fi++) {
+          ctx.fillStyle = flowerColors[fi % flowerColors.length];
+          ctx.fillRect(wx + fi * 3, winY + winH - 2, 2, 2);
+        }
+      } else {
+        // Daun jendela kayu samping (shutters)
+        ctx.fillStyle = '#451a03';
+        ctx.fillRect(wx - 3, winY, 2.5, winH);
+        ctx.fillRect(wx + winW + 0.5, winY, 2.5, winH);
+      }
+    }
+
+    // Tanaman Rambat Ivy Khusus Toko Bunga Lily
+    if (isLily) {
+      ctx.fillStyle = '#15803d';
+      ctx.fillRect(x + 2, wallY + 8, 3, 5);
+      ctx.fillRect(x + 4, wallY + 14, 2.5, 4);
+      ctx.fillRect(x + 2, wallY + 19, 3, 6);
+      ctx.fillStyle = '#fb7185';
+      ctx.fillRect(x + 3, wallY + 10, 2, 2);
+      ctx.fillRect(x + 3, wallY + 21, 2, 2);
+    }
+
+    // Tong Anggur Kayu di Samping Dapur Gaston
+    if (isKitchen) {
+      ctx.fillStyle = '#78350f';
+      ctx.fillRect(x + w - 8, y + h - 14, 8, 12);
+      ctx.fillStyle = '#1e293b';
+      ctx.fillRect(x - 8 + w, y + h - 12, 8, 1.5);
+      ctx.fillRect(x - 8 + w, y + h - 6, 8, 1.5);
+    }
+
+    // 5. Pintu Lengkung Kayu Oak Kokoh & Ambang Pintu
+    const doorW = 16;
+    const doorH = 24;
+    const doorX = Math.round(x + w / 2 - doorW / 2);
+    const doorY = y + h - doorH - 2;
+
+    // Bingkai lengkung pintu
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.roundRect(doorX - 2, doorY - 3, doorW + 4, doorH + 4, [5, 5, 0, 0]);
+    ctx.fill();
+
+    // Daun pintu papan kayu
+    ctx.fillStyle = isStonewatch ? '#334155' : '#451a03';
+    ctx.beginPath();
+    ctx.roundRect(doorX, doorY, doorW, doorH, [4, 4, 0, 0]);
+    ctx.fill();
+
+    // Garis serat papan pintu vertikal
+    ctx.fillStyle = isStonewatch ? '#1e293b' : '#270e02';
+    ctx.fillRect(doorX + 5, doorY + 2, 1, doorH - 2);
+    ctx.fillRect(doorX + 10, doorY + 2, 1, doorH - 2);
+
+    // Engsel besi hitam melintang
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(doorX + 1, doorY + 6, doorW - 3, 2);
+    ctx.fillRect(doorX + 1, doorY + 16, doorW - 3, 2);
+
+    // Gagang pintu kuningan berkilau
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.arc(doorX + doorW - 4, doorY + 12, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Ambang pintu batu
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(doorX - 1, doorY + doorH - 1, doorW + 2, 3);
+
+    // 6. Atap Bersusun Klasik RPG (Layered Tiled Gable Roof with Ridge & Overhang)
+    // Cerobong asap batu (di belakang atap kanan)
+    const chimX = x + w - 17;
+    const chimY = y - 6;
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(chimX, chimY, 8, 14);
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(chimX - 1, chimY - 2, 10, 3); // Pot cap
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(chimX + 2, chimY - 3, 4, 1.5); // Flue
+    // Asap cerobong halus berayun naik
+    const smokeBob = Math.sin(this.animTimer * 2 + x) * 3;
+    ctx.fillStyle = 'rgba(226, 232, 240, 0.45)';
+    ctx.beginPath();
+    ctx.arc(chimX + 4 + smokeBob, chimY - 6, 3.5, 0, Math.PI * 2);
+    ctx.arc(chimX + 6 - smokeBob, chimY - 13, 5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Badan Atap (Trapezoid / Hip Roof bersusun)
+    // Shingle rows: 4 tingkatan sirap atap
+    const tiers = 4;
+    const roofTopY = y + 2;
+    const roofBotY = y + 24;
+    const roofOverhang = 4;
+
+    for (let t = 0; t < tiers; t++) {
+      const tProgress = t / tiers;
+      const nextProgress = (t + 1) / tiers;
+      const y0 = roofTopY + tProgress * (roofBotY - roofTopY);
+      const y1 = roofTopY + nextProgress * (roofBotY - roofTopY) + 1;
+      const spread0 = 6 + (w / 2 - 6 + roofOverhang) * tProgress;
+      const spread1 = 6 + (w / 2 - 6 + roofOverhang) * nextProgress;
+
+      ctx.fillStyle = t % 2 === 0 ? roofColor : this.shadeColor(roofColor, -12);
+      ctx.beginPath();
+      ctx.moveTo(x + w / 2 - spread0, y0);
+      ctx.lineTo(x + w / 2 + spread0, y0);
+      ctx.lineTo(x + w / 2 + spread1, y1);
+      ctx.lineTo(x + w / 2 - spread1, y1);
+      ctx.closePath();
+      ctx.fill();
+
+      // Garis kilau atas setiap sirap
+      ctx.strokeStyle = this.shadeColor(roofColor, 28);
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + w / 2 - spread0 + 1, y0);
+      ctx.lineTo(x + w / 2 + spread0 - 1, y0);
+      ctx.stroke();
+
+      // Celah sirap vertikal
+      ctx.strokeStyle = 'rgba(0, 0, 0, 0.2)';
+      ctx.lineWidth = 0.8;
+      const segW = 10;
+      const segStart = x + w / 2 - spread1 + (t % 2 === 0 ? 0 : 5);
+      for (let sx = segStart; sx < x + w / 2 + spread1; sx += segW) {
+        if (sx > x + w / 2 - spread0 && sx < x + w / 2 + spread0) {
+          ctx.beginPath();
+          ctx.moveTo(sx, y0);
+          ctx.lineTo(sx, y1);
+          ctx.stroke();
+        }
+      }
+    }
+
+    // Lis Tepi Atap (Bargeboards & Ridge cap)
+    ctx.strokeStyle = this.shadeColor(roofColor, -35);
+    ctx.lineWidth = 1.8;
+    ctx.beginPath();
+    ctx.moveTo(x - roofOverhang, roofBotY);
+    ctx.lineTo(x + w / 2 - 6, roofTopY);
+    ctx.lineTo(x + w / 2 + 6, roofTopY);
+    ctx.lineTo(x + w + roofOverhang, roofBotY);
     ctx.stroke();
 
-    // Chimney with animated smoke
-    ctx.fillStyle = '#475569';
-    ctx.fillRect(x + w - 16, y - 6, 8, 14);
-    const smokeBob = Math.sin(this.animTimer + x) * 2;
-    ctx.fillStyle = 'rgba(203, 213, 225, 0.45)';
-    ctx.beginPath();
-    ctx.arc(x + w - 12 + smokeBob, y - 10, 4, 0, Math.PI * 2);
-    ctx.fill();
+    // Ridge cap emas / kayu di puncak
+    ctx.fillStyle = isStonewatch ? '#0f172a' : '#ca8a04';
+    ctx.fillRect(x + w / 2 - 8, roofTopY - 1.5, 16, 3);
 
-    // Signpost Plaque
-    this.drawFittedSignboard(ctx, x + w / 2, y + h + 2, w - 8, 12, nameTag, 'rgba(15, 23, 42, 0.88)', '#ca8a04', '#fef08a');
+    // Bayangan Jatuh Teritisan Atap ke Dinding Bawah (Ambient Occlusion Under Eaves)
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.42)';
+    ctx.fillRect(x + 2, roofBotY, w - 4, 4.5);
+
+    // 7. Plakat Papan Nama Bangunan Terpasang Rapi di Fasad Atas Pintu
+    this.drawFittedSignboard(
+      ctx,
+      x + w / 2,
+      wallY + 2.5,
+      w - 14,
+      10,
+      nameTag,
+      'rgba(15, 23, 42, 0.94)',
+      '#ca8a04',
+      '#fef08a'
+    );
   }
 
   /**
-   * Render Bangunan Bank Kerajaan Oakhaven (Atap Kubah Biru Safir & Lis Emas, Fasad Marmer Putih, Pilar Romawi & Lambang Koin Emas)
+   * Render Bangunan Bank Kerajaan Val / Oakhaven (Neoclassical Imperial Treasury)
+   * Tangga marmer bertingkat, 4 pilar Romawi berulir (fluted) dengan kapitel emas, dinding marmer ashlar,
+   * pintu khazanah besi bertabur emas, jendela lengkung teralis emas & pedimen biru safir berlis emas megah.
    */
   private drawBankBuilding(
     ctx: CanvasRenderingContext2D,
@@ -1377,103 +1867,215 @@ export class VillageManager {
     w: number,
     h: number
   ): void {
-    // 1. Fondasi Marmer Putih Abu-abu
-    ctx.fillStyle = '#cbd5e1';
-    ctx.fillRect(x + 2, y + h - 10, w - 4, 10);
+    // 1. Soft Ambient Ground Shadow
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.32)';
+    ctx.beginPath();
+    ctx.ellipse(x + w / 2, y + h + 1, w / 2 + 6, 8, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. Tangga Marmer Tiga Tingkat Menuju Serambi Bank (3-Tiered Marble Steps)
     ctx.fillStyle = '#94a3b8';
-    ctx.fillRect(x + 2, y + h - 2, w - 4, 2);
+    ctx.fillRect(x + 2, y + h - 5, w - 4, 5);
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(x + 4, y + h - 8, w - 8, 3.5);
+    ctx.fillStyle = '#f1f5f9';
+    ctx.fillRect(x + 6, y + h - 11, w - 12, 3.5);
 
-    // 2. Fasad Dinding Marmer Putih
+    // Garis bevel anak tangga
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(x + 2, y + h - 5, w - 4, 1);
+    ctx.fillRect(x + 4, y + h - 8, w - 8, 1);
+
+    // 3. Fasad Dinding Marmer Putih Ashlar (Polished White Marble Masonry)
+    const wallY = y + 22;
+    const wallH = h - 33;
     ctx.fillStyle = '#f8fafc';
-    ctx.fillRect(x + 4, y + 20, w - 8, h - 28);
-    ctx.strokeStyle = '#cbd5e1';
+    ctx.fillRect(x + 6, wallY, w - 12, wallH);
+
+    // Garis sambungan batu marmer halus
+    ctx.strokeStyle = '#e2e8f0';
     ctx.lineWidth = 0.8;
-    ctx.strokeRect(x + 4, y + 20, w - 8, h - 28);
-
-    // 3. Pilar Marmer Romawi di Kiri dan Kanan Pintu Fasad
-    const pX1 = x + 8;
-    const pX2 = x + w - 16;
-    for (const px of [pX1, pX2]) {
-      // Column
-      ctx.fillStyle = '#ffffff';
-      ctx.fillRect(px, y + 20, 8, h - 28);
-      // Gold capital & base
-      ctx.fillStyle = '#facc15';
-      ctx.fillRect(px - 1, y + 20, 10, 3);
-      ctx.fillRect(px - 1, y + h - 11, 10, 3);
-      ctx.strokeStyle = '#e2e8f0';
-      ctx.lineWidth = 0.8;
-      ctx.strokeRect(px, y + 20, 8, h - 28);
+    for (let my = wallY + 8; my < wallY + wallH; my += 9) {
+      ctx.beginPath();
+      ctx.moveTo(x + 6, my);
+      ctx.lineTo(x + w - 6, my);
+      ctx.stroke();
     }
 
-    // 4. Jendela Kaca Kisi Emas
-    const jx1 = x + 18;
-    const jx2 = x + w - 28;
-    const jy = y + 28;
-    for (const jx of [jx1, jx2]) {
+    // 4. Jendela Lengkung Teralis Emas & Kaca Biru Safir Tinted
+    const winW = 10;
+    const winH = 14;
+    const winY = wallY + 8;
+    for (const jx of [x + 13, x + w - 23]) {
+      // Bingkai lengkung
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.roundRect(jx - 1, winY - 1, winW + 2, winH + 2, [4, 4, 0, 0]);
+      ctx.fill();
+      // Kaca biru safir
       ctx.fillStyle = '#0284c7';
-      ctx.fillRect(jx, jy, 10, 14);
-      ctx.fillStyle = 'rgba(255, 255, 255, 0.4)';
-      ctx.fillRect(jx + 2, jy + 2, 6, 4);
+      ctx.beginPath();
+      ctx.roundRect(jx, winY, winW, winH, [3, 3, 0, 0]);
+      ctx.fill();
+      // Pantulan kilau kaca diagonal
+      ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+      ctx.beginPath();
+      ctx.moveTo(jx + 1, winY + 1);
+      ctx.lineTo(jx + 5, winY + 1);
+      ctx.lineTo(jx + 1, winY + 5);
+      ctx.closePath();
+      ctx.fill();
+      // Teralis pengaman emas
       ctx.strokeStyle = '#facc15';
-      ctx.lineWidth = 1;
-      ctx.strokeRect(jx, jy, 10, 14);
+      ctx.lineWidth = 0.8;
+      ctx.beginPath();
+      ctx.moveTo(jx + winW / 2, winY);
+      ctx.lineTo(jx + winW / 2, winY + winH);
+      ctx.moveTo(jx, winY + winH / 2);
+      ctx.lineTo(jx + winW, winY + winH / 2);
+      ctx.stroke();
     }
 
-    // 5. Pintu Masuk Kayu Mahoni Tebal Bertabur Paku Emas
+    // 5. Pintu Khazanah Emas & Perunggu Berlapis Besi (Grand Vault Double Door)
     const doorW = 20;
     const doorH = 26;
-    const doorX = x + w / 2 - doorW / 2;
-    const doorY = y + h - doorH - 4;
-    ctx.fillStyle = '#451a03';
-    ctx.fillRect(doorX, doorY, doorW, doorH);
-    ctx.strokeStyle = '#facc15';
-    ctx.lineWidth = 1.2;
-    ctx.strokeRect(doorX, doorY, doorW, doorH);
-    // Gold Studs
-    ctx.fillStyle = '#facc15';
-    ctx.fillRect(doorX + 3, doorY + 6, 2, 2);
-    ctx.fillRect(doorX + doorW - 5, doorY + 6, 2, 2);
-    ctx.fillRect(doorX + 3, doorY + 16, 2, 2);
-    ctx.fillRect(doorX + doorW - 5, doorY + 16, 2, 2);
+    const doorX = Math.round(x + w / 2 - doorW / 2);
+    const doorY = y + h - doorH - 3;
 
-    // 6. Atap Pedimen Segitiga Biru Safir & Lis Emas Kerajaan
-    ctx.fillStyle = '#1e3a8a';
+    // Bingkai lengkung pintu marmer
+    ctx.fillStyle = '#0f172a';
     ctx.beginPath();
-    ctx.moveTo(x - 2, y + 22);
-    ctx.lineTo(x + w / 2, y - 2);
-    ctx.lineTo(x + w + 2, y + 22);
-    ctx.closePath();
+    ctx.roundRect(doorX - 2.5, doorY - 3, doorW + 5, doorH + 4, [6, 6, 0, 0]);
     ctx.fill();
-
-    // Lis Emas Atap
     ctx.strokeStyle = '#facc15';
-    ctx.lineWidth = 2.0;
-    ctx.stroke();
-
-    // 7. Lambang Koin Emas Val di Tengah Pedimen Atap
-    const crestX = x + w / 2;
-    const crestY = y + 11;
-    ctx.fillStyle = '#facc15';
-    ctx.beginPath();
-    ctx.arc(crestX, crestY, 6.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.strokeStyle = '#ca8a04';
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    ctx.font = 'bold 7px sans-serif';
+    // Daun pintu besi mahoni & perunggu
+    ctx.fillStyle = '#270e02';
+    ctx.beginPath();
+    ctx.roundRect(doorX, doorY, doorW, doorH, [4, 4, 0, 0]);
+    ctx.fill();
+
+    // Pelat perisai pintu emas
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(doorX + 2, doorY + 4, doorW - 4, 2);
+    ctx.fillRect(doorX + 2, doorY + doorH - 6, doorW - 4, 2);
+    // Roda pengunci kubah bank (vault locking wheel) di tengah
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.arc(doorX + doorW / 2, doorY + 12, 3.5, 0, Math.PI * 2);
+    ctx.stroke();
+    ctx.fillStyle = '#ca8a04';
+    ctx.beginPath();
+    ctx.arc(doorX + doorW / 2, doorY + 12, 1.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 6. Empat Pilar Romawi Berulir (4 Fluted Roman Columns with Gold Capitals)
+    const colPositions = [x + 5, x + 23, x + w - 31, x + w - 13];
+    for (const px of colPositions) {
+      // Bayangan pilar ke dinding
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.2)';
+      ctx.fillRect(px + 6, wallY + 3, 2, wallH - 3);
+
+      // Batang pilar marmer putih
+      ctx.fillStyle = '#ffffff';
+      ctx.fillRect(px, wallY + 2, 7, wallH - 2);
+
+      // Alur vertikal pilar (fluting highlight & shadow)
+      ctx.fillStyle = '#cbd5e1';
+      ctx.fillRect(px + 1.2, wallY + 2, 1, wallH - 2);
+      ctx.fillRect(px + 4.8, wallY + 2, 1, wallH - 2);
+      ctx.fillStyle = '#f8fafc';
+      ctx.fillRect(px + 3, wallY + 2, 1.2, wallH - 2);
+
+      // Kapitel emas (atas) & plinth dasar (bawah)
+      ctx.fillStyle = '#facc15';
+      ctx.fillRect(px - 1.5, wallY, 10, 3);
+      ctx.fillRect(px - 1.5, wallY + wallH - 3, 10, 3);
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 0.8;
+      ctx.strokeRect(px - 1.5, wallY, 10, 3);
+    }
+
+    // 7. Balok Architrave & Pedimen Segitiga Biru Safir (Classical Pediment)
+    // Balok Architrave marmer di atas pilar
+    ctx.fillStyle = '#e2e8f0';
+    ctx.fillRect(x + 2, wallY - 2, w - 4, 4);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x + 2, wallY - 2, w - 4, 1.2);
+
+    // Pedimen Segitiga Biru Safir
+    ctx.fillStyle = '#1e3a8a';
+    ctx.beginPath();
+    ctx.moveTo(x - 3, wallY - 1);
+    ctx.lineTo(x + w / 2, y - 4);
+    ctx.lineTo(x + w + 3, wallY - 1);
+    ctx.closePath();
+    ctx.fill();
+
+    // Lis Emas Pedimen
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(x - 3, wallY - 1);
+    ctx.lineTo(x + w / 2, y - 4);
+    ctx.lineTo(x + w + 3, wallY - 1);
+    ctx.stroke();
+
+    // Dentil Molding (gigi ornamen klasik di bawah pedimen)
+    ctx.fillStyle = '#facc15';
+    for (let dx = x + 4; dx < x + w - 4; dx += 6) {
+      ctx.fillRect(dx, wallY - 2, 3, 2);
+    }
+
+    // Apex Finial Emas di Puncak
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(x + w / 2 - 2, y - 8, 4, 4);
+    ctx.beginPath();
+    ctx.arc(x + w / 2, y - 8, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 8. Medali Koin Emas Val di Tengah Tympanum Pedimen
+    const crestX = x + w / 2;
+    const crestY = y + 8;
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.arc(crestX, crestY, 7, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#ca8a04';
+    ctx.lineWidth = 1.2;
+    ctx.stroke();
+
+    ctx.font = 'bold 7.5px sans-serif';
     ctx.fillStyle = '#78350f';
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    ctx.fillText('𝒱', crestX, crestY + 0.5);
+    ctx.fillText('𝒱', crestX, crestY + 0.3);
 
-    // 8. Plakat Papan Nama Bank Emas di Atas Pintu
-    this.drawFittedSignboard(ctx, x + w / 2, doorY - 8.5, w - 8, 11, '🏛️ BANK KERAJAAN VAL', '#0f172a', '#facc15', '#fef08a');
+    // Bayangan Teritisan Atap
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.4)';
+    ctx.fillRect(x + 2, wallY + 2, w - 4, 3.5);
+
+    // 9. Plakat Papan Nama Bank Emas di Atas Pintu
+    this.drawFittedSignboard(
+      ctx,
+      x + w / 2,
+      wallY + 2.5,
+      w - 14,
+      10,
+      '🏛️ BANK KERAJAAN VAL',
+      '#0f172a',
+      '#facc15',
+      '#fef08a'
+    );
   }
 
   /**
-   * Render Bangunan Bengkel Pandai Besi Master Brokk di Oakhaven (Atap Slate Arang, Dinding Batu Basalt, Cerobong Asap & Plang Anvil)
+   * Render Bangunan Bengkel Pandai Besi Master Brokk di Oakhaven (Master Blacksmith Foundry)
+   * Arsitektur batu basalt & arang, atap sirap slate bergerigi, cerobong asap batu ganda dengan semburan api & bunga api terbang,
+   * jendela tempa berkobar api jingga dengan teralis besi, landasan tempa (anvil) di atas tunggul kayu, & tong pendingin.
    */
   private drawBlacksmithWorkshop(
     ctx: CanvasRenderingContext2D,
@@ -1482,126 +2084,242 @@ export class VillageManager {
     w: number,
     h: number
   ): void {
-    // 1. Dark Charred Basalt Stone Foundation
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(x + 2, y + h - 10, w - 4, 10);
-
-    // 2. Heavy Masonry Stone Walls (Charcoal Grey Basalt)
-    ctx.fillStyle = '#334155';
-    ctx.fillRect(x + 4, y + 20, w - 8, h - 28);
-
-    // Stone Pillar Bracing on Corners
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(x + 4, y + 20, 6, h - 28);
-    ctx.fillRect(x + w - 10, y + 20, 6, h - 28);
-
-    // Stone brick lines
-    ctx.strokeStyle = '#0f172a';
-    ctx.lineWidth = 0.8;
-    ctx.strokeRect(x + 4, y + 20, w - 8, h - 28);
-
-    // 3. Fiery Forge Glowing Window (Kiri: jendela tempa memperlihatkan api jingga)
-    ctx.fillStyle = '#ea580c';
-    ctx.fillRect(x + 12, y + 28, 14, 13);
-    const forgeFlicker = Math.sin(this.animTimer * 8) * 1.5;
-    ctx.fillStyle = '#fde047';
-    ctx.fillRect(x + 14, y + 30 + forgeFlicker, 10, 8);
-    ctx.strokeStyle = '#7c2d12';
-    ctx.lineWidth = 1.2;
-    ctx.strokeRect(x + 12, y + 28, 14, 13);
-    // Iron Window Grille
-    ctx.fillStyle = '#1e293b';
-    ctx.fillRect(x + 18, y + 28, 2, 13);
-    ctx.fillRect(x + 12, y + 34, 14, 2);
-
-    // 4. Heavy Reinforced Iron-Banded Oak Door at bottom center (pintu masuk ke interior)
-    const doorX = x + w / 2 - 8;
-    const doorY = y + h - 26;
-    ctx.fillStyle = '#451a03';
-    ctx.fillRect(doorX, doorY, 16, 24);
-    // Iron banding on door
-    ctx.fillStyle = '#475569';
-    ctx.fillRect(doorX, doorY + 4, 16, 2.5);
-    ctx.fillRect(doorX, doorY + 14, 16, 2.5);
-    ctx.fillStyle = '#fbbf24';
-    ctx.fillRect(doorX + 11, doorY + 11, 2.5, 2.5); // Brass handle
-
-    // Stone Archway Over Door
-    ctx.strokeStyle = '#64748b';
-    ctx.lineWidth = 1.5;
-    ctx.strokeRect(doorX - 1, doorY - 1, 18, 25);
-
-    // 5. Heavy Slate Charcoal Pitched Roof
-    ctx.fillStyle = '#1e293b';
+    // 1. Soft Ambient Ground Shadow
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
     ctx.beginPath();
-    ctx.moveTo(x - 5, y + 22);
-    ctx.lineTo(x + w / 2, y - 2);
-    ctx.lineTo(x + w + 5, y + 22);
-    ctx.closePath();
+    ctx.ellipse(x + w / 2, y + h + 1, w / 2 + 6, 8, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = '#0f172a';
-    ctx.lineWidth = 2;
-    ctx.stroke();
 
-    // Secondary roof trim
+    // 2. Fondasi Batu Basalt Arang Hitam Pekat
+    const plinthH = 10;
+    const plinthY = y + h - plinthH;
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(x + 2, plinthY, w - 4, plinthH);
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(x + 2, plinthY, w - 4, 2);
+
+    // 3. Dinding Masonry Batu Basalt Gelap & Balok Kayu Hangus
+    const wallY = y + 24;
+    const wallH = h - 34;
     ctx.fillStyle = '#334155';
-    ctx.fillRect(x - 4, y + 20, w + 8, 3);
+    ctx.fillRect(x + 4, wallY, w - 8, wallH);
 
-    // 6. Massive Stone Chimney with Blazing Fire & Rising Smoke/Embers
+    // Sambungan batu bata basalt kasar
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 0.8;
+    for (let my = wallY + 6; my < wallY + wallH; my += 7) {
+      ctx.beginPath();
+      ctx.moveTo(x + 4, my);
+      ctx.lineTo(x + w - 4, my);
+      ctx.stroke();
+    }
+
+    // Tiang Sudut Kayu Hangus dengan Pelat Sudut Besi Hitam
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(x + 4, wallY, 6, wallH);
+    ctx.fillRect(x + w - 10, wallY, 6, wallH);
+    ctx.fillStyle = '#64748b'; // Paku keling besi sudut
+    ctx.fillRect(x + 6, wallY + 4, 2, 2);
+    ctx.fillRect(x + 6, wallY + wallH - 6, 2, 2);
+    ctx.fillRect(x + w - 8, wallY + 4, 2, 2);
+    ctx.fillRect(x + w - 8, wallY + wallH - 6, 2, 2);
+
+    // 4. Jendela Tempa Api Membara (Fiery Forge Glowing Window)
+    const forgeWinW = 15;
+    const forgeWinH = 14;
+    const forgeWinX = x + 11;
+    const forgeWinY = wallY + 5;
+
+    // Bingkai batu lengkung jendela tempa
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.roundRect(forgeWinX - 2, forgeWinY - 2, forgeWinW + 4, forgeWinH + 4, [4, 4, 0, 0]);
+    ctx.fill();
+
+    // Api berkobar di dalam bengkel tempa
+    ctx.fillStyle = '#ea580c';
+    ctx.fillRect(forgeWinX, forgeWinY, forgeWinW, forgeWinH);
+    const forgeFlicker = Math.sin(this.animTimer * 10) * 2;
+    ctx.fillStyle = '#fde047';
+    ctx.beginPath();
+    ctx.arc(forgeWinX + forgeWinW / 2, forgeWinY + forgeWinH / 2 + forgeFlicker, 4.5, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Teralis jeruji besi tempa
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(forgeWinX + 4.5, forgeWinY, 2, forgeWinH);
+    ctx.fillRect(forgeWinX + 9.5, forgeWinY, 2, forgeWinH);
+    ctx.fillRect(forgeWinX, forgeWinY + 7, forgeWinW, 2);
+
+    // Pancaran cahaya hangat tempa ke tanah
+    const forgeGlow = ctx.createRadialGradient(
+      forgeWinX + forgeWinW / 2,
+      forgeWinY + forgeWinH,
+      2,
+      forgeWinX + forgeWinW / 2,
+      forgeWinY + forgeWinH + 12,
+      18
+    );
+    forgeGlow.addColorStop(0, 'rgba(249, 115, 22, 0.45)');
+    forgeGlow.addColorStop(1, 'rgba(249, 115, 22, 0)');
+    ctx.fillStyle = forgeGlow;
+    ctx.fillRect(forgeWinX - 10, forgeWinY + forgeWinH, forgeWinW + 20, 18);
+
+    // 5. Pintu Masuk Kayu Oak Tebal Diperkuat Pelat Besi Bersilang
+    const doorW = 16;
+    const doorH = 24;
+    const doorX = Math.round(x + w / 2 - doorW / 2);
+    const doorY = y + h - doorH - 2;
+
+    // Bingkai lengkung batu pintu
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.roundRect(doorX - 2, doorY - 3, doorW + 4, doorH + 4, [5, 5, 0, 0]);
+    ctx.fill();
+
+    // Pintu kayu arang
+    ctx.fillStyle = '#1e1b18';
+    ctx.beginPath();
+    ctx.roundRect(doorX, doorY, doorW, doorH, [4, 4, 0, 0]);
+    ctx.fill();
+
+    // Sabuk pelat besi hitam bersilang
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(doorX + 1, doorY + 5, doorW - 2, 2.5);
+    ctx.fillRect(doorX + 1, doorY + 15, doorW - 2, 2.5);
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(doorX + doorW - 4, doorY + 11, 2, 2); // Gagang kuningan
+
+    // 6. Cerobong Asap Batu Masif dengan Lidah Api & Bunga Api Terbang
     const chimX = x + w - 18;
     const chimY = y - 10;
     ctx.fillStyle = '#1e293b';
-    ctx.fillRect(chimX, chimY, 10, 18);
+    ctx.fillRect(chimX, chimY, 11, 20);
     ctx.strokeStyle = '#0f172a';
     ctx.lineWidth = 1;
-    ctx.strokeRect(chimX, chimY, 10, 18);
-    // Fiery orange rim at chimney opening
-    ctx.fillStyle = '#ea580c';
-    ctx.fillRect(chimX + 1, chimY - 2, 8, 3);
+    ctx.strokeRect(chimX, chimY, 11, 20);
 
-    // Animated Smoke & Spark Particles
+    // Klem besi pengikat cerobong
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(chimX - 1, chimY + 4, 13, 2);
+    ctx.fillRect(chimX - 1, chimY + 12, 13, 2);
+
+    // Mulut cerobong berpijar jingga
+    ctx.fillStyle = '#ea580c';
+    ctx.fillRect(chimX + 1, chimY - 2, 9, 3);
+
+    // Partikel asap tebal & bunga api tempa (embers)
     const smokeWave = Math.sin(this.animTimer * 2 + x) * 3;
     ctx.fillStyle = 'rgba(148, 163, 184, 0.55)';
     ctx.beginPath();
     ctx.arc(chimX + 5 + smokeWave, chimY - 6, 4.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.beginPath();
     ctx.arc(chimX + 7 - smokeWave, chimY - 14, 6.5, 0, Math.PI * 2);
     ctx.fill();
-    // Glowing orange ember spark
-    const emberY = chimY - 10 - ((this.animTimer * 20) % 16);
+
+    // Percikan bunga api membubung tinggi
+    const emberY1 = chimY - 8 - ((this.animTimer * 22) % 18);
+    const emberY2 = chimY - 4 - ((this.animTimer * 18 + 8) % 18);
     ctx.fillStyle = '#f97316';
-    ctx.fillRect(chimX + 4 + Math.sin(this.animTimer * 6) * 4, emberY, 2, 2);
+    ctx.fillRect(chimX + 4 + Math.sin(this.animTimer * 7) * 4, emberY1, 2, 2);
+    ctx.fillStyle = '#fde047';
+    ctx.fillRect(chimX + 7 - Math.sin(this.animTimer * 5) * 3, emberY2, 1.5, 1.5);
 
-    // 7. Hanging Anvil Signpost (⚒️ Plang Besi Tempa)
-    const signX = x + w - 24;
-    const signY = y + 26;
-    // Sign bracket
+    // 7. Atap Sirap Slate Arang Gelap Bertingkat (Layered Slate Shingle Roof)
+    const tiers = 4;
+    const roofTopY = y + 2;
+    const roofBotY = y + 24;
+    const roofOverhang = 5;
+
+    for (let t = 0; t < tiers; t++) {
+      const tProgress = t / tiers;
+      const nextProgress = (t + 1) / tiers;
+      const y0 = roofTopY + tProgress * (roofBotY - roofTopY);
+      const y1 = roofTopY + nextProgress * (roofBotY - roofTopY) + 1;
+      const spread0 = 6 + (w / 2 - 6 + roofOverhang) * tProgress;
+      const spread1 = 6 + (w / 2 - 6 + roofOverhang) * nextProgress;
+
+      ctx.fillStyle = t % 2 === 0 ? '#1e293b' : '#0f172a';
+      ctx.beginPath();
+      ctx.moveTo(x + w / 2 - spread0, y0);
+      ctx.lineTo(x + w / 2 + spread0, y0);
+      ctx.lineTo(x + w / 2 + spread1, y1);
+      ctx.lineTo(x + w / 2 - spread1, y1);
+      ctx.closePath();
+      ctx.fill();
+
+      // Garis kilau sirap slate arang
+      ctx.strokeStyle = '#475569';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(x + w / 2 - spread0 + 1, y0);
+      ctx.lineTo(x + w / 2 + spread0 - 1, y0);
+      ctx.stroke();
+    }
+
+    // Lis atap besi & ridge cap
+    ctx.strokeStyle = '#0f172a';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(x - roofOverhang, roofBotY);
+    ctx.lineTo(x + w / 2 - 6, roofTopY);
+    ctx.lineTo(x + w / 2 + 6, roofTopY);
+    ctx.lineTo(x + w + roofOverhang, roofBotY);
+    ctx.stroke();
+
+    // Ridge cap tembaga di puncak atap
+    ctx.fillStyle = '#ea580c';
+    ctx.fillRect(x + w / 2 - 8, roofTopY - 1.5, 16, 3);
+
+    // Bayangan jatuh teritisan atap ke dinding
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
+    ctx.fillRect(x + 2, roofBotY, w - 4, 4.5);
+
+    // 8. Perlengkapan Luar Bengkel (Outdoor Blacksmith Props)
+    // Landasan Tempa (Anvil) di atas tunggul kayu alami di kanan
+    const anvilStumpX = x + w - 24;
+    const anvilStumpY = y + h - 14;
+    // Tunggul kayu
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(anvilStumpX, anvilStumpY, 10, 10);
+    ctx.fillStyle = '#78350f';
+    ctx.beginPath();
+    ctx.ellipse(anvilStumpX + 5, anvilStumpY, 5, 2.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Besi landasan tempa (Anvil)
     ctx.fillStyle = '#0f172a';
-    ctx.fillRect(signX, signY - 2, 14, 2);
-    // Mini hanging sign board
-    ctx.fillStyle = '#451a03';
-    ctx.fillRect(signX + 2, signY + 2, 12, 10);
-    ctx.strokeStyle = '#ca8a04';
-    ctx.strokeRect(signX + 2, signY + 2, 12, 10);
-    ctx.fillStyle = '#f8fafc';
-    ctx.font = 'bold 7px sans-serif';
-    ctx.textAlign = 'center';
-    ctx.fillText('⚒️', signX + 8, signY + 10);
+    ctx.fillRect(anvilStumpX + 1, anvilStumpY - 4, 8, 4);
+    ctx.fillRect(anvilStumpX - 1, anvilStumpY - 6, 12, 2.5); // Horn & face
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(anvilStumpX, anvilStumpY - 6, 10, 1);
 
-    // 8. Outdoor Props: Tong Air Pendingin & Tumpukan Batangan Besi
-    // Quenching tub on the right
+    // Tong Air Pendingin (Quenching Tub) di kiri
     ctx.fillStyle = '#451a03';
-    ctx.fillRect(x + w - 8, y + h - 16, 10, 12);
+    ctx.fillRect(x - 5, y + h - 14, 9, 12);
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(x - 5, y + h - 12, 9, 1.5); // Klem tong
+    ctx.fillRect(x - 5, y + h - 6, 9, 1.5);
+    // Air pendingin biru
     ctx.fillStyle = '#0284c7';
-    ctx.fillRect(x + w - 7, y + h - 15, 8, 3);
-    // Iron ingots stack on the left
-    ctx.fillStyle = '#94a3b8';
-    ctx.fillRect(x - 5, y + h - 10, 8, 4);
-    ctx.fillRect(x - 3, y + h - 14, 6, 4);
+    ctx.fillRect(x - 4, y + h - 13, 7, 2);
 
-    // 9. Signpost Plaque: "BENGKEL TEMPA BROKK"
-    this.drawFittedSignboard(ctx, x + w / 2, y + h + 2, w - 4, 12, '⚒️ BENGKEL TEMPA BROKK', 'rgba(15, 23, 42, 0.95)', '#f97316', '#fdba74');
+    // Tumpukan Batangan Besi (Ingots)
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(x + 5, y + h - 7, 7, 3);
+    ctx.fillStyle = '#94a3b8';
+    ctx.fillRect(x + 6, y + h - 10, 5, 3);
+
+    // 9. Plakat Papan Nama Bengkel Tempa Terpasang Rapi di Fasad
+    this.drawFittedSignboard(
+      ctx,
+      x + w / 2,
+      wallY + 2.5,
+      w - 10,
+      10,
+      '⚒️ BENGKEL TEMPA BROKK',
+      'rgba(15, 23, 42, 0.95)',
+      '#f97316',
+      '#fdba74'
+    );
   }
 
   /**
@@ -1723,84 +2441,140 @@ export class VillageManager {
     const w = 58;
     const h = 32;
 
-    // Cobblestone ground rug
+    // 1. Soft Ground Shadow & Cobblestone Paving
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.25)';
+    ctx.beginPath();
+    ctx.ellipse(x + w / 2, y + h + 2, w / 2 + 6, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.fillStyle = '#334155';
     ctx.fillRect(x - 8, y + 16, w + 16, 18);
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(x - 6, y + 18, w + 12, 14);
 
-    // Left Side Potion Barrel
+    // 2. Rak Barang Belakang & Dinding Kios
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(x + 2, y + 6, w - 4, 12);
+    // Rak kayu & botol ramuan cadangan di rak
     ctx.fillStyle = '#78350f';
-    ctx.fillRect(x - 6, y + 18, 10, 14);
-    ctx.fillStyle = '#475569';
-    ctx.fillRect(x - 6, y + 22, 10, 2);
-    ctx.fillRect(x - 6, y + 27, 10, 2);
+    ctx.fillRect(x + 4, y + 10, w - 8, 2);
+    // Botol-botol ramuan kecil di rak atas
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(x + 8, y + 7, 3, 3);
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(x + 14, y + 7, 3, 3);
+    ctx.fillStyle = '#22c55e';
+    ctx.fillRect(x + 20, y + 7, 3, 3);
+    ctx.fillStyle = '#fde047';
+    ctx.fillRect(x + w - 16, y + 7, 5, 3); // Peta gulung
 
-    // Right Side Fruit Crate
+    // Sisi Kiri: Tong Kayu Ramuan Ekstrak
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(x - 7, y + 17, 10, 15);
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(x - 7, y + 20, 10, 2);
+    ctx.fillRect(x - 7, y + 27, 10, 2);
+
+    // Sisi Kanan: Kotak Kayu Berisi Buah Segar (Apel & Pir Hutan)
     ctx.fillStyle = '#b45309';
-    ctx.fillRect(x + w - 2, y + 20, 12, 12);
+    ctx.fillRect(x + w - 2, y + 19, 12, 12);
     ctx.fillStyle = '#ef4444';
     ctx.beginPath();
-    ctx.arc(x + w + 2, y + 19, 2.5, 0, Math.PI * 2);
+    ctx.arc(x + w + 2, y + 18, 2.5, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#22c55e';
     ctx.beginPath();
-    ctx.arc(x + w + 6, y + 19, 2.5, 0, Math.PI * 2);
+    ctx.arc(x + w + 6, y + 18, 2.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // Merchant Marco standing behind counter
-    ctx.fillStyle = '#047857'; // Green Apron
+    // 3. Saudagar Marco Berdiri di Balik Meja Kasir
+    ctx.fillStyle = '#047857'; // Apron hijau
     ctx.fillRect(x + w / 2 - 6, y + 6, 12, 12);
-    ctx.fillStyle = '#fed7aa'; // Face
+    ctx.fillStyle = '#fed7aa'; // Wajah
     ctx.fillRect(x + w / 2 - 4, y - 2, 8, 8);
-    ctx.fillStyle = '#fde047'; // Straw Hat
+    ctx.fillStyle = '#fde047'; // Topi jerami pedagang
     ctx.fillRect(x + w / 2 - 8, y - 5, 16, 3);
     ctx.fillRect(x + w / 2 - 5, y - 8, 10, 4);
-    ctx.fillStyle = '#dc2626';
+    ctx.fillStyle = '#dc2626'; // Pita topi merah
     ctx.fillRect(x + w / 2 - 5, y - 5, 10, 1.5);
 
-    // Wooden Posts
+    // 4. Meja Konter Kayu Dipoles Rapi (Counter Table)
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(x + 2, y + 16, w - 4, 12);
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(x + 2, y + 16, w - 4, 3);
     ctx.fillStyle = '#451a03';
-    ctx.fillRect(x + 2, y + 4, 4, h - 4);
-    ctx.fillRect(x + w - 6, y + 4, 4, h - 4);
+    ctx.fillRect(x + 2, y + 27, w - 4, 1.5);
 
-    // Striped Awning (Red & Yellow)
+    // Barang dagangan di meja: Ramuan HP (merah), MP (biru) dengan kilau kaca & gulungan
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(x + 11, y + 18, 2.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x + 10, y + 16.5, 1, 1); // Specular glint
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(x + 10, y + 15, 2, 1.5); // Gabus botol
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.arc(x + 21, y + 18, 2.8, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x + 20, y + 16.5, 1, 1);
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(x + 20, y + 15, 2, 1.5);
+
+    // Gulungan kertas perjanjian jual-beli
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(x + 29, y + 17, 8, 3.5);
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(x + 32, y + 17, 2, 3.5); // Pita merah gulungan
+
+    // 5. Tiang Penyangga Kanopi Kayu Berukir
+    ctx.fillStyle = '#451a03';
+    ctx.fillRect(x + 2, y + 3, 4, h - 3);
+    ctx.fillRect(x + w - 6, y + 3, 4, h - 3);
+    // Braket siku kayu
+    ctx.fillStyle = '#78350f';
+    ctx.beginPath();
+    ctx.moveTo(x + 6, y + 4);
+    ctx.lineTo(x + 10, y + 4);
+    ctx.lineTo(x + 6, y + 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x + w - 6, y + 4);
+    ctx.lineTo(x + w - 10, y + 4);
+    ctx.lineTo(x + w - 6, y + 8);
+    ctx.closePath();
+    ctx.fill();
+
+    // 6. Tenda Kanopi Bergaris Merah & Kuning Bersirip Halus (Scalloped Awning)
     const stripes = 7;
     const stripeW = w / stripes;
     for (let i = 0; i < stripes; i++) {
       ctx.fillStyle = i % 2 === 0 ? '#dc2626' : '#fef08a';
       ctx.beginPath();
-      ctx.moveTo(x + i * stripeW, y + 4);
-      ctx.lineTo(x + (i + 1) * stripeW, y + 4);
-      ctx.lineTo(x + (i + 1) * stripeW - 2, y + 14);
-      ctx.lineTo(x + i * stripeW - 2, y + 14);
+      ctx.moveTo(x + i * stripeW, y + 2);
+      ctx.lineTo(x + (i + 1) * stripeW, y + 2);
+      ctx.lineTo(x + (i + 1) * stripeW - 1, y + 13);
+      ctx.lineTo(x + i * stripeW - 1, y + 13);
       ctx.closePath();
       ctx.fill();
+
+      // Kelopak renda bawah melengkung halus
       ctx.beginPath();
-      ctx.arc(x + i * stripeW + stripeW / 2 - 1, y + 14, stripeW / 2, 0, Math.PI);
+      ctx.arc(x + i * stripeW + stripeW / 2 - 0.5, y + 13, stripeW / 2, 0, Math.PI);
       ctx.fill();
     }
 
-    // Counter & Goods
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(x + 2, y + 16, w - 4, 12);
-    ctx.fillStyle = '#b45309';
-    ctx.fillRect(x + 3, y + 16, w - 6, 3);
+    // Bayangan teritisan tenda ke meja
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
+    ctx.fillRect(x + 2, y + 14, w - 4, 2.5);
 
-    // Ramuan HP & MP di meja
-    ctx.fillStyle = '#ef4444';
-    ctx.beginPath();
-    ctx.arc(x + 10, y + 18, 2.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#38bdf8';
-    ctx.beginPath();
-    ctx.arc(x + 20, y + 18, 2.5, 0, Math.PI * 2);
-    ctx.fill();
-    ctx.fillStyle = '#fef08a';
-    ctx.fillRect(x + 28, y + 16, 8, 3); // Scroll
-
-    // Signboard
-    this.drawFittedSignboard(ctx, x + w / 2, y + 0.5, w - 4, 10, '🛒 SERBA ADA MARCO', '#1e293b', '#facc15', '#fef08a');
+    // 7. Plakat Papan Nama Kios Rapi di Puncak Tenda
+    this.drawFittedSignboard(ctx, x + w / 2, y + 0.5, w - 2, 10, '🛒 SERBA ADA MARCO', '#1e293b', '#facc15', '#fef08a');
   }
 
   /**
@@ -1810,92 +2584,103 @@ export class VillageManager {
     const w = 62;
     const h = 32;
 
-    // Terracotta warm brick paving
+    // 1. Soft Ground Shadow & Terracotta Paving
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.25)';
+    ctx.beginPath();
+    ctx.ellipse(x + w / 2, y + h + 2, w / 2 + 6, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.fillStyle = '#7c2d12';
     ctx.fillRect(x - 8, y + 16, w + 16, 18);
     ctx.fillStyle = '#9a3412';
     ctx.fillRect(x - 6, y + 18, w + 12, 14);
 
-    // Left Side Iron Stew Cauldron with bubbling steam
+    // 2. Kuali Sup Besi Hitam Mendidih Beruap (Kiri)
     ctx.fillStyle = '#1e293b';
     ctx.beginPath();
-    ctx.arc(x - 4, y + 24, 7, 0, Math.PI * 2);
+    ctx.arc(x - 4, y + 24, 7.5, 0, Math.PI * 2);
     ctx.fill();
-    // Fire under cauldron
+    // Tungku api menyala di bawah kuali
     ctx.fillStyle = '#ea580c';
     ctx.fillRect(x - 6, y + 30, 4, 3);
     const steamWave = Math.sin(this.animTimer * 4 + x) * 2;
-    ctx.fillStyle = 'rgba(255, 255, 255, 0.45)';
+    ctx.fillStyle = 'rgba(255, 255, 255, 0.5)';
     ctx.beginPath();
     ctx.arc(x - 4 + steamWave, y + 14, 3.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // Right Side Roasting Spit with meat skewer
+    // 3. Alat Pemanggang Daging Berputar Sizzling di Kanan
     ctx.fillStyle = '#451a03';
-    ctx.fillRect(x + w, y + 16, 2, 16);
-    ctx.fillRect(x + w + 10, y + 16, 2, 16);
+    ctx.fillRect(x + w, y + 16, 2.5, 16);
+    ctx.fillRect(x + w + 10, y + 16, 2.5, 16);
     ctx.fillStyle = '#92400e';
-    ctx.fillRect(x + w - 2, y + 20, 16, 4); // Sizzling meat skewer
+    ctx.fillRect(x + w - 2, y + 20, 16, 4.5); // Daging panggang bakar
+    ctx.fillStyle = '#ea580c';
+    ctx.fillRect(x + w + 2, y + 21, 6, 2.5); // Aksen bara panggang
 
-    // Chef Gaston standing behind counter
-    ctx.fillStyle = '#ffffff'; // White Chef Jacket
+    // 4. Chef Gaston Berdiri di Balik Konter
+    ctx.fillStyle = '#ffffff'; // Jas koki putih
     ctx.fillRect(x + w / 2 - 6, y + 6, 12, 12);
-    ctx.fillStyle = '#dc2626'; // Red necktie
+    ctx.fillStyle = '#dc2626'; // Dasi leher merah
     ctx.fillRect(x + w / 2 - 2, y + 8, 4, 5);
-    ctx.fillStyle = '#fed7aa'; // Face
+    ctx.fillStyle = '#fed7aa'; // Wajah
     ctx.fillRect(x + w / 2 - 4, y - 2, 8, 8);
-    // Handlebar Moustache
+    // Kumis melengkung lebat
     ctx.fillStyle = '#451a03';
     ctx.fillRect(x + w / 2 - 5, y + 3, 10, 2);
-    // Tall White Chef Toque Hat
+    // Topi Koki Tinggi Putih (Chef Toque)
     ctx.fillStyle = '#ffffff';
     ctx.fillRect(x + w / 2 - 5, y - 8, 10, 6);
     ctx.beginPath();
-    ctx.arc(x + w / 2, y - 8, 6, 0, Math.PI * 2);
+    ctx.arc(x + w / 2, y - 8, 5.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // Wooden Posts
+    // 5. Tiang Penyangga Konter
     ctx.fillStyle = '#451a03';
-    ctx.fillRect(x + 2, y + 4, 4, h - 4);
-    ctx.fillRect(x + w - 6, y + 4, 4, h - 4);
+    ctx.fillRect(x + 2, y + 3, 4, h - 3);
+    ctx.fillRect(x + w - 6, y + 3, 4, h - 3);
 
-    // Striped Awning (Orange & White)
+    // 6. Tenda Kanopi Oranye & Putih (Orange & White Scalloped Awning)
     const stripes = 7;
     const stripeW = w / stripes;
     for (let i = 0; i < stripes; i++) {
       ctx.fillStyle = i % 2 === 0 ? '#ea580c' : '#ffffff';
       ctx.beginPath();
-      ctx.moveTo(x + i * stripeW, y + 4);
-      ctx.lineTo(x + (i + 1) * stripeW, y + 4);
-      ctx.lineTo(x + (i + 1) * stripeW - 2, y + 14);
-      ctx.lineTo(x + i * stripeW - 2, y + 14);
+      ctx.moveTo(x + i * stripeW, y + 2);
+      ctx.lineTo(x + (i + 1) * stripeW, y + 2);
+      ctx.lineTo(x + (i + 1) * stripeW - 1, y + 13);
+      ctx.lineTo(x + i * stripeW - 1, y + 13);
       ctx.closePath();
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(x + i * stripeW + stripeW / 2 - 1, y + 14, stripeW / 2, 0, Math.PI);
+      ctx.arc(x + i * stripeW + stripeW / 2 - 0.5, y + 13, stripeW / 2, 0, Math.PI);
       ctx.fill();
     }
 
-    // Counter & Food display
+    // 7. Meja Konter Kuliner & Display Hidangan Lezat
     ctx.fillStyle = '#78350f';
     ctx.fillRect(x + 2, y + 16, w - 4, 12);
     ctx.fillStyle = '#b45309';
-    ctx.fillRect(x + 3, y + 16, w - 6, 3);
+    ctx.fillRect(x + 2, y + 16, w - 4, 3);
 
-    // Food dishes on counter (Steak, pudding, soup bowl)
+    // Piring hidangan di meja (Steak daging, puding slime, mangkuk sup herbal)
     ctx.fillStyle = '#fb923c';
-    ctx.fillRect(x + 10, y + 17, 8, 3); // Steak plate
+    ctx.fillRect(x + 10, y + 17, 8, 3.5); // Piring steak
     ctx.fillStyle = '#38bdf8';
     ctx.beginPath();
-    ctx.arc(x + 26, y + 18, 3, 0, Math.PI * 2); // Slime pudding
+    ctx.arc(x + 26, y + 18, 3, 0, Math.PI * 2); // Slime jelly pudding
     ctx.fill();
     ctx.fillStyle = '#22c55e';
     ctx.beginPath();
-    ctx.arc(x + 40, y + 18, 3, 0, Math.PI * 2); // Herbal soup
+    ctx.arc(x + 40, y + 18, 3, 0, Math.PI * 2); // Sup herbal hijau
     ctx.fill();
 
-    // Signboard
-    this.drawFittedSignboard(ctx, x + w / 2, y + 0.5, w - 4, 10, '🍲 KEDAI KULINER GASTON', '#1e293b', '#ea580c', '#fed7aa');
+    // Bayangan jatuh kanopi
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
+    ctx.fillRect(x + 2, y + 14, w - 4, 2.5);
+
+    // 8. Signboard
+    this.drawFittedSignboard(ctx, x + w / 2, y + 0.5, w - 2, 10, '🍲 KEDAI KULINER GASTON', '#1e293b', '#ea580c', '#fed7aa');
   }
 
   /**
@@ -1905,14 +2690,19 @@ export class VillageManager {
     const w = 58;
     const h = 32;
 
-    // Deep purple mystical magic circle rug
+    // 1. Soft Ground Shadow & Permadani Lingkaran Sihir Ungu
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.25)';
+    ctx.beginPath();
+    ctx.ellipse(x + w / 2, y + h + 2, w / 2 + 6, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.fillStyle = '#3b0764';
     ctx.fillRect(x - 8, y + 16, w + 16, 18);
     ctx.strokeStyle = '#c084fc';
     ctx.lineWidth = 0.8;
     ctx.strokeRect(x - 6, y + 18, w + 12, 14);
 
-    // Left Side Floating Glowing Crystal Orb on Pedestal
+    // 2. Kristal Mengambang Berpendar Aura Mistis di Kiri
     ctx.fillStyle = '#581c87';
     ctx.fillRect(x - 6, y + 22, 8, 10);
     const orbBob = Math.sin(this.animTimer * 5) * 2;
@@ -1925,20 +2715,20 @@ export class VillageManager {
     ctx.arc(x - 2, y + 16 + orbBob, 8, 0, Math.PI * 2);
     ctx.fill();
 
-    // Right Side Lectern with Open Grimoire
+    // 3. Mimbar Kitab Mantra Terbuka di Kanan (Open Grimoire Lectern)
     ctx.fillStyle = '#451a03';
     ctx.fillRect(x + w, y + 18, 4, 14);
     ctx.fillStyle = '#fef08a';
     ctx.fillRect(x + w - 4, y + 16, 12, 6);
     ctx.fillStyle = '#9333ea';
-    ctx.fillRect(x + w + 1, y + 16, 2, 6);
+    ctx.fillRect(x + w + 1, y + 16, 2, 6); // Pita penanda kitab
 
-    // Sorceress Luna standing behind counter
-    ctx.fillStyle = '#4c1d95'; // Violet Robes
+    // 4. Sorceress Luna Berdiri di Balik Konter
+    ctx.fillStyle = '#4c1d95'; // Jubah violet
     ctx.fillRect(x + w / 2 - 6, y + 6, 12, 12);
-    ctx.fillStyle = '#fed7aa'; // Face
+    ctx.fillStyle = '#fed7aa'; // Wajah
     ctx.fillRect(x + w / 2 - 4, y - 2, 8, 8);
-    // Pointed Wizard Hat with golden crescent
+    // Topi penyihir kerucut dengan sabit emas
     ctx.fillStyle = '#581c87';
     ctx.beginPath();
     ctx.moveTo(x + w / 2, y - 11);
@@ -1949,44 +2739,48 @@ export class VillageManager {
     ctx.fillStyle = '#fde047';
     ctx.fillRect(x + w / 2 - 8, y - 4, 16, 2);
 
-    // Wooden Posts
+    // 5. Tiang Penyangga
     ctx.fillStyle = '#3b0764';
-    ctx.fillRect(x + 2, y + 4, 4, h - 4);
-    ctx.fillRect(x + w - 6, y + 4, 4, h - 4);
+    ctx.fillRect(x + 2, y + 3, 4, h - 3);
+    ctx.fillRect(x + w - 6, y + 3, 4, h - 3);
 
-    // Canopy (Deep Violet & Gold silk stripes)
+    // 6. Kanopi Sutra Ungu Violet & Emas Mistis
     const stripes = 7;
     const stripeW = w / stripes;
     for (let i = 0; i < stripes; i++) {
       ctx.fillStyle = i % 2 === 0 ? '#581c87' : '#ca8a04';
       ctx.beginPath();
-      ctx.moveTo(x + i * stripeW, y + 4);
-      ctx.lineTo(x + (i + 1) * stripeW, y + 4);
-      ctx.lineTo(x + (i + 1) * stripeW - 2, y + 14);
-      ctx.lineTo(x + i * stripeW - 2, y + 14);
+      ctx.moveTo(x + i * stripeW, y + 2);
+      ctx.lineTo(x + (i + 1) * stripeW, y + 2);
+      ctx.lineTo(x + (i + 1) * stripeW - 1, y + 13);
+      ctx.lineTo(x + i * stripeW - 1, y + 13);
       ctx.closePath();
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(x + i * stripeW + stripeW / 2 - 1, y + 14, stripeW / 2, 0, Math.PI);
+      ctx.arc(x + i * stripeW + stripeW / 2 - 0.5, y + 13, stripeW / 2, 0, Math.PI);
       ctx.fill();
     }
 
-    // Counter & Arcane Items
+    // 7. Meja Konter Arcane
     ctx.fillStyle = '#2e1065';
     ctx.fillRect(x + 2, y + 16, w - 4, 12);
     ctx.fillStyle = '#581c87';
-    ctx.fillRect(x + 3, y + 16, w - 6, 3);
+    ctx.fillRect(x + 2, y + 16, w - 4, 3);
 
-    // Crystal Gem & Arcane Scroll on counter
+    // Kristal permata & gulungan portal sihir
     ctx.fillStyle = '#c084fc';
     ctx.beginPath();
     ctx.arc(x + 14, y + 18, 3, 0, Math.PI * 2);
     ctx.fill();
     ctx.fillStyle = '#38bdf8';
-    ctx.fillRect(x + 26, y + 16, 8, 3); // Portal Scroll
+    ctx.fillRect(x + 26, y + 16.5, 8, 3.5);
 
-    // Signboard
-    this.drawFittedSignboard(ctx, x + w / 2, y + 0.5, w - 4, 10, '🔮 ARKANA LUNA', '#0f172a', '#c084fc', '#e9d5ff');
+    // Bayangan jatuh kanopi
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
+    ctx.fillRect(x + 2, y + 14, w - 4, 2.5);
+
+    // 8. Signboard
+    this.drawFittedSignboard(ctx, x + w / 2, y + 0.5, w - 2, 10, '🔮 ARKANA LUNA', '#0f172a', '#c084fc', '#e9d5ff');
   }
 
   /**
@@ -1996,23 +2790,28 @@ export class VillageManager {
     const w = 58;
     const h = 32;
 
-    // Dark slate stone paving
+    // 1. Soft Ground Shadow & Dark Stone Paving
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.25)';
+    ctx.beginPath();
+    ctx.ellipse(x + w / 2, y + h + 2, w / 2 + 6, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(x - 8, y + 16, w + 16, 18);
     ctx.fillStyle = '#334155';
     ctx.fillRect(x - 6, y + 18, w + 12, 14);
 
-    // Left Side Mini Anvil & Hammer
+    // 2. Landasan Mini Tempa di Kiri
     ctx.fillStyle = '#0f172a';
     ctx.fillRect(x - 6, y + 24, 10, 8);
     ctx.fillStyle = '#64748b';
     ctx.fillRect(x - 8, y + 22, 14, 3);
 
-    // Right Side Weapon Rack with crossed sword & shield
+    // 3. Rak Senjata Pedang Bersilang & Perisai Baja di Kanan
     ctx.fillStyle = '#451a03';
-    ctx.fillRect(x + w, y + 16, 2, 16);
-    ctx.fillRect(x + w + 10, y + 16, 2, 16);
-    // Steel Shield
+    ctx.fillRect(x + w, y + 16, 2.5, 16);
+    ctx.fillRect(x + w + 10, y + 16, 2.5, 16);
+    // Perisai Baja (Heater Shield)
     ctx.fillStyle = '#475569';
     ctx.beginPath();
     ctx.arc(x + w + 5, y + 23, 5, 0, Math.PI * 2);
@@ -2020,56 +2819,56 @@ export class VillageManager {
     ctx.fillStyle = '#cbd5e1';
     ctx.fillRect(x + w + 4, y + 20, 2, 6);
 
-    // Pengrajin Gareth standing behind counter
-    ctx.fillStyle = '#451a03'; // Heavy Leather Vest
+    // 4. Pengrajin Gareth Berdiri di Balik Konter
+    ctx.fillStyle = '#451a03'; // Rompi kulit tebal
     ctx.fillRect(x + w / 2 - 6, y + 6, 12, 12);
-    ctx.fillStyle = '#fed7aa'; // Face
+    ctx.fillStyle = '#fed7aa'; // Wajah
     ctx.fillRect(x + w / 2 - 4, y - 2, 8, 8);
-    ctx.fillStyle = '#334155'; // Short Brown Hair
+    ctx.fillStyle = '#334155'; // Rambut cokelat pendek
     ctx.fillRect(x + w / 2 - 5, y - 4, 10, 4);
 
-    // Wooden Posts
+    // 5. Tiang Penyangga
     ctx.fillStyle = '#1e293b';
-    ctx.fillRect(x + 2, y + 4, 4, h - 4);
-    ctx.fillRect(x + w - 6, y + 4, 4, h - 4);
+    ctx.fillRect(x + 2, y + 3, 4, h - 3);
+    ctx.fillRect(x + w - 6, y + 3, 4, h - 3);
 
-    // Striped Awning (Charcoal Slate & Steel Blue)
+    // 6. Tenda Kanopi Abu Slate & Biru Baja
     const stripes = 7;
     const stripeW = w / stripes;
     for (let i = 0; i < stripes; i++) {
       ctx.fillStyle = i % 2 === 0 ? '#334155' : '#64748b';
       ctx.beginPath();
-      ctx.moveTo(x + i * stripeW, y + 4);
-      ctx.lineTo(x + (i + 1) * stripeW, y + 4);
-      ctx.lineTo(x + (i + 1) * stripeW - 2, y + 14);
-      ctx.lineTo(x + i * stripeW - 2, y + 14);
+      ctx.moveTo(x + i * stripeW, y + 2);
+      ctx.lineTo(x + (i + 1) * stripeW, y + 2);
+      ctx.lineTo(x + (i + 1) * stripeW - 1, y + 13);
+      ctx.lineTo(x + i * stripeW - 1, y + 13);
       ctx.closePath();
       ctx.fill();
       ctx.beginPath();
-      ctx.arc(x + i * stripeW + stripeW / 2 - 1, y + 14, stripeW / 2, 0, Math.PI);
+      ctx.arc(x + i * stripeW + stripeW / 2 - 0.5, y + 13, stripeW / 2, 0, Math.PI);
       ctx.fill();
     }
 
-    // Counter & Display Goods
+    // 7. Meja Konter & Logam Perkakas
     ctx.fillStyle = '#475569';
     ctx.fillRect(x + 2, y + 16, w - 4, 12);
     ctx.fillStyle = '#334155';
-    ctx.fillRect(x + 3, y + 16, w - 6, 3);
+    ctx.fillRect(x + 2, y + 16, w - 4, 3);
 
-    // Dark Iron Ingot on counter
+    // Batangan besi & belati baja di konter
     ctx.fillStyle = '#1e293b';
-    ctx.fillRect(x + 10, y + 17, 8, 3);
-    ctx.fillStyle = '#64748b';
-    ctx.fillRect(x + 11, y + 16, 6, 2);
-
-    // Dagger on counter
+    ctx.fillRect(x + 10, y + 17, 8, 3.5);
     ctx.fillStyle = '#cbd5e1';
     ctx.fillRect(x + 24, y + 17, 10, 2);
     ctx.fillStyle = '#78350f';
     ctx.fillRect(x + 22, y + 16.5, 3, 3);
 
-    // Signboard
-    this.drawFittedSignboard(ctx, x + w / 2, y + 0.5, w - 4, 10, '⚔️ SENJATA GARETH', '#0f172a', '#94a3b8', '#cbd5e1');
+    // Bayangan jatuh kanopi
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.35)';
+    ctx.fillRect(x + 2, y + 14, w - 4, 2.5);
+
+    // 8. Signboard
+    this.drawFittedSignboard(ctx, x + w / 2, y + 0.5, w - 2, 10, '⚔️ SENJATA GARETH', '#0f172a', '#94a3b8', '#cbd5e1');
   }
 
   /**
@@ -2080,18 +2879,19 @@ export class VillageManager {
     const penW = 7 * ts;
     const penH = 3.5 * ts;
 
-    // Lush green meadow pen grass
+    // 1. Padang Rumput Hijau Paddock Peliharaan
     ctx.fillStyle = '#15803d';
     ctx.fillRect(x, y, penW, penH);
     ctx.fillStyle = '#16a34a';
-    ctx.fillRect(x + 4, y + 4, penW - 8, penH - 8);
+    ctx.fillRect(x + 3, y + 3, penW - 6, penH - 6);
 
-    // Red-roofed wooden pet shelter / doghouse in top-right of pen
+    // 2. Rumah Anjing / Pet Shelter Kayu Beratap Merah di Kanan Atas
     const shX = x + penW - 44;
     const shY = y + 4;
     ctx.fillStyle = '#78350f';
     ctx.fillRect(shX, shY + 8, 36, 24);
-    // Dark doorway into doghouse
+
+    // Pintu masuk pondok hewan
     ctx.fillStyle = '#1e293b';
     ctx.beginPath();
     ctx.arc(shX + 18, shY + 24, 7, Math.PI, 0, false);
@@ -2099,7 +2899,8 @@ export class VillageManager {
     ctx.lineTo(shX + 11, shY + 32);
     ctx.closePath();
     ctx.fill();
-    // Red pitched roof
+
+    // Atap pondok hewan bersusun
     ctx.fillStyle = '#dc2626';
     ctx.beginPath();
     ctx.moveTo(shX - 4, shY + 8);
@@ -2108,16 +2909,17 @@ export class VillageManager {
     ctx.closePath();
     ctx.fill();
     ctx.strokeStyle = '#991b1b';
-    ctx.lineWidth = 1;
+    ctx.lineWidth = 1.2;
     ctx.stroke();
 
-    // Water trough & Hay bedding in pen
+    // 3. Bak Air Minum & Jerami Tidur
     ctx.fillStyle = '#78350f';
     ctx.fillRect(x + 10, y + penH - 20, 18, 10);
     ctx.fillStyle = '#0284c7';
     ctx.fillRect(x + 12, y + penH - 18, 14, 6);
 
-    // Baby pet 1: Puni (bouncing mini slime)
+    // 4. Hewan Bayi Peliharaan Lucu:
+    // Puni (Slime mini melompat gembira)
     const slimeBob = Math.sin(this.animTimer * 6) * 3;
     ctx.fillStyle = '#38bdf8';
     ctx.beginPath();
@@ -2127,46 +2929,42 @@ export class VillageManager {
     ctx.fillRect(x + 39, y + 23 + slimeBob, 1.5, 1.5);
     ctx.fillRect(x + 42, y + 23 + slimeBob, 1.5, 1.5);
 
-    // Baby pet 2: Lobo (puppy playing with bone)
+    // Lobo (Anak serigala lucu mengibaskan ekor)
     const wolfWag = Math.sin(this.animTimer * 12) * 3;
     ctx.fillStyle = '#94a3b8';
     ctx.fillRect(x + 70, y + 26, 8, 5);
     ctx.fillStyle = '#cbd5e1';
     ctx.fillRect(x + 74, y + 23, 6, 6);
     ctx.fillStyle = '#64748b';
-    ctx.fillRect(x + 67, y + 25 + wolfWag * 0.4, 3, 2); // Tail
+    ctx.fillRect(x + 67, y + 25 + wolfWag * 0.4, 3, 2); // Ekor
     ctx.fillStyle = '#fef08a';
-    ctx.fillRect(x + 82, y + 27, 4, 2); // Bone toy
+    ctx.fillRect(x + 82, y + 27, 4, 2); // Tulang mainan
 
-    // Wooden post-and-rail fence around the pen
+    // 5. Pagar Kayu Paddock (Post-and-Rail Fence)
     ctx.strokeStyle = '#78350f';
     ctx.lineWidth = 2.5;
-    // Top fence (left and right of Mia's counter)
     ctx.beginPath();
     ctx.moveTo(x, y);
     ctx.lineTo(x + 48, y);
     ctx.moveTo(x + 88, y);
     ctx.lineTo(x + penW, y);
-    // Right fence
     ctx.lineTo(x + penW, y + penH);
-    // Bottom fence
     ctx.lineTo(x, y + penH);
-    // Left fence
     ctx.lineTo(x, y);
     ctx.stroke();
 
-    // Fence Posts
+    // Tiang pagar kayu
     for (let px = x; px <= x + penW; px += 24) {
       ctx.fillStyle = '#451a03';
       ctx.fillRect(px - 2, y - 2, 4, penH + 4);
     }
 
-    // Mia's Reception Counter (Pintu Masuk Suaka di x + 48..88)
+    // 6. Konter Loket Penjinak Mia di x + 46..90
     const cX = x + 46;
     const cY = y - 4;
     const cW = 44;
 
-    // Green Striped Awning over counter
+    // Kanopi Hijau Zamrud
     ctx.fillStyle = '#059669';
     ctx.beginPath();
     ctx.roundRect(cX - 2, cY - 14, cW + 4, 10, 2);
@@ -2175,14 +2973,14 @@ export class VillageManager {
     ctx.lineWidth = 1;
     ctx.stroke();
 
-    // Penjinak Mia standing behind the reception desk
-    ctx.fillStyle = '#065f46'; // Green Hunter Vest
+    // Penjinak Mia Berdiri di Balik Loket
+    ctx.fillStyle = '#065f46'; // Rompi hijau
     ctx.fillRect(cX + cW / 2 - 5, cY - 2, 10, 10);
-    ctx.fillStyle = '#fed7aa'; // Face
+    ctx.fillStyle = '#fed7aa'; // Wajah
     ctx.fillRect(cX + cW / 2 - 4, cY - 8, 8, 7);
-    ctx.fillStyle = '#f59e0b'; // Blonde hair
+    ctx.fillStyle = '#f59e0b'; // Rambut pirang
     ctx.fillRect(cX + cW / 2 - 5, cY - 10, 10, 4);
-    // Cute Fox/Cat Ears Headband
+    // Bando telinga rubah oranye
     ctx.fillStyle = '#ea580c';
     ctx.beginPath();
     ctx.moveTo(cX + cW / 2 - 5, cY - 10);
@@ -2193,49 +2991,73 @@ export class VillageManager {
     ctx.lineTo(cX + cW / 2 + 5, cY - 10);
     ctx.fill();
 
-    // Wooden Counter Table
+    // Meja Loket Kayu
     ctx.fillStyle = '#78350f';
     ctx.fillRect(cX, cY + 4, cW, 10);
     ctx.fillStyle = '#b45309';
     ctx.fillRect(cX + 1, cY + 4, cW - 2, 2.5);
 
-    // Treat Bag & Pet Bell on counter
+    // Lonceng panggil & biskuit pet di konter
     ctx.fillStyle = '#ca8a04';
-    ctx.fillRect(cX + 6, y + 2, 5, 5); // Treat bag
+    ctx.fillRect(cX + 6, y + 2, 5, 5);
     ctx.fillStyle = '#facc15';
     ctx.beginPath();
-    ctx.arc(cX + cW - 8, y + 4, 2.5, 0, Math.PI * 2); // Bell
+    ctx.arc(cX + cW - 8, y + 4, 2.5, 0, Math.PI * 2);
     ctx.fill();
 
-    // Signboard Atas
+    // 7. Signboard
     this.drawFittedSignboard(ctx, cX + cW / 2, cY - 19, cW + 16, 11, '🐾 SUAKA SATWA MIA', '#0f172a', '#34d399', '#a7f3d0');
   }
 
+  /**
+   * Render Tiang Lentera Jalan Desa Klasik dengan Lampu Kaca Berulir & Cahaya Ambient Hangat
+   */
   private drawStreetlamp(ctx: CanvasRenderingContext2D, x: number, y: number): void {
-    // Lamp pole
-    ctx.fillStyle = '#334155';
-    ctx.fillRect(x - 2, y, 4, 22);
+    // 1. Bayangan Kaki Lentera di Tanah
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.25)';
+    ctx.beginPath();
+    ctx.ellipse(x, y + 23, 5, 2.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 2. Tiang Besi Hitam Tempa
     ctx.fillStyle = '#1e293b';
+    ctx.fillRect(x - 2, y, 4, 22);
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(x - 1, y, 2, 22);
+
+    // Kaki / Plinth Dasar Lentera
+    ctx.fillStyle = '#0f172a';
     ctx.fillRect(x - 4, y + 20, 8, 3);
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(x - 2, y + 19, 4, 1.5); // Ring emas
 
-    // Lantern Bracket & Glass
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(x - 4, y - 4, 8, 5);
+    // 3. Rumah Lentera Kaca Bersudut & Tudung Piramida Besi
+    ctx.fillStyle = '#0f172a';
+    ctx.fillRect(x - 4, y - 5, 8, 6);
+    // Tudung atap lentera
+    ctx.beginPath();
+    ctx.moveTo(x - 5, y - 5);
+    ctx.lineTo(x, y - 9);
+    ctx.lineTo(x + 5, y - 5);
+    ctx.closePath();
+    ctx.fill();
 
-    // Warm radial glow
+    // Inti Api Mantle Lentera Menyala
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(x - 2.5, y - 4, 5, 4);
+    ctx.fillStyle = '#ffffff';
+    ctx.fillRect(x - 1, y - 3, 2, 2);
+
+    // 4. Cahaya Radial Hangat Lentera
     const flicker = Math.sin(this.animTimer * 1.5 + x) * 2;
-    const grad = ctx.createRadialGradient(x, y - 1, 2, x, y - 1, 22 + flicker);
+    const grad = ctx.createRadialGradient(x, y - 2, 1, x, y - 2, 24 + flicker);
     grad.addColorStop(0, 'rgba(254, 240, 138, 0.65)');
-    grad.addColorStop(0.5, 'rgba(245, 158, 11, 0.25)');
+    grad.addColorStop(0.4, 'rgba(245, 158, 11, 0.22)');
     grad.addColorStop(1, 'rgba(0, 0, 0, 0)');
     ctx.fillStyle = grad;
     ctx.beginPath();
-    ctx.arc(x, y - 1, 22 + flicker, 0, Math.PI * 2);
+    ctx.arc(x, y - 2, 24 + flicker, 0, Math.PI * 2);
     ctx.fill();
-
-    // Lantern core bulb
-    ctx.fillStyle = '#fef08a';
-    ctx.fillRect(x - 2, y - 2, 4, 4);
   }
 
   private renderNPC(ctx: CanvasRenderingContext2D, npc: VillageNPCData, playerCenterX: number, playerCenterY: number, isSuppressed: boolean = false): void {

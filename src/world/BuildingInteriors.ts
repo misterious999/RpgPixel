@@ -623,53 +623,38 @@ export class BuildingInteriors {
       const dist = Math.hypot(dx + 16 - playerCenterX, dy + 16 - playerCenterY);
       const isNear = dist < 42;
 
-      // 1. Karpet Selamat Datang Bercahaya di Depan Pintu
-      const pulse = Math.sin(this.animTimer + dx) * 0.2;
-      ctx.fillStyle = isNear ? def.accentColor : 'rgba(250, 204, 21, 0.45)';
-      ctx.globalAlpha = isNear ? 0.85 + pulse : 0.45;
-      ctx.fillRect(dx + 2, dy + 18, 28, 8);
-      ctx.strokeStyle = '#fef08a';
+      // 1. Keset Sambutan Ambang Pintu Elegan di Depan Pintu Masuk
+      const pulse = Math.sin(this.animTimer * 3 + dx) * 0.2;
+      ctx.fillStyle = isNear ? def.accentColor : 'rgba(203, 213, 225, 0.45)';
+      ctx.globalAlpha = isNear ? 0.85 + pulse : 0.35;
+      ctx.beginPath();
+      ctx.roundRect(dx + 4, dy + 18, 24, 7, 2);
+      ctx.fill();
+      ctx.strokeStyle = isNear ? '#fef08a' : 'rgba(255, 255, 255, 0.35)';
       ctx.lineWidth = 1;
-      ctx.strokeRect(dx + 2, dy + 18, 28, 8);
+      ctx.stroke();
       ctx.globalAlpha = 1.0;
 
-      // 2. Plang Papan Nama Toko/Bangunan Mengambang di Atas Pintu
-      ctx.font = 'bold 8px sans-serif';
-      const doorLabel = `${def.icon} Masuk`;
-      const badgeW = ctx.measureText(doorLabel).width + 16;
-      ctx.fillStyle = '#0f172a';
-      ctx.beginPath();
-      ctx.roundRect(dx + 16 - badgeW / 2, dy - 18, badgeW, 16, 4);
-      ctx.fill();
-      ctx.strokeStyle = def.accentColor;
-      ctx.lineWidth = 1.5;
-      ctx.stroke();
-
-      ctx.fillStyle = '#f8fafc';
-      ctx.textAlign = 'center';
-      ctx.textBaseline = 'middle';
-      ctx.fillText(doorLabel, dx + 16, dy - 10);
-
-      // 3. Prompt Interaksi Mengambang saat Pemain Mendekat
+      // 2. Prompt Interaksi Mengambang HANYA saat Pemain Mendekat (Bersih & Rapi)
       if (isNear && !isSuppressed) {
-        const bob = Math.sin(this.animTimer * 2) * 2;
+        const bob = Math.sin(this.animTimer * 3) * 2;
         ctx.font = 'bold 8.5px sans-serif';
         const promptText = `[A] Masuk ${def.tag}`;
         const ptw = ctx.measureText(promptText).width + 16;
         const pbx = dx + 16 - ptw / 2;
-        const pby = dy - 34 + bob;
+        const pby = dy - 22 + bob;
 
-        ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
+        ctx.fillStyle = 'rgba(15, 23, 42, 0.94)';
         ctx.beginPath();
         ctx.roundRect(pbx, pby, ptw, 16, 4);
         ctx.fill();
         ctx.strokeStyle = def.accentColor;
-        ctx.lineWidth = 1.2;
+        ctx.lineWidth = 1.3;
         ctx.stroke();
 
         ctx.textAlign = 'center';
         ctx.textBaseline = 'middle';
-        ctx.fillStyle = def.accentColor;
+        ctx.fillStyle = '#fef08a';
         ctx.fillText(promptText, dx + 16, pby + 8);
       }
     }
