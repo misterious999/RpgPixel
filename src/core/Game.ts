@@ -604,7 +604,21 @@ export class Game {
         this.authUI.isGuest = false;
         // Jika sudah dipulihkan dari sesi auto-update lokal, jangan timpa kecuali belum ada sesi
         if (!hasSessionSave) {
-          if (hasPending) {
+          // Prioritaskan cek dan muat Cloud Save jika akun sudah memiliki karakter tersimpan sebelumnya
+          const hasSave = await this.authUI.loadCloudSave(user.id);
+          if (hasSave) {
+            this.onboardingUI.setState('PLAYING');
+            AudioEngine.playBgm(this.currentMap);
+            const roleName = ROLE_INFO[this.player.role]?.name || 'Petualang';
+            this.floatingText.spawn(
+              this.player.x + 10,
+              this.player.y - 20,
+              `Selamat datang kembali, ${this.player.username}! (${roleName})`,
+              '#38bdf8',
+              3.0
+            );
+          } else if (hasPending) {
+            // Pengguna baru pertama kali mendaftar karakter online
             this.onboardingUI.setState('PLAYING');
             AudioEngine.playBgm(this.currentMap);
             this.authUI.saveCurrentGame();
@@ -614,20 +628,6 @@ export class Game {
               `🌐 Mode Online Aktif! Selamat datang, ${this.player.username}!`,
               '#38bdf8',
               3.5
-            );
-            return;
-          }
-          const hasSave = await this.authUI.loadCloudSave(user.id);
-          if (hasSave) {
-            this.onboardingUI.setState('PLAYING');
-            AudioEngine.playBgm(this.currentMap);
-            const roleName = ROLE_INFO[this.player.role].name;
-            this.floatingText.spawn(
-              this.player.x + 10,
-              this.player.y - 20,
-              `Selamat datang kembali, ${this.player.username}! (${roleName})`,
-              '#38bdf8',
-              3.0
             );
           } else {
             this.onboardingUI.username = (user.user_metadata?.full_name || 'Hero').slice(0, 15);

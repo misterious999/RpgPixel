@@ -42,6 +42,9 @@ export class SupabaseService {
       // Listen for auth state changes
       supabase.auth.onAuthStateChange((_event: any, session: any) => {
         this.currentUser = (session?.user as User) || null;
+        if (session?.user) {
+          this.cleanAuthUrlHash();
+        }
         for (const cb of this.onAuthChangeCallbacks) {
           cb(this.currentUser);
         }
@@ -58,12 +61,26 @@ export class SupabaseService {
     }
   }
 
+  /**
+   * Membersihkan hash access_token dari bilah URL browser setelah autentikasi sukses
+   */
+  public static cleanAuthUrlHash(): void {
+    if (typeof window !== 'undefined' && window.location.hash) {
+      if (window.location.hash.includes('access_token') || window.location.hash.includes('error')) {
+        const cleanUrl = window.location.pathname + window.location.search;
+        window.history.replaceState(null, '', cleanUrl);
+      }
+    }
+  }
+
   public static async loginWithGoogle(): Promise<void> {
     try {
+      // Dapatkan URL asal saat ini secara presisi tanpa query string atau hash token lama
+      const redirectUrl = window.location.href.split('#')[0].split('?')[0];
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
         options: {
-          redirectTo: window.location.origin,
+          redirectTo: redirectUrl,
           queryParams: {
             prompt: 'select_account'
           }
