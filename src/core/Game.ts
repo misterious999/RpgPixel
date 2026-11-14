@@ -2087,25 +2087,29 @@ export class Game {
   }
 
   private loop(currentTime: number): void {
-    const rawDelta = (currentTime - this.lastTime) / 1000;
-    const deltaTime = Math.min(rawDelta, 0.1);
-    this.lastTime = currentTime;
+    try {
+      const rawDelta = (currentTime - this.lastTime) / 1000;
+      const deltaTime = Math.max(0.001, Math.min(rawDelta, 0.1));
+      this.lastTime = currentTime;
 
-    this.frameCount++;
-    this.fpsTimer += deltaTime;
-    if (this.fpsTimer >= 0.5) {
-      this.fps = Math.round(this.frameCount / this.fpsTimer);
-      this.frameCount = 0;
-      this.fpsTimer = 0;
-      if (this.fpsEl) {
-        this.fpsEl.textContent = `FPS: ${this.fps}`;
+      this.frameCount++;
+      this.fpsTimer += deltaTime;
+      if (this.fpsTimer >= 0.5) {
+        this.fps = Math.round(this.frameCount / this.fpsTimer);
+        this.frameCount = 0;
+        this.fpsTimer = 0;
+        if (this.fpsEl) {
+          this.fpsEl.textContent = `FPS: ${this.fps}`;
+        }
       }
+
+      this.update(deltaTime);
+      this.render();
+    } catch (err) {
+      console.error('Critical Game Loop Error (recovering gracefully):', err);
+    } finally {
+      requestAnimationFrame((t) => this.loop(t));
     }
-
-    this.update(deltaTime);
-    this.render();
-
-    requestAnimationFrame((t) => this.loop(t));
   }
 
   private update(deltaTime: number): void {

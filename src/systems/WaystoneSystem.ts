@@ -86,7 +86,7 @@ export class WaystoneSystem {
     return WaystoneSystem.instance;
   }
 
-  public update(deltaTime: number, player: Player, currentMap: string): void {
+  public update(_deltaTime: number, player: Player, currentMap: string): void {
     if (currentMap !== 'OVERWORLD') return;
     const ts = CONSTANTS.TILE_SIZE;
     const pCenterX = player.x + 16;

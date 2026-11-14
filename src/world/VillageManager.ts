@@ -1484,10 +1484,6 @@ export class VillageManager {
     );
   }
 
-  private drawGuildPillarsAndRoof(ctx: CanvasRenderingContext2D, gx: number, gy: number, gw: number, gh: number): void {
-    this.drawGuildRoofOverhang(ctx, gx, gy, gw, gh);
-  }
-
   private drawNoticeBoardStructure(ctx: CanvasRenderingContext2D, nbX: number, nbY: number): void {
     ctx.fillStyle = '#78350f';
     ctx.fillRect(nbX, nbY, 18, 22);

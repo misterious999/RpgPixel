@@ -1,5 +1,3 @@
-import { CONSTANTS } from '../core/Constants.ts';
-
 export interface RegionData {
   id: string;
   name: string;

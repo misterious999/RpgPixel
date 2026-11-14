@@ -152,7 +152,7 @@ export class GuildMailboxSystem {
         this.lastClaimDate = today;
         this.save();
 
-        player.gold = (player.gold || 0) + 50;
+        player.addVal(50);
         player.inventory.addItem('HEALTH_POTION', 2);
         player.inventory.addItem('MANA_POTION', 1);
         player.inventory.addItem('SILVER_COIN', 1);

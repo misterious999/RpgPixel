@@ -686,6 +686,62 @@ export class AudioEngine {
     osc.stop(t + 0.05);
   }
 
+  /**
+   * Universal audio dispatcher berdasarkan string identifier
+   */
+  public static play(soundKey: string): void {
+    if (!this.isSoundEnabled) return;
+    try {
+      switch (soundKey) {
+        case 'quest_complete':
+          this.playQuestComplete();
+          break;
+        case 'potion_heal':
+        case 'potion_drink':
+          this.playPotionDrink();
+          break;
+        case 'item_pickup':
+        case 'pickup':
+          this.playItemPickup(false);
+          break;
+        case 'coin_pickup':
+          this.playItemPickup(true);
+          break;
+        case 'attack_miss':
+        case 'swing':
+          this.playAttackSwing();
+          break;
+        case 'sword_hit':
+        case 'hit':
+          this.playHit(false);
+          break;
+        case 'hit_crit':
+          this.playHit(true);
+          break;
+        case 'water_splash':
+        case 'splash':
+          this.playWaterSplash();
+          break;
+        case 'level_up':
+          this.playLevelUp();
+          break;
+        case 'chest_open':
+          this.playChestOpen();
+          break;
+        case 'player_hurt':
+          this.playPlayerHurt();
+          break;
+        case 'button_click':
+        case 'click':
+        default:
+          this.playButtonClick();
+          break;
+      }
+    } catch (e) {
+      console.warn('AudioEngine play error:', e);
+    }
+  }
+
   // ===============================================================
   // BACKGROUND AMBIENT THEME (BGM RETRO)
   // ===============================================================

@@ -12,6 +12,7 @@ export class CanvasText {
     text: string,
     maxWidth: number
   ): string[] {
+    const safeMaxWidth = Math.max(16, isNaN(maxWidth) ? 100 : maxWidth);
     const lines: string[] = [];
     const paragraphs = text.split('\n');
 
@@ -28,14 +29,16 @@ export class CanvasText {
         const testLine = currentLine ? `${currentLine} ${word}` : word;
         const testWidth = ctx.measureText(testLine).width;
 
-        if (testWidth > maxWidth && currentLine) {
+        if (testWidth > safeMaxWidth && currentLine) {
           lines.push(currentLine);
           currentLine = word;
 
-          // If a single word itself exceeds maxWidth, force-break it
-          while (ctx.measureText(currentLine).width > maxWidth && currentLine.length > 3) {
+          // If a single word itself exceeds maxWidth, force-break it with safety guard
+          let guardOuter = 0;
+          while (ctx.measureText(currentLine).width > safeMaxWidth && currentLine.length > 3 && ++guardOuter < 30) {
             let sub = currentLine;
-            while (ctx.measureText(sub + '-').width > maxWidth && sub.length > 2) {
+            let guardInner = 0;
+            while (ctx.measureText(sub + '-').width > safeMaxWidth && sub.length > 2 && ++guardInner < 30) {
               sub = sub.slice(0, -1);
             }
             lines.push(sub + '-');
@@ -68,14 +71,16 @@ export class CanvasText {
     lineHeight: number,
     maxLines: number = 8
   ): number {
-    const lines = this.wrapText(ctx, text, maxWidth);
+    const safeMaxWidth = Math.max(16, isNaN(maxWidth) ? 100 : maxWidth);
+    const lines = this.wrapText(ctx, text, safeMaxWidth);
     const renderCount = Math.min(lines.length, maxLines);
 
     for (let i = 0; i < renderCount; i++) {
       let line = lines[i];
       if (i === maxLines - 1 && lines.length > maxLines) {
-        // Last line truncation
-        while (ctx.measureText(line + '...').width > maxWidth && line.length > 3) {
+        // Last line truncation with safety guard
+        let guard = 0;
+        while (ctx.measureText(line + '...').width > safeMaxWidth && line.length > 3 && ++guard < 40) {
           line = line.slice(0, -1);
         }
         line += '...';
@@ -94,12 +99,14 @@ export class CanvasText {
     text: string,
     maxWidth: number
   ): string {
-    if (ctx.measureText(text).width <= maxWidth) {
+    const safeMaxWidth = Math.max(16, isNaN(maxWidth) ? 100 : maxWidth);
+    if (ctx.measureText(text).width <= safeMaxWidth) {
       return text;
     }
 
     let truncated = text;
-    while (truncated.length > 2 && ctx.measureText(truncated + '...').width > maxWidth) {
+    let guard = 0;
+    while (truncated.length > 2 && ctx.measureText(truncated + '...').width > safeMaxWidth && ++guard < 60) {
       truncated = truncated.slice(0, -1);
     }
 

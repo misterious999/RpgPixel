@@ -11,7 +11,30 @@ export interface FloatingMessage {
 }
 
 export class FloatingTextManager {
+  private static instance: FloatingTextManager | null = null;
   private messages: FloatingMessage[] = [];
+
+  constructor() {
+    FloatingTextManager.instance = this;
+  }
+
+  public static getInstance(): FloatingTextManager {
+    if (!FloatingTextManager.instance) {
+      FloatingTextManager.instance = new FloatingTextManager();
+    }
+    return FloatingTextManager.instance;
+  }
+
+  public addText(
+    x: number,
+    y: number,
+    text: string,
+    color: string = '#facc15',
+    duration: number = 1.2,
+    fontSize: number = 10
+  ): void {
+    this.spawn(x, y, text, color, duration, fontSize);
+  }
 
   public spawn(
     x: number,

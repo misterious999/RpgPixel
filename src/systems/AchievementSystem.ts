@@ -161,7 +161,7 @@ export class AchievementSystem {
 
     // Berikan reward Val jika player ada
     if (player) {
-      player.gold = (player.gold || 0) + ach.rewardVal;
+      player.addVal(ach.rewardVal);
       FloatingTextManager.getInstance().addText(
         player.x + 16,
         player.y - 24,

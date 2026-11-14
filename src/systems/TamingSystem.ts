@@ -16,6 +16,8 @@ export interface PetInfo {
   costVal: number;
   sellVal: number;
   avatarIcon: string;
+  speed: number;
+  pickupRadius: number;
 }
 
 export const PET_DATA: Record<PetType, PetInfo> = {
@@ -28,7 +30,9 @@ export const PET_DATA: Record<PetType, PetInfo> = {
     tameCount: 2,
     costVal: 350,
     sellVal: 175,
-    avatarIcon: '🫧'
+    avatarIcon: '🫧',
+    speed: 72,
+    pickupRadius: 135
   },
   WOLF_PET: {
     type: 'WOLF_PET',
@@ -39,7 +43,9 @@ export const PET_DATA: Record<PetType, PetInfo> = {
     tameCount: 2,
     costVal: 500,
     sellVal: 250,
-    avatarIcon: '🐺'
+    avatarIcon: '🐺',
+    speed: 76,
+    pickupRadius: 140
   },
   FAIRY_PET: {
     type: 'FAIRY_PET',
@@ -50,7 +56,9 @@ export const PET_DATA: Record<PetType, PetInfo> = {
     tameCount: 1,
     costVal: 1200,
     sellVal: 600,
-    avatarIcon: '✨'
+    avatarIcon: '✨',
+    speed: 88,
+    pickupRadius: 170
   },
   DRAGON_PET: {
     type: 'DRAGON_PET',
@@ -61,7 +69,9 @@ export const PET_DATA: Record<PetType, PetInfo> = {
     tameCount: 2,
     costVal: 2500,
     sellVal: 1250,
-    avatarIcon: '🐉'
+    avatarIcon: '🐉',
+    speed: 80,
+    pickupRadius: 150
   }
 };
 

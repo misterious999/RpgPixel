@@ -219,7 +219,7 @@ export class AtmosphereEngine {
       p.swayTimer += deltaTime * p.swaySpeed;
       const swayOffset = Math.sin(p.swayTimer) * 14 * deltaTime;
 
-      p.x += (p.vx + swayOffset);
+      p.x += p.vx * deltaTime + swayOffset;
       p.y += p.vy * deltaTime;
       p.rotation += p.rotationSpeed * deltaTime;
 
@@ -227,7 +227,7 @@ export class AtmosphereEngine {
       if (p.x < left) p.x = right;
       else if (p.x > right) p.x = left;
 
-      if (p.vy > 0 && p.y > bottom) {
+      if (p.vy >= 0 && p.y > bottom) {
         p.y = top;
         p.x = left + Math.random() * (viewW + pad * 2);
       } else if (p.vy < 0 && p.y < top) {

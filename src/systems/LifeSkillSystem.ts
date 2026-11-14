@@ -97,7 +97,7 @@ export class LifeSkillSystem {
     });
   }
 
-  public update(deltaTime: number, player: Player, currentMap: string): void {
+  public update(deltaTime: number, player: Player, _currentMap: string): void {
     // 1. Update Respawn Timer Nodes
     for (const node of this.harvestNodes) {
       if (node.respawnTimer > 0) {
@@ -108,7 +108,6 @@ export class LifeSkillSystem {
     // 2. Update Fishing State
     if (this.isFishing) {
       // Jika pemain bergerak jauh dari tempat memancing, batalkan pancing
-      const ts = CONSTANTS.TILE_SIZE;
       const dist = Math.hypot(player.x + 16 - this.bobberPos.x, player.y + 16 - this.bobberPos.y);
       if (dist > 80) {
         this.cancelFishing('Memancing dibatalkan karena bergerak.');
@@ -171,7 +170,6 @@ export class LifeSkillSystem {
       return;
     }
 
-    const ts = CONSTANTS.TILE_SIZE;
     this.isFishing = true;
     this.hasBite = false;
     this.fishingTimer = 0;
@@ -179,9 +177,11 @@ export class LifeSkillSystem {
     this.fishingWaterRipples = [];
 
     // Posisi pelampung di danau di depan dermaga
+    const offsetX = player.direction === 'left' ? -36 : player.direction === 'right' ? 36 : 0;
+    const offsetY = player.direction === 'up' ? -28 : 28;
     this.bobberPos = {
-      x: player.x + (player.facing === 'left' ? -36 : 36),
-      y: player.y + (player.facing === 'up' ? -28 : 28)
+      x: player.x + (offsetX !== 0 ? offsetX : 28),
+      y: player.y + offsetY
     };
 
     AudioEngine.play('potion_heal');
@@ -350,7 +350,7 @@ export class LifeSkillSystem {
         return;
       }
 
-      player.inventory.removeItem('WHEAT_BUNDLE', 2);
+      player.inventory.removeItemsById('WHEAT_BUNDLE', 2);
       player.inventory.addItem('FLOUR_BAG', 1);
       AudioEngine.play('quest_complete');
       FloatingTextManager.getInstance().addText(
