@@ -228,8 +228,8 @@ export class VillageManager {
         outfitColor: '#065f46', // Elder robe
         accentColor: '#34d399',
         avatarIcon: '👴',
-        greetingText: 'Selamat datang di Desa Oakhaven, pahlawan muda!',
-        loreText: 'Desa kami makmur berkat perlindungan Serikat Guild di alun-alun tengah. Warga desa selalu menyambut petualang ramah seperti dirimu dengan tangan terbuka.',
+        greetingText: 'Kabar agung dari seberang samudra, pahlawan muda!',
+        loreText: 'Dunia kita semakin luas! Benua Baru Valoria kini telah terhubung melalui Kapal Samudra di Dermaga Dusun Tirta Kencana (selatan Oakhaven) serta Prasasti Waystone di alun-alun. Di sana terhampar kota pelabuhan Port Valoria, Dusun Oasis Al-Zahra, hingga dusun salju Frostpeak Haven!',
         actionPrompt: '💬 [A] Bicara'
       },
       {
@@ -280,8 +280,8 @@ export class VillageManager {
         outfitColor: '#475569', // Iron chainmail
         accentColor: '#cbd5e1',
         avatarIcon: '💂',
-        greetingText: 'Berhenti sejenak, kawan! Gerbang Selatan di bawah pengawasanku.',
-        loreText: 'Desa Oakhaven adalah zona aman netral. Namun berhati-hatilah saat melangkah ke luar batas gerbang, banyak monster liar mengintai di alam bebas.',
+        greetingText: 'Berhenti sejenak, kawan! Jalur Gerbang Selatan mengarah ke Dermaga Samudra.',
+        loreText: 'Jika engkau berjalan lurus ke arah selatan melewati hutan cemara, engkau akan tiba di Dusun Nelayan Tirta Kencana. Di sana telah berlabuh Kapal Ekspedisi Samudra siap mengantarmu berlayar ke Benua Baru Valoria!',
         actionPrompt: '💂 [A] Tanya Rolf'
       },
       {

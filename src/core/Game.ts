@@ -639,6 +639,18 @@ export class Game {
       } catch (e) {}
     }
 
+    const showValoriaAnnouncement = () => {
+      setTimeout(() => {
+        this.floatingText.spawn(
+          this.player.x + 10,
+          this.player.y - 36,
+          '🗺️ Benua Baru Valoria Siap Dijelajahi! (Buka Prasasti Waystone / Dermaga Tirta Kencana)',
+          '#facc15',
+          6.0
+        );
+      }, 1200);
+    };
+
     // 1. Pulihkan sesi jika pengguna baru saja me-refresh dari auto-update
     const hasSessionSave = this.restoreSessionSnapshot();
     if (hasSessionSave) {
@@ -652,6 +664,7 @@ export class Game {
         '#38bdf8',
         4.0
       );
+      showValoriaAnnouncement();
     }
 
     await SupabaseService.init();
@@ -674,6 +687,7 @@ export class Game {
               '#38bdf8',
               3.0
             );
+            showValoriaAnnouncement();
           } else if (hasPending) {
             // Pengguna baru pertama kali mendaftar karakter online
             this.onboardingUI.setState('PLAYING');
@@ -686,6 +700,7 @@ export class Game {
               '#38bdf8',
               3.5
             );
+            showValoriaAnnouncement();
           } else {
             this.onboardingUI.username = (user.user_metadata?.full_name || 'Hero').slice(0, 15);
             this.onboardingUI.setState('CHARACTER_CREATION');
@@ -709,6 +724,7 @@ export class Game {
         this.saveSessionSnapshot();
         this.floatingText.spawn(this.player.x + 10, this.player.y - 18, `📴 Mode Offline Aktif (Tersimpan di HP). Selamat datang, ${username}!`, '#4ade80', 3.5);
       }
+      showValoriaAnnouncement();
     });
   }
 

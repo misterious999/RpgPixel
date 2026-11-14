@@ -90,7 +90,7 @@ export class WaystoneSystem {
       icon: '⚓',
       tileX: 28,
       tileY: 90,
-      isUnlocked: false,
+      isUnlocked: true, // Terbuka agar pemain dapat langsung menjelajah Benua Valoria
       color: '#38bdf8',
       map: 'CONTINENT_VALORIA',
       continentName: 'Benua Valoria'

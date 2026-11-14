@@ -1,4 +1,5 @@
-const CACHE_NAME = 'rpg2d-cache-v3';
+// ServiceWorker Build Version 4 (Benua Baru Valoria)
+const CACHE_NAME = 'rpg2d-cache-v4';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
