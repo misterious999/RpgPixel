@@ -1,6 +1,7 @@
 import { CONSTANTS } from '../core/Constants.ts';
 import { InputState } from '../core/Input.ts';
 import { TileMap } from '../world/TileMap.ts';
+import { ContinentValoria } from '../world/ContinentValoria.ts';
 import { DungeonMap } from '../world/DungeonMap.ts';
 import { DungeonFloor2 } from '../world/DungeonFloor2.ts';
 import { DungeonFloor3 } from '../world/DungeonFloor3.ts';
@@ -467,7 +468,7 @@ export class Player {
     };
   }
 
-  public update(deltaTime: number, input: InputState, tileMap: TileMap | DungeonMap | DungeonFloor2 | DungeonFloor3 | DungeonEldoria | DungeonStonewatch | BuildingInteriors, obstacleChecker?: (box: { x: number; y: number; width: number; height: number }) => boolean): void {
+  public update(deltaTime: number, input: InputState, tileMap: TileMap | ContinentValoria | DungeonMap | DungeonFloor2 | DungeonFloor3 | DungeonEldoria | DungeonStonewatch | BuildingInteriors, obstacleChecker?: (box: { x: number; y: number; width: number; height: number }) => boolean): void {
     const { axisX, axisY, isSprint, isAction } = input;
 
     this.breathTimer += deltaTime * 3;

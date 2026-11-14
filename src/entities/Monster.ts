@@ -23,7 +23,11 @@ export type MonsterType =
   | 'CRYSTAL_SPIDER'
   | 'IRONCLAD_SKELETON'
   | 'ARMORED_GOLEM'
-  | 'BOSS_OBSIDIAN_BEHEMOTH';
+  | 'BOSS_OBSIDIAN_BEHEMOTH'
+  | 'DESERT_SCORPION'
+  | 'SAND_GOLEM'
+  | 'FROST_WOLF'
+  | 'CRYSTAL_ELEMENTAL';
 export type MonsterTier = 'LOW' | 'MID' | 'HIGH' | 'BOSS';
 
 export interface MonsterDrop {
@@ -390,6 +394,67 @@ export class Monster {
         this.tier = 'BOSS';
         this.tierLabel = 'Penguasa Tambang Terkutuk';
         break;
+
+      // --- MONSTER EKSOTIS BENUA BARU VALORIA ---
+      case 'DESERT_SCORPION':
+        this.name = 'Kalajengking Gurun Emas';
+        this.width = 24;
+        this.height = 20;
+        this.maxHp = 180;
+        this.level = 8;
+        this.attackPower = 24;
+        this.expReward = 110;
+        this.goldReward = 2;
+        this.speed = 46;
+        this.aggroRange = 120;
+        this.tier = 'LOW';
+        this.tierLabel = 'Gurun Solaria';
+        break;
+
+      case 'SAND_GOLEM':
+        this.name = 'Golem Pasir Piramida Surya';
+        this.width = 32;
+        this.height = 32;
+        this.maxHp = 320;
+        this.level = 12;
+        this.attackPower = 34;
+        this.expReward = 230;
+        this.goldReward = 3;
+        this.speed = 28;
+        this.aggroRange = 130;
+        this.tier = 'HIGH';
+        this.tierLabel = 'Piramida Purba';
+        break;
+
+      case 'FROST_WOLF':
+        this.name = 'Serigala Salju Boreal';
+        this.width = 26;
+        this.height = 22;
+        this.maxHp = 220;
+        this.level = 10;
+        this.attackPower = 28;
+        this.expReward = 160;
+        this.goldReward = 2;
+        this.speed = 54;
+        this.aggroRange = 135;
+        this.tier = 'MID';
+        this.tierLabel = 'Frostpeak Salju';
+        break;
+
+      case 'CRYSTAL_ELEMENTAL':
+        this.name = 'Elemental Kristal Mana Ungu';
+        this.width = 24;
+        this.height = 28;
+        this.maxHp = 260;
+        this.level = 11;
+        this.attackPower = 32;
+        this.expReward = 195;
+        this.goldReward = 3;
+        this.speed = 44;
+        this.aggroRange = 130;
+        this.tier = 'MID';
+        this.tierLabel = 'Lembah Celestia';
+        break;
     }
 
     this.hp = this.maxHp;
@@ -740,6 +805,18 @@ export class Monster {
         break;
       case 'BOSS_OBSIDIAN_BEHEMOTH':
         this.renderBossObsidianBehemoth(ctx, x, y, isFlashing);
+        break;
+      case 'DESERT_SCORPION':
+        this.renderDesertScorpion(ctx, x, y, isFlashing);
+        break;
+      case 'SAND_GOLEM':
+        this.renderSandGolem(ctx, x, y, isFlashing);
+        break;
+      case 'FROST_WOLF':
+        this.renderFrostWolf(ctx, x, y, isFlashing);
+        break;
+      case 'CRYSTAL_ELEMENTAL':
+        this.renderCrystalElemental(ctx, x, y, isFlashing);
         break;
     }
 
@@ -1676,6 +1753,98 @@ export class Monster {
     ctx.fillStyle = '#1e293b';
     ctx.fillRect(x + 2, y + 24 + pulse, 9, 16);
     ctx.fillRect(x + 43, y + 24 - pulse, 9, 16);
+  }
+
+  private renderDesertScorpion(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    ctx.fillStyle = flash ? '#ffffff' : '#b45309';
+    // Tubuh ruas kalajengking
+    ctx.beginPath();
+    ctx.ellipse(x + 12, y + 10, 8, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Capit
+    ctx.fillStyle = flash ? '#ffffff' : '#d97706';
+    ctx.fillRect(x + 2, y + 4, 5, 4);
+    ctx.fillRect(x + 17, y + 4, 5, 4);
+    // Ekor sengat melengkung
+    ctx.strokeStyle = flash ? '#ffffff' : '#f59e0b';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(x + 12, y + 14);
+    ctx.quadraticCurveTo(x + 20, y + 18, x + 20, y + 6);
+    ctx.stroke();
+    // Ujung sengat berbisa
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(x + 20, y + 6, 2.5, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  private renderSandGolem(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    ctx.fillStyle = flash ? '#ffffff' : '#ca8a04';
+    ctx.fillRect(x + 6, y + 6, 20, 20);
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 2;
+    ctx.strokeRect(x + 6, y + 6, 20, 20);
+    // Mata merah bersinar
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(x + 9, y + 10, 4, 3);
+    ctx.fillRect(x + 17, y + 10, 4, 3);
+    // Mahkota piramida pasir di atas kepala
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.moveTo(x + 16, y);
+    ctx.lineTo(x + 24, y + 6);
+    ctx.lineTo(x + 8, y + 6);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  private renderFrostWolf(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    ctx.fillStyle = flash ? '#ffffff' : '#94a3b8';
+    // Badan serigala es
+    ctx.beginPath();
+    ctx.ellipse(x + 13, y + 12, 10, 6, 0, 0, Math.PI * 2);
+    ctx.fill();
+    // Moncong
+    ctx.fillStyle = flash ? '#ffffff' : '#cbd5e1';
+    ctx.fillRect(x + 4, y + 8, 7, 5);
+    // Telinga runcing
+    ctx.fillStyle = '#64748b';
+    ctx.beginPath();
+    ctx.moveTo(x + 10, y + 3);
+    ctx.lineTo(x + 14, y + 8);
+    ctx.lineTo(x + 8, y + 8);
+    ctx.closePath();
+    ctx.fill();
+    // Mata biru es
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(x + 8, y + 9, 2, 2);
+    // Ekor berbulu tebal
+    ctx.fillStyle = '#e2e8f0';
+    ctx.beginPath();
+    ctx.arc(x + 22, y + 10, 4, 0, Math.PI * 2);
+    ctx.fill();
+  }
+
+  private renderCrystalElemental(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const pulse = Math.sin(this.animTimer * 5) * 2;
+    ctx.fillStyle = flash ? '#ffffff' : '#a855f7';
+    // Tubuh kristal mengambang
+    ctx.beginPath();
+    ctx.moveTo(x + 12, y + 2 + pulse);
+    ctx.lineTo(x + 22, y + 14 + pulse);
+    ctx.lineTo(x + 12, y + 26 + pulse);
+    ctx.lineTo(x + 2, y + 14 + pulse);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#f3e8ff';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+    // Inti cahaya mana
+    ctx.fillStyle = '#fde047';
+    ctx.beginPath();
+    ctx.arc(x + 12, y + 14 + pulse, 3.5, 0, Math.PI * 2);
+    ctx.fill();
   }
 
   private renderHealthBar(ctx: CanvasRenderingContext2D, x: number, y: number): void {

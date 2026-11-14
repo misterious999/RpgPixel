@@ -34,6 +34,7 @@ import { DungeonFloor2 } from '../world/DungeonFloor2.ts';
 import { DungeonFloor3 } from '../world/DungeonFloor3.ts';
 import { DungeonEldoria } from '../world/DungeonEldoria.ts';
 import { DungeonStonewatch } from '../world/DungeonStonewatch.ts';
+import { ContinentValoria } from '../world/ContinentValoria.ts';
 import { BuildingInteriors, InteriorId } from '../world/BuildingInteriors.ts';
 import { RegionManager } from '../world/RegionManager.ts';
 import { Companion, CompanionType } from '../entities/Companion.ts';
@@ -77,6 +78,7 @@ export class Game {
   // Map, Dungeon & Building Interiors state
   public currentMap:
     | 'OVERWORLD'
+    | 'CONTINENT_VALORIA'
     | 'DUNGEON'
     | 'DUNGEON_FLOOR_2'
     | 'DUNGEON_FLOOR_3'
@@ -90,6 +92,10 @@ export class Game {
     | 'INTERIOR_ELDORIA'
     | 'INTERIOR_STONEWATCH' = 'OVERWORLD';
   public buildingInteriors: BuildingInteriors;
+  public continentValoria: ContinentValoria = new ContinentValoria();
+  private valoriaMonsters: Monster[] = [];
+  private valoriaChests: Chest[] = [];
+  private valoriaWorldItems: WorldItem[] = [];
   private caveEntrance: CaveEntrance;
   private dungeonMap: DungeonMap;
   private dungeonMonsters: Monster[] = [];
@@ -268,9 +274,18 @@ export class Game {
       const count = this.waystoneSystem.waystones.filter((w) => w.isUnlocked).length;
       this.achievementSystem.checkWaystones(count, this.player);
     };
-    this.waystoneSystem.onTeleport = (tx, ty, wsName) => {
+    this.waystoneSystem.onTeleport = (tx, ty, wsName, targetMap) => {
+      if (targetMap && targetMap !== this.currentMap) {
+        this.currentMap = targetMap as any;
+        if (targetMap === 'CONTINENT_VALORIA') {
+          this.camera.setWorldBounds(this.continentValoria.width * CONSTANTS.TILE_SIZE, this.continentValoria.height * CONSTANTS.TILE_SIZE);
+        } else if (targetMap === 'OVERWORLD') {
+          this.camera.setWorldBounds(this.tileMap.width * CONSTANTS.TILE_SIZE, this.tileMap.height * CONSTANTS.TILE_SIZE);
+        }
+      }
       this.player.x = tx;
       this.player.y = ty;
+      this.camera.snapTo(tx, ty);
       this.triggerMapTransition(wsName, 'Teleportasi Kilat Berhasil');
       this.floatingText.spawn(tx, ty - 24, `⚡ Tiba di ${wsName}!`, '#38bdf8', 2.5);
     };
@@ -345,6 +360,7 @@ export class Game {
     };
 
     this.spawnInitialWorldObjects();
+    this.initValoriaObjects();
 
     // Inisialisasi Auth & Onboarding flow
     this.authUI = new AuthUI(this.player, this.chests, this.floatingText);
@@ -933,6 +949,9 @@ export class Game {
       } else if (data.currentMap === 'DUNGEON_STONEWATCH') {
         this.currentMap = 'DUNGEON_STONEWATCH';
         this.camera.setWorldBounds(this.dungeonStonewatch.width * CONSTANTS.TILE_SIZE, this.dungeonStonewatch.height * CONSTANTS.TILE_SIZE);
+      } else if (data.currentMap === 'CONTINENT_VALORIA') {
+        this.currentMap = 'CONTINENT_VALORIA';
+        this.camera.setWorldBounds(this.continentValoria.width * CONSTANTS.TILE_SIZE, this.continentValoria.height * CONSTANTS.TILE_SIZE);
       } else {
         this.currentMap = 'OVERWORLD';
         this.camera.setWorldBounds(CONSTANTS.MAP_WIDTH * CONSTANTS.TILE_SIZE, CONSTANTS.MAP_HEIGHT * CONSTANTS.TILE_SIZE);
@@ -1043,6 +1062,138 @@ export class Game {
       new Monster('m_skel_elite', 'SKELETON', 16 * ts + 5, 5 * ts + 3),
       new Monster('m_boss_slime', 'BOSS_SLIME', 20 * ts, 5 * ts)
     ];
+  }
+
+  private initValoriaObjects(): void {
+    const ts = CONSTANTS.TILE_SIZE;
+    // 1. Monster Liar Eksotis Benua Baru Valoria
+    this.valoriaMonsters = [
+      // Gurun Solaria (Kalajengking Emas Berbisa)
+      new Monster('val_scorp_1', 'DESERT_SCORPION', 62 * ts + 10, 68 * ts + 10),
+      new Monster('val_scorp_2', 'DESERT_SCORPION', 66 * ts + 8, 72 * ts + 12),
+      new Monster('val_scorp_3', 'DESERT_SCORPION', 82 * ts + 8, 70 * ts + 10),
+      new Monster('val_scorp_4', 'DESERT_SCORPION', 78 * ts + 10, 82 * ts + 8),
+      new Monster('val_scorp_5', 'DESERT_SCORPION', 86 * ts + 8, 78 * ts + 10),
+
+      // Reruntuhan Piramida Matahari Purba (Golem Pasir Pengawal Surya)
+      new Monster('val_golem_1', 'SAND_GOLEM', 52 * ts + 8, 54 * ts + 12),
+      new Monster('val_golem_2', 'SAND_GOLEM', 58 * ts + 8, 54 * ts + 12),
+      new Monster('val_golem_3', 'SAND_GOLEM', 55 * ts + 16, 58 * ts + 6),
+
+      // Lereng Salju Pegunungan Frostpeak (Serigala Salju Boreal)
+      new Monster('val_wolf_1', 'FROST_WOLF', 22 * ts + 8, 26 * ts + 10),
+      new Monster('val_wolf_2', 'FROST_WOLF', 26 * ts + 8, 28 * ts + 8),
+      new Monster('val_wolf_3', 'FROST_WOLF', 38 * ts + 8, 24 * ts + 10),
+      new Monster('val_wolf_4', 'FROST_WOLF', 30 * ts + 8, 14 * ts + 10),
+
+      // Lembah Kristal Celestia (Elemental Kristal Mana)
+      new Monster('val_elem_1', 'CRYSTAL_ELEMENTAL', 82 * ts + 8, 22 * ts + 10),
+      new Monster('val_elem_2', 'CRYSTAL_ELEMENTAL', 96 * ts + 8, 24 * ts + 12),
+      new Monster('val_elem_3', 'CRYSTAL_ELEMENTAL', 92 * ts + 8, 34 * ts + 8),
+      new Monster('val_elem_4', 'CRYSTAL_ELEMENTAL', 86 * ts + 8, 36 * ts + 10)
+    ];
+
+    // 2. Peti Harta Karun Benua Valoria
+    this.valoriaChests = [
+      new Chest(56 * ts + 8, 52 * ts + 8, [
+        { itemId: 'GOLD_COIN', count: 5 },
+        { itemId: 'RUBY_GEM', count: 2 },
+        { itemId: 'HEALTH_POTION', count: 3 }
+      ]),
+      new Chest(77 * ts + 8, 76 * ts + 8, [
+        { itemId: 'SILVER_COIN', count: 6 },
+        { itemId: 'GOLD_COIN', count: 2 },
+        { itemId: 'MANA_POTION', count: 3 }
+      ]),
+      new Chest(25 * ts + 8, 24 * ts + 8, [
+        { itemId: 'SILVER_COIN', count: 5 },
+        { itemId: 'DARK_IRON_ORE', count: 4 },
+        { itemId: 'HEALTH_POTION', count: 2 }
+      ]),
+      new Chest(92 * ts + 8, 24 * ts + 8, [
+        { itemId: 'GOLD_COIN', count: 4 },
+        { itemId: 'DUNGEON_GEM', count: 2 },
+        { itemId: 'MANA_POTION', count: 4 }
+      ])
+    ];
+  }
+
+  public sailToValoria(): void {
+    const ts = CONSTANTS.TILE_SIZE;
+    this.currentMap = 'CONTINENT_VALORIA';
+    this.player.x = 24 * ts + 16;
+    this.player.y = 92 * ts + 16;
+    this.player.direction = 'up';
+    this.camera.setWorldBounds(this.continentValoria.width * ts, this.continentValoria.height * ts);
+    this.camera.snapTo(this.player.x, this.player.y);
+    AudioEngine.play('quest_complete');
+    this.triggerMapTransition('「 BENUA BARU: VALORIA 」', 'Berlayar Menembus Samudra Abisal Menuju Dunia Baru...');
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '⛵ Tiba di Pelabuhan Port Valoria!', '#38bdf8', 3.5);
+    this.saveSessionSnapshot();
+  }
+
+  public sailToOverworld(): void {
+    const ts = CONSTANTS.TILE_SIZE;
+    this.currentMap = 'OVERWORLD';
+    this.player.x = 33 * ts + 16;
+    this.player.y = 73 * ts + 16;
+    this.player.direction = 'up';
+    this.camera.setWorldBounds(this.tileMap.width * ts, this.tileMap.height * ts);
+    this.camera.snapTo(this.player.x, this.player.y);
+    AudioEngine.play('quest_complete');
+    this.triggerMapTransition('「 BENUA AETHELGARD 」', 'Berlayar Pulang ke Lembah Serikat Oakhaven...');
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '⛵ Tiba di Dermaga Dusun Tirta Kencana!', '#38bdf8', 3.5);
+    this.saveSessionSnapshot();
+  }
+
+  public showValoriaNPCDialog(npc: any): void {
+    AudioEngine.play('btn_click');
+    const randomDialog = npc.dialog[Math.floor(Math.random() * npc.dialog.length)];
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 28, `${npc.icon} ${npc.name}: "${randomDialog}"`, npc.accentColor || '#facc15', 4.0);
+  }
+
+  private renderOverworldShip(ctx: CanvasRenderingContext2D): void {
+    const ts = CONSTANTS.TILE_SIZE;
+    const sx = 28 * ts;
+    const sy = 71 * ts;
+    ctx.save();
+    // Lambung Kapal Samudra Ekspedisi Jati
+    ctx.fillStyle = '#451a03';
+    ctx.beginPath();
+    ctx.moveTo(sx, sy + 25);
+    ctx.lineTo(sx + 110, sy + 25);
+    ctx.lineTo(sx + 95, sy + 58);
+    ctx.lineTo(sx + 15, sy + 58);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#b45309';
+    ctx.lineWidth = 2;
+    ctx.stroke();
+
+    // Tiang Layar & Layar Samudra
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(sx + 50, sy - 38, 6, 63);
+    ctx.fillStyle = '#f8fafc';
+    ctx.beginPath();
+    ctx.moveTo(sx + 53, sy - 32);
+    ctx.lineTo(sx + 85, sy - 10);
+    ctx.lineTo(sx + 53, sy + 18);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Bendera Ekspedisi Samudra
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(sx + 53, sy - 38, 16, 8);
+
+    // Teks info kapal & Nakhoda
+    ctx.fillStyle = '#fef08a';
+    ctx.font = 'bold 9.5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('⛵ Ekspedisi Benua Valoria', sx + 55, sy + 70);
+    ctx.restore();
   }
 
   private spawnHitSparks(x: number, y: number, isCrit: boolean): void {
@@ -2173,6 +2324,8 @@ export class Game {
       this.tileMap.update(deltaTime);
       this.caveEntrance.update(deltaTime);
       this.villageManager.update(deltaTime);
+    } else if (this.currentMap === 'CONTINENT_VALORIA') {
+      this.continentValoria.update(deltaTime);
     } else if (this.isCurrentMapInterior()) {
       this.buildingInteriors.update(deltaTime);
     } else {
@@ -2230,6 +2383,14 @@ export class Game {
         const cey = this.caveEntrance.y;
         if (box.x < cex + 16 && box.x + box.width > cex && box.y < cey + 60 && box.y + box.height > cey + 24) return true;
         if (box.x < cex + 64 && box.x + box.width > cex + 48 && box.y < cey + 60 && box.y + box.height > cey + 24) return true;
+      } else if (this.currentMap === 'CONTINENT_VALORIA') {
+        // Valoria Chests
+        for (const chest of this.valoriaChests) {
+          const cb = chest.getCollisionBox();
+          if (box.x < cb.x + cb.width && box.x + box.width > cb.x && box.y < cb.y + cb.height && box.y + box.height > cb.y) {
+            return true;
+          }
+        }
       } else if (this.currentMap === 'DUNGEON') {
         // Dungeon Floor 1 Chests
         for (const chest of this.dungeonChests) {
@@ -2274,6 +2435,8 @@ export class Game {
     const activeMap =
       this.currentMap === 'OVERWORLD'
         ? this.tileMap
+        : this.currentMap === 'CONTINENT_VALORIA'
+        ? this.continentValoria
         : this.isCurrentMapInterior()
         ? this.buildingInteriors
         : this.currentMap === 'DUNGEON'
@@ -2294,7 +2457,7 @@ export class Game {
       this.camera.y,
       this.camera.viewportWidth,
       this.camera.viewportHeight,
-      this.currentMap !== 'OVERWORLD' && !this.isCurrentMapInterior()
+      this.currentMap !== 'OVERWORLD' && this.currentMap !== 'CONTINENT_VALORIA' && !this.isCurrentMapInterior()
     );
 
     // Sync Active Title
@@ -2305,6 +2468,7 @@ export class Game {
     // Helper aktif pengecekan rintangan/dinding map saat ini (mendukung renang companion & pet)
     const getActiveIsTileSolid = (tx: number, ty: number): boolean => {
       if (this.currentMap === 'OVERWORLD') return this.tileMap.isTileSolid(tx, ty, this.player.isSwimming);
+      if (this.currentMap === 'CONTINENT_VALORIA') return this.continentValoria.isTileSolid(tx, ty, this.player.isSwimming);
       if (this.currentMap === 'DUNGEON') return this.dungeonMap.isTileSolid(tx, ty);
       if (this.currentMap === 'DUNGEON_FLOOR_2') return this.dungeonFloor2.isTileSolid(tx, ty);
       if (this.currentMap === 'DUNGEON_FLOOR_3') return this.dungeonFloor3.isTileSolid(tx, ty);
@@ -2318,6 +2482,8 @@ export class Game {
       const activeMonsters =
         this.currentMap === 'OVERWORLD'
           ? this.overworldMonsters
+          : this.currentMap === 'CONTINENT_VALORIA'
+          ? this.valoriaMonsters
           : this.currentMap === 'DUNGEON'
           ? this.dungeonMonsters
           : this.currentMap === 'DUNGEON_FLOOR_2'
@@ -2345,6 +2511,8 @@ export class Game {
       const activeItems =
         this.currentMap === 'OVERWORLD'
           ? this.worldItems
+          : this.currentMap === 'CONTINENT_VALORIA'
+          ? this.valoriaWorldItems
           : this.currentMap === 'DUNGEON'
           ? this.dungeonWorldItems
           : this.currentMap === 'DUNGEON_FLOOR_2'
@@ -2479,6 +2647,16 @@ export class Game {
             AudioEngine.playPlayerHurt();
             this.floatingText.spawn(playerCenterX, playerCenterY - 24, '🔒 Gerbang Terkunci! Pecahkan teka-teki Kapten Borin di Stonewatch.', '#f59e0b', 3.0);
           }
+        }
+      }
+
+      // 5.3 Kapal Ekspedisi Samudra (Dermaga Dusun Tirta Kencana -> Berlayar ke Benua Baru Valoria)
+      const tirtaShipDist = Math.hypot(33 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 73 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
+      if (tirtaShipDist < 48) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.input.consumeAction();
+          this.sailToValoria();
+          return;
         }
       }
     }
@@ -2635,6 +2813,170 @@ export class Game {
 
       // 10.5 Minion AI Combat & Escort Update (Prajurit Kerangka, Roh Beruang, Klon Bayangan)
       this.updateMinions(deltaTime, this.overworldMonsters);
+    } else if (this.currentMap === 'CONTINENT_VALORIA') {
+      // --- BENUA VALORIA SPECIFIC INTERACTION & COMBAT ---
+      if (!this.isAnyModalOpen()) {
+        // 1. Kapal Samudra di Port Valoria (Berlayar Kembali ke Benua Aethelgard)
+        const valoriaShipDist = Math.hypot(22 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 92 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
+        if (valoriaShipDist < 48) {
+          if (this.input.isActionJustPressed || this.input.state.isAction) {
+            this.input.consumeAction();
+            this.sailToOverworld();
+            return;
+          }
+        }
+
+        // 2. Prasasti Kuno Fast Travel
+        const nearWaystone = this.waystoneSystem.getNearbyWaystone(this.player.x, this.player.y, this.currentMap);
+        if (nearWaystone && (this.input.isActionJustPressed || this.input.state.isAction)) {
+          this.input.consumeAction();
+          this.waystoneSystem.openModal();
+          return;
+        }
+
+        // 3. NPC Valoria Interaksi Dialog
+        const nearValoriaNPC = this.continentValoria.getNearbyNPC(playerCenterX, playerCenterY);
+        if (nearValoriaNPC && (this.input.isActionJustPressed || this.input.state.isAction)) {
+          this.input.consumeAction();
+          this.showValoriaNPCDialog(nearValoriaNPC);
+          return;
+        }
+      }
+
+      // 4. Update Valoria Chests
+      for (const chest of this.valoriaChests) {
+        chest.update(deltaTime);
+        if (!chest.isOpen && chest.isNearPlayer(playerCenterX, playerCenterY)) {
+          if (this.input.isActionJustPressed || this.input.state.isAction) {
+            this.input.consumeAction();
+            AudioEngine.playChestOpen();
+            const rewards = chest.open();
+            for (const reward of rewards) {
+              this.player.inventory.addItem(reward.itemId, reward.count);
+              const def = ITEM_DEFINITIONS[reward.itemId];
+              const name = def ? def.name : reward.itemId;
+              this.floatingText.spawn(chest.x + 11, chest.y - 12, `+${reward.count} ${name}`, '#facc15', 1.8);
+            }
+            this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
+            const leveledUp = this.player.addExp(45);
+            if (leveledUp) {
+              AudioEngine.playLevelUp();
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 30, `🎉 LEVEL UP! Sekarang Lv. ${this.player.level}`, '#fde047', 3.0);
+            }
+            this.authUI.saveCurrentGame();
+          }
+        }
+      }
+
+      // 5. Update Valoria World Items
+      for (let i = this.valoriaWorldItems.length - 1; i >= 0; i--) {
+        const item = this.valoriaWorldItems[i];
+        if (item.isCollected || item.count <= 0) {
+          this.valoriaWorldItems.splice(i, 1);
+          continue;
+        }
+        const pickedUp = item.update(deltaTime, playerCenterX, playerCenterY);
+        if (pickedUp) {
+          const added = this.player.inventory.addItem(item.itemId, item.count);
+          if (added > 0) {
+            AudioEngine.playItemPickup(item.itemId === 'GOLD_COIN');
+            const def = ITEM_DEFINITIONS[item.itemId];
+            const name = def ? def.name : item.itemId;
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `+${added} ${name}`, '#38bdf8');
+            this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
+            this.valoriaWorldItems.splice(i, 1);
+          }
+        }
+      }
+
+      // 6. Update Valoria Monsters (AI, Movement, & Attack)
+      for (const monster of this.valoriaMonsters) {
+        monster.update(
+          deltaTime,
+          playerCenterX,
+          playerCenterY,
+          (tx, ty) => this.continentValoria.isTileSolid(tx, ty),
+          (atk) => {
+            const died = this.player.takeDamage(atk);
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `-${atk} HP`, '#ef4444');
+            AudioEngine.playPlayerHurt();
+            this.camera.shake(4.0, 0.16);
+            if (died) {
+              AudioEngine.playPlayerDeath();
+              // Evakuasi ke Pelabuhan Port Valoria
+              this.player.x = 24 * CONSTANTS.TILE_SIZE + 16;
+              this.player.y = 92 * CONSTANTS.TILE_SIZE + 16;
+              this.player.direction = 'up';
+              this.camera.snapTo(this.player.x, this.player.y);
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu diselamatkan oleh Penjaga Port Valoria!', '#ef4444', 3.5);
+            }
+          },
+          this.player.minions,
+          (minion, atk) => {
+            this.handleMonsterAttackMinion(monster, minion, atk);
+          }
+        );
+      }
+
+      // 7. Player Melee Attack vs Valoria Monsters
+      const valAttackHitbox = this.player.getAttackHitbox();
+      if (valAttackHitbox) {
+        for (const monster of this.valoriaMonsters) {
+          if (monster.isDead) continue;
+          if (this.hitMonstersInSwing.has(monster.id)) continue;
+
+          if (
+            valAttackHitbox.x < monster.x + monster.width &&
+            valAttackHitbox.x + valAttackHitbox.width > monster.x &&
+            valAttackHitbox.y < monster.y + monster.height &&
+            valAttackHitbox.y + valAttackHitbox.height > monster.y
+          ) {
+            this.hitMonstersInSwing.add(monster.id);
+            const { damage, isCrit } = this.player.getAttackDamage();
+            const res = monster.takeDamage(damage, playerCenterX, playerCenterY);
+            AudioEngine.playHit(isCrit);
+            this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, isCrit);
+            this.camera.shake(isCrit ? 4.8 : 2.6, isCrit ? 0.16 : 0.10);
+            const hitText = isCrit ? `💥 CRIT -${res.damage}!` : `-${res.damage}`;
+            this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 10, hitText, isCrit ? '#facc15' : '#ffffff');
+
+            if (res.isDead) {
+              this.handleMonsterDefeated(monster);
+            }
+          }
+        }
+      }
+
+      // 8. Player Skill Effects vs Valoria Monsters
+      for (const effect of this.skillBarUI.visualEffects) {
+        if (['slash', 'fire', 'ice', 'lightning', 'wind', 'earth', 'abnormal', 'shockwave', 'grasp', 'devour'].includes(effect.type)) {
+          for (const monster of this.valoriaMonsters) {
+            if (monster.isDead) continue;
+            const dist = Math.hypot(effect.x - (monster.x + monster.width / 2), effect.y - (monster.y + monster.height / 2));
+            if (dist < effect.radius + monster.width / 2) {
+              if (monster.hurtTimer <= 0) {
+                let spellDmg = 28 + this.player.level * 3.5;
+                if (effect.type === 'abnormal' || effect.type === 'devour') {
+                  spellDmg = 72 + this.player.level * 6.5;
+                } else if (effect.type === 'grasp' || effect.type === 'shockwave') {
+                  spellDmg = 34 + this.player.level * 4.0;
+                }
+                const res = monster.takeDamage(spellDmg, effect.x, effect.y);
+                AudioEngine.playHit(false);
+                this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, true);
+                this.camera.shake(3.2, 0.12);
+                this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 8, `✨ -${res.damage}`, effect.color);
+                if (res.isDead) {
+                  this.handleMonsterDefeated(monster);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // 9. Minions vs Valoria Monsters
+      this.updateMinions(deltaTime, this.valoriaMonsters);
     } else if (this.currentMap === 'DUNGEON') {
       // --- DUNGEON FLOOR 1 SPECIFIC UPDATES ---
       // 4. Exit Ladder to Surface
@@ -3570,7 +3912,10 @@ export class Game {
       const tileY = Math.floor(this.player.y / CONSTANTS.TILE_SIZE);
       const roleInfo = ROLE_INFO[this.player.role];
       const curRegion = RegionManager.getInstance().getRegion(this.currentMap, tileX, tileY);
-      const villageOrRegion = this.tileMap.getVillageName(tileX, tileY) || curRegion.name;
+      const villageOrRegion =
+        this.currentMap === 'CONTINENT_VALORIA'
+          ? this.continentValoria.getVillageName(tileX, tileY)
+          : (this.tileMap.getVillageName(tileX, tileY) || curRegion.name);
       const interiorId = this.isCurrentMapInterior() ? this.getInteriorIdFromCurrentMap() : null;
       const interiorDef = interiorId ? this.buildingInteriors.doors[interiorId] : null;
       const locText =
@@ -3586,6 +3931,8 @@ export class Game {
           ? '<span style="color: #4ade80; font-weight: 700;">🌿 Kuil Roh Hutan Eldoria</span>'
           : this.currentMap === 'DUNGEON_STONEWATCH'
           ? '<span style="color: #f59e0b; font-weight: 700;">⚒️ Tambang Besi Abisal Stonewatch</span>'
+          : this.currentMap === 'CONTINENT_VALORIA'
+          ? `<span style="color: ${curRegion.themeColor || '#f59e0b'}; font-weight: 700;">${curRegion.icon || '🌍'} ${villageOrRegion}</span>`
           : `<span style="color: ${curRegion.themeColor || '#4ade80'}; font-weight: 700;">${curRegion.icon || '🌍'} ${villageOrRegion}</span>`;
 
       const weapon = this.player.equippedWeapon;
@@ -3682,6 +4029,9 @@ export class Game {
       // 2.2 Render Stonewatch Cursed Iron Mine Entrance (Desa Stonewatch)
       this.renderStonewatchEntrance(ctx, playerCenterX, playerCenterY);
 
+      // 2.3 Render Kapal Ekspedisi Samudra Tirta Kencana (Gerbang ke Benua Valoria)
+      this.renderOverworldShip(ctx);
+
       // 4. Render Overworld Chests
       for (const chest of this.chests) {
         chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY), this.isAnyModalOpen());
@@ -3730,6 +4080,56 @@ export class Game {
       this.skillBarUI.renderWorldEffects(ctx);
 
       // 7.5 Render Ambient Atmosphere (Falling Petals, Forest Mana Spores)
+      this.atmosphereEngine.render(ctx);
+
+      // 7.6 Render Combat Hit Sparks
+      this.renderHitSparks(ctx);
+
+      // 7.7 Day/Night Cycle & Weather Ambient Lighting Wash
+      this.timeWeatherEngine.renderWorldLighting(ctx, this.camera.x, this.camera.y, this.camera.viewportWidth, this.camera.viewportHeight, false);
+
+      // 8. Render Floating Texts
+      this.floatingText.render(ctx);
+    } else if (this.currentMap === 'CONTINENT_VALORIA') {
+      // --- BENUA VALORIA WORLD RENDERING ---
+      // 1. Render Continent Valoria TileMap & Structures
+      this.continentValoria.render(ctx, this.camera);
+
+      // 2. Render Ancient Waystones Benua Valoria
+      this.waystoneSystem.render(ctx, this.currentMap);
+
+      // 3. Render Valoria Chests
+      for (const chest of this.valoriaChests) {
+        chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY), this.isAnyModalOpen());
+      }
+
+      // 4. Render Valoria Items
+      for (const item of this.valoriaWorldItems) {
+        item.render(ctx);
+      }
+
+      // 5. Render Valoria Monsters
+      for (const monster of this.valoriaMonsters) {
+        monster.render(ctx);
+      }
+
+      // Render Companion if active
+      if (this.companion) {
+        this.companion.render(ctx);
+      }
+
+      // Render Pet if active
+      if (this.pet) {
+        this.pet.render(ctx);
+      }
+
+      // 6. Render Player
+      this.player.render(ctx);
+
+      // 7. Render Spell Effects
+      this.skillBarUI.renderWorldEffects(ctx);
+
+      // 7.5 Render Ambient Atmosphere
       this.atmosphereEngine.render(ctx);
 
       // 7.6 Render Combat Hit Sparks
@@ -4029,6 +4429,8 @@ export class Game {
           ? []
           : this.currentMap === 'OVERWORLD'
           ? this.overworldMonsters
+          : this.currentMap === 'CONTINENT_VALORIA'
+          ? this.valoriaMonsters
           : this.currentMap === 'DUNGEON'
           ? this.dungeonMonsters
           : this.currentMap === 'DUNGEON_FLOOR_2'
@@ -4044,6 +4446,8 @@ export class Game {
           ? []
           : this.currentMap === 'OVERWORLD'
           ? this.chests
+          : this.currentMap === 'CONTINENT_VALORIA'
+          ? this.valoriaChests
           : this.currentMap === 'DUNGEON'
           ? this.dungeonChests
           : this.currentMap === 'DUNGEON_FLOOR_2'
@@ -4073,7 +4477,8 @@ export class Game {
         this.dungeonFloor2,
         this.dungeonFloor3,
         this.dungeonEldoria,
-        this.dungeonStonewatch
+        this.dungeonStonewatch,
+        this.continentValoria
       );
 
       // 10.1 Render Active Quest HUD Tracker (Top-Left)
@@ -4303,6 +4708,20 @@ export class Game {
             } else {
               this.renderBottomActionPrompt(ctx, '🎣 [A] Lempar Kail Pancing ke Danau', '#06b6d4', '#67e8f9');
             }
+          } else if (Math.hypot(33 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 73 * CONSTANTS.TILE_SIZE + 16 - playerCenterY) < 48) {
+            this.renderBottomActionPrompt(ctx, '⛵ [A] Berlayar ke Benua Baru Valoria', '#38bdf8', '#93c5fd');
+          }
+        } else if (this.currentMap === 'CONTINENT_VALORIA') {
+          const dockDist = Math.hypot(22 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 92 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
+          const nearValoriaNPC = this.continentValoria.getNearbyNPC(playerCenterX, playerCenterY);
+          const nearWaystone = this.waystoneSystem.getNearbyWaystone(this.player.x, this.player.y, this.currentMap);
+
+          if (dockDist < 48) {
+            this.renderBottomActionPrompt(ctx, '⛵ [A] Berlayar Pulang ke Benua Aethelgard', '#38bdf8', '#93c5fd');
+          } else if (nearWaystone) {
+            this.renderBottomActionPrompt(ctx, `[A] Prasasti Teleportasi (${nearWaystone.name}) ⚡`, nearWaystone.color, '#f8fafc');
+          } else if (nearValoriaNPC) {
+            this.renderBottomActionPrompt(ctx, `[A] Bicara dengan ${nearValoriaNPC.name} 💬`, nearValoriaNPC.accentColor, '#fef08a');
           }
         } else if (this.isCurrentMapInterior()) {
           const interiorId = this.getInteriorIdFromCurrentMap();

@@ -12,12 +12,15 @@ export interface Waystone {
   tileY: number;
   isUnlocked: boolean;
   color: string;
+  map?: 'OVERWORLD' | 'CONTINENT_VALORIA';
+  continentName?: string;
 }
 
 export class WaystoneSystem {
   private static instance: WaystoneSystem | null = null;
 
   public waystones: Waystone[] = [
+    // --- BENUA 1: AETHELGARD (LEMBAH SERIKAT) ---
     {
       id: 'WAYSTONE_OAKHAVEN',
       name: 'Alun-Alun Oakhaven',
@@ -26,7 +29,9 @@ export class WaystoneSystem {
       tileX: 48,
       tileY: 52,
       isUnlocked: true, // Oakhaven otomatis terbuka sejak awal
-      color: '#38bdf8'
+      color: '#38bdf8',
+      map: 'OVERWORLD',
+      continentName: 'Benua Aethelgard'
     },
     {
       id: 'WAYSTONE_ELDORIA',
@@ -36,7 +41,9 @@ export class WaystoneSystem {
       tileX: 23,
       tileY: 22,
       isUnlocked: false,
-      color: '#10b981'
+      color: '#10b981',
+      map: 'OVERWORLD',
+      continentName: 'Benua Aethelgard'
     },
     {
       id: 'WAYSTONE_STONEWATCH',
@@ -46,7 +53,9 @@ export class WaystoneSystem {
       tileX: 82,
       tileY: 64,
       isUnlocked: false,
-      color: '#f97316'
+      color: '#f97316',
+      map: 'OVERWORLD',
+      continentName: 'Benua Aethelgard'
     },
     {
       id: 'WAYSTONE_TIRTA_KENCANA',
@@ -56,7 +65,9 @@ export class WaystoneSystem {
       tileX: 34,
       tileY: 72,
       isUnlocked: false,
-      color: '#06b6d4'
+      color: '#06b6d4',
+      map: 'OVERWORLD',
+      continentName: 'Benua Aethelgard'
     },
     {
       id: 'WAYSTONE_AMBERVALE',
@@ -66,13 +77,65 @@ export class WaystoneSystem {
       tileX: 75,
       tileY: 25,
       isUnlocked: false,
-      color: '#ca8a04'
+      color: '#ca8a04',
+      map: 'OVERWORLD',
+      continentName: 'Benua Aethelgard'
+    },
+
+    // --- BENUA 2: VALORIA (DUNIA BARU MISTIS) ---
+    {
+      id: 'WAYSTONE_PORT_VALORIA',
+      name: 'Port Valoria',
+      subtitle: 'Pelabuhan Samudra & Dermaga Ekspedisi',
+      icon: '⚓',
+      tileX: 28,
+      tileY: 90,
+      isUnlocked: false,
+      color: '#38bdf8',
+      map: 'CONTINENT_VALORIA',
+      continentName: 'Benua Valoria'
+    },
+    {
+      id: 'WAYSTONE_AL_ZAHRA',
+      name: 'Oasis Al-Zahra',
+      subtitle: 'Telaga Zamrud & Kafilah Gurun Emas',
+      icon: '🐫',
+      tileX: 74,
+      tileY: 74,
+      isUnlocked: false,
+      color: '#f59e0b',
+      map: 'CONTINENT_VALORIA',
+      continentName: 'Benua Valoria'
+    },
+    {
+      id: 'WAYSTONE_FROSTPEAK',
+      name: 'Frostpeak Haven',
+      subtitle: 'Puncak Salju & Kabin Api Unggun',
+      icon: '❄️',
+      tileX: 32,
+      tileY: 22,
+      isUnlocked: false,
+      color: '#a5f3fc',
+      map: 'CONTINENT_VALORIA',
+      continentName: 'Benua Valoria'
+    },
+    {
+      id: 'WAYSTONE_CELESTIA',
+      name: 'Lembah Celestia',
+      subtitle: 'Kuil Alkemis Kristal Mana Ungu',
+      icon: '🔮',
+      tileX: 90,
+      tileY: 28,
+      isUnlocked: false,
+      color: '#c084fc',
+      map: 'CONTINENT_VALORIA',
+      continentName: 'Benua Valoria'
     }
   ];
 
   public isOpen: boolean = false;
   private container: HTMLDivElement | null = null;
-  public onTeleport?: (targetX: number, targetY: number, waystoneName: string) => void;
+  public onTeleport?: (targetX: number, targetY: number, waystoneName: string, targetMap?: string) => void;
   public onWaystoneUnlocked?: (waystone: Waystone) => void;
 
   constructor() {
@@ -87,13 +150,16 @@ export class WaystoneSystem {
   }
 
   public update(_deltaTime: number, player: Player, currentMap: string): void {
-    if (currentMap !== 'OVERWORLD') return;
+    if (currentMap !== 'OVERWORLD' && currentMap !== 'CONTINENT_VALORIA') return;
     const ts = CONSTANTS.TILE_SIZE;
     const pCenterX = player.x + 16;
     const pCenterY = player.y + 16;
 
     // Cek apakah pemain mendekati waystone yang belum terbuka untuk mengaktifkannya
     for (const ws of this.waystones) {
+      const wsMap = ws.map || 'OVERWORLD';
+      if (wsMap !== currentMap) continue;
+
       const wsX = ws.tileX * ts + 16;
       const wsY = ws.tileY * ts + 16;
       const dist = Math.hypot(pCenterX - wsX, pCenterY - wsY);
@@ -113,12 +179,15 @@ export class WaystoneSystem {
   }
 
   public getNearbyWaystone(playerX: number, playerY: number, currentMap: string): Waystone | null {
-    if (currentMap !== 'OVERWORLD') return null;
+    if (currentMap !== 'OVERWORLD' && currentMap !== 'CONTINENT_VALORIA') return null;
     const ts = CONSTANTS.TILE_SIZE;
     const pCenterX = playerX + 16;
     const pCenterY = playerY + 16;
 
     for (const ws of this.waystones) {
+      const wsMap = ws.map || 'OVERWORLD';
+      if (wsMap !== currentMap) continue;
+
       const wsX = ws.tileX * ts + 16;
       const wsY = ws.tileY * ts + 16;
       const dist = Math.hypot(pCenterX - wsX, pCenterY - wsY);
@@ -172,13 +241,17 @@ export class WaystoneSystem {
 
     let itemsHtml = '';
     for (const ws of this.waystones) {
+      const contTag = ws.continentName ? `<span style="font-size: 9px; padding: 1px 6px; border-radius: 4px; background: rgba(255,255,255,0.08); color: #cbd5e1; margin-left: 6px;">${ws.continentName}</span>` : '';
       if (ws.isUnlocked) {
         itemsHtml += `
           <div style="background: rgba(30, 41, 59, 0.9); border: 1.5px solid ${ws.color}; border-radius: 8px; padding: 12px; margin-bottom: 8px; display: flex; align-items: center; justify-content: space-between;">
             <div style="display: flex; align-items: center; gap: 10px;">
               <span style="font-size: 24px;">${ws.icon}</span>
               <div>
-                <div style="font-weight: bold; color: #f8fafc; font-size: 14px;">${ws.name}</div>
+                <div style="font-weight: bold; color: #f8fafc; font-size: 14px; display: flex; align-items: center;">
+                  <span>${ws.name}</span>
+                  ${contTag}
+                </div>
                 <div style="font-size: 11px; color: ${ws.color};">${ws.subtitle}</div>
               </div>
             </div>
@@ -193,7 +266,10 @@ export class WaystoneSystem {
             <div style="display: flex; align-items: center; gap: 10px;">
               <span style="font-size: 24px;">🔒</span>
               <div>
-                <div style="font-weight: bold; color: #94a3b8; font-size: 14px;">${ws.name}</div>
+                <div style="font-weight: bold; color: #94a3b8; font-size: 14px; display: flex; align-items: center;">
+                  <span>${ws.name}</span>
+                  ${contTag}
+                </div>
                 <div style="font-size: 11px; color: #64748b;">Kunjungi wilayah ini untuk membuka prasasti</div>
               </div>
             </div>
@@ -211,7 +287,7 @@ export class WaystoneSystem {
             <span style="font-size: 20px;">⚡</span>
             <div>
               <div style="font-weight: bold; color: #f8fafc; font-size: 15px;">Jaringan Prasasti Kuno (Fast Travel)</div>
-              <div style="font-size: 11px; color: #94a3b8;">Teleportasi seketika antar-desa di Lembah Serikat</div>
+              <div style="font-size: 11px; color: #94a3b8;">Teleportasi seketika antar-pedesaan & lintas benua</div>
             </div>
           </div>
           <button id="close_waystone_btn" style="background: none; border: none; color: #ef4444; font-size: 20px; font-weight: bold; cursor: pointer;">✕</button>
@@ -237,7 +313,7 @@ export class WaystoneSystem {
           const targetY = ws.tileY * ts + 24;
           AudioEngine.play('potion_heal');
           if (this.onTeleport) {
-            this.onTeleport(targetX, targetY, ws.name);
+            this.onTeleport(targetX, targetY, ws.name, ws.map || 'OVERWORLD');
           }
         });
       }
@@ -246,10 +322,13 @@ export class WaystoneSystem {
 
   // --- RENDER PRASASTI DI DUNIA ---
   public render(ctx: CanvasRenderingContext2D, currentMap: string): void {
-    if (currentMap !== 'OVERWORLD') return;
+    if (currentMap !== 'OVERWORLD' && currentMap !== 'CONTINENT_VALORIA') return;
     const ts = CONSTANTS.TILE_SIZE;
 
     for (const ws of this.waystones) {
+      const wsMap = ws.map || 'OVERWORLD';
+      if (wsMap !== currentMap) continue;
+
       const wx = ws.tileX * ts + 8;
       const wy = ws.tileY * ts + 4;
 

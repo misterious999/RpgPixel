@@ -179,6 +179,105 @@ export class RegionManager {
     }
   ];
 
+  public static readonly VALORIA_REGIONS: RegionData[] = [
+    // 1. Kota Pelabuhan Port Valoria
+    {
+      id: 'VALORIA_PORT',
+      name: 'Kota Pelabuhan Port Valoria',
+      subtitle: '~ Pelabuhan Bahari Samudra & Gerbang Ekspedisi Benua Baru ~',
+      icon: '⚓',
+      themeColor: '#38bdf8',
+      accentColor: '#93c5fd',
+      isSafeZone: true,
+      centerTile: { x: 28, y: 92 },
+      contains: (x, y) => x >= 18 && x <= 38 && y >= 82 && y <= 100
+    },
+    // 2. Dusun Oasis Karavan Al-Zahra
+    {
+      id: 'VALORIA_OASIS',
+      name: 'Dusun Oasis Karavan Al-Zahra',
+      subtitle: '~ Telaga Zamrud Sejuk & Pasar Sutra Kafilah Gurun ~',
+      icon: '🐫',
+      themeColor: '#f59e0b',
+      accentColor: '#fde047',
+      isSafeZone: true,
+      centerTile: { x: 74, y: 76 },
+      contains: (x, y) => x >= 64 && x <= 86 && y >= 66 && y <= 86
+    },
+    // 3. Dusun Salju Frostpeak Haven
+    {
+      id: 'VALORIA_FROSTPEAK',
+      name: 'Dusun Salju Frostpeak Haven',
+      subtitle: '~ Kabin Kayu Pegunungan Es & Api Unggun Penghangat ~',
+      icon: '❄️',
+      themeColor: '#a5f3fc',
+      accentColor: '#cffafe',
+      isSafeZone: true,
+      centerTile: { x: 32, y: 22 },
+      contains: (x, y) => x >= 20 && x <= 42 && y >= 12 && y <= 30
+    },
+    // 4. Dusun Lembah Kristal Celestia
+    {
+      id: 'VALORIA_CELESTIA',
+      name: 'Lembah Kristal Celestia',
+      subtitle: '~ Monolit Kristal Mana Mistis & Observatorium Alkemis ~',
+      icon: '🔮',
+      themeColor: '#c084fc',
+      accentColor: '#f3e8ff',
+      isSafeZone: true,
+      centerTile: { x: 90, y: 28 },
+      contains: (x, y) => x >= 78 && x <= 102 && y >= 18 && y <= 38
+    },
+    // 5. Reruntuhan Piramida Matahari Purba
+    {
+      id: 'VALORIA_PYRAMID',
+      name: 'Reruntuhan Piramida Matahari Purba',
+      subtitle: '~ Candi Berundak Emas Peninggalan Dinasti Surya Kuno ~',
+      icon: '🏛️',
+      themeColor: '#eab308',
+      accentColor: '#fef08a',
+      isSafeZone: false,
+      centerTile: { x: 56, y: 56 },
+      contains: (x, y) => x >= 50 && x <= 62 && y >= 50 && y <= 62
+    },
+    // 6. Gurun Pasir Emas Solaria
+    {
+      id: 'VALORIA_DESERT',
+      name: 'Gurun Pasir Emas Solaria',
+      subtitle: '~ Hamparan Pasir Berbisik Habitat Monster Kalajengking Emas ~',
+      icon: '🏜️',
+      themeColor: '#d97706',
+      accentColor: '#fbbf24',
+      isSafeZone: false,
+      centerTile: { x: 65, y: 65 },
+      contains: (_x, y) => y >= 55
+    },
+    // 7. Lereng Salju Pegunungan Frostpeak
+    {
+      id: 'VALORIA_SNOWLANDS',
+      name: 'Lereng Salju Pegunungan Frostpeak',
+      subtitle: '~ Rimba Pinus Boreal Beku & Sarang Serigala Salju ~',
+      icon: '🏔️',
+      themeColor: '#93c5fd',
+      accentColor: '#bfdbfe',
+      isSafeZone: false,
+      centerTile: { x: 30, y: 20 },
+      contains: (_x, y) => y < 35
+    }
+  ];
+
+  private static readonly DEFAULT_VALORIA: RegionData = {
+    id: 'VALORIA_SAVANNA',
+    name: 'Padang Savana Luar Valoria',
+    subtitle: '~ Dataran Terbuka Rimba Liar Benua Valoria ~',
+    icon: '🌾',
+    themeColor: '#84cc16',
+    accentColor: '#bef264',
+    isSafeZone: false,
+    centerTile: { x: 55, y: 55 },
+    contains: () => true
+  };
+
   // Default Wilayah Rimba Terbuka
   private static readonly DEFAULT_OVERWORLD: RegionData = {
     id: 'OVERWORLD_WILD',
@@ -270,6 +369,13 @@ export class RegionManager {
       };
     } else if (currentMap.startsWith('INTERIOR_')) {
       return this.getInteriorRegion(currentMap);
+    } else if (currentMap === 'CONTINENT_VALORIA') {
+      for (const reg of RegionManager.VALORIA_REGIONS) {
+        if (reg.contains(tileX, tileY)) {
+          return reg;
+        }
+      }
+      return RegionManager.DEFAULT_VALORIA;
     }
 
     // Overworld: cocokkan dengan daftar region

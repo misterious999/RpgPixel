@@ -17,6 +17,7 @@ export class AudioEngine {
   private static bgmInterval: number | null = null;
   private static currentMapBgm:
     | 'OVERWORLD'
+    | 'CONTINENT_VALORIA'
     | 'DUNGEON'
     | 'DUNGEON_FLOOR_2'
     | 'DUNGEON_FLOOR_3'
@@ -749,6 +750,7 @@ export class AudioEngine {
   public static playBgm(
     map:
       | 'OVERWORLD'
+      | 'CONTINENT_VALORIA'
       | 'DUNGEON'
       | 'DUNGEON_FLOOR_2'
       | 'DUNGEON_FLOOR_3'
@@ -785,12 +787,18 @@ export class AudioEngine {
     const eldoriaNotes = [329.63, 392.0, 493.88, 587.33, 523.25, 440.0];
     // Dungeon Stonewatch (Cursed Mine): Deep dwarven rhythmic bass
     const stonewatchNotes = [123.47, 130.81, 146.83, 110.0, 98.0, 123.47];
+    // Benua Valoria: Petualangan eksotis tanah gurun & savana mistis (Phrygian Dominant)
+    const valoriaNotes = [220.0, 233.08, 277.18, 293.66, 329.63, 349.23, 392.0, 440.0];
 
     let notes = overworldNotes;
     let speed = 450;
     let oscType: OscillatorType = 'triangle';
 
-    if (
+    if (map === 'CONTINENT_VALORIA') {
+      notes = valoriaNotes;
+      speed = 420;
+      oscType = 'triangle';
+    } else if (
       map === 'INTERIOR_GUILD' ||
       map === 'INTERIOR_BLACKSMITH' ||
       map === 'INTERIOR_APOTHECARY' ||

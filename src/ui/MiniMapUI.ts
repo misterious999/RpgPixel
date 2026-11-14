@@ -9,6 +9,7 @@ import { DungeonFloor3 } from '../world/DungeonFloor3.ts';
 import { DungeonEldoria } from '../world/DungeonEldoria.ts';
 import { DungeonStonewatch } from '../world/DungeonStonewatch.ts';
 import { RegionManager } from '../world/RegionManager.ts';
+import { ContinentValoria, ValoriaTileType } from '../world/ContinentValoria.ts';
 
 export type MiniMapMode = 'NORMAL' | 'EXPANDED' | 'MINIMIZED';
 
@@ -22,6 +23,7 @@ export class MiniMapUI {
   private floor3Canvas: HTMLCanvasElement | null = null;
   private eldoriaCanvas: HTMLCanvasElement | null = null;
   private stonewatchCanvas: HTMLCanvasElement | null = null;
+  private valoriaCanvas: HTMLCanvasElement | null = null;
   private interiorCanvas: HTMLCanvasElement | null = null;
 
   private pulseTimer: number = 0;
@@ -155,6 +157,40 @@ export class MiniMapUI {
     return c;
   }
 
+  /**
+   * Menghasilkan peta statis Benua Baru Valoria (120x120 tiles)
+   */
+  private generateValoriaCache(continentValoria: ContinentValoria): HTMLCanvasElement {
+    const c = document.createElement('canvas');
+    c.width = continentValoria.width;
+    c.height = continentValoria.height;
+    const ctx = c.getContext('2d')!;
+
+    for (let y = 0; y < continentValoria.height; y++) {
+      for (let x = 0; x < continentValoria.width; x++) {
+        const t = continentValoria.getTileAt(x, y);
+        let color = '#65a30d'; // Savana
+        if (t === ValoriaTileType.DESERT_SAND) color = '#eab308';
+        else if (t === ValoriaTileType.DUNES) color = '#d97706';
+        else if (t === ValoriaTileType.WATER) color = '#0284c7';
+        else if (t === ValoriaTileType.COBBLESTONE) color = '#94a3b8';
+        else if (t === ValoriaTileType.DIRT_PATH) color = '#b45309';
+        else if (t === ValoriaTileType.SNOW) color = '#f8fafc';
+        else if (t === ValoriaTileType.ICE) color = '#7dd3fc';
+        else if (t === ValoriaTileType.CRYSTAL_SOIL) color = '#7e22ce';
+        else if (t === ValoriaTileType.PINE_TREE) color = '#065f46';
+        else if (t === ValoriaTileType.PALM_TREE) color = '#15803d';
+        else if (t === ValoriaTileType.SAVANNA_TREE) color = '#3f6212';
+        else if (t === ValoriaTileType.CLIFF) color = '#334155';
+        else if (t === ValoriaTileType.CRYSTAL_SPIRE) color = '#c084fc';
+
+        ctx.fillStyle = color;
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+    return c;
+  }
+
   public handleTouch(touchX: number, touchY: number, screenWidth: number, screenHeight: number): boolean {
     if (this.mode === 'MINIMIZED') {
       const btn = { x: screenWidth - 110, y: 52, w: 60, h: 26 };
@@ -211,7 +247,7 @@ export class MiniMapUI {
     ctx: CanvasRenderingContext2D,
     screenWidth: number,
     screenHeight: number,
-    currentMap: 'OVERWORLD' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | 'DUNGEON_ELDORIA' | 'DUNGEON_STONEWATCH' | 'INTERIOR_GUILD' | 'INTERIOR_BLACKSMITH' | 'INTERIOR_APOTHECARY' | 'INTERIOR_KITCHEN' | 'INTERIOR_BANK' | 'INTERIOR_ELDORIA' | 'INTERIOR_STONEWATCH',
+    currentMap: 'OVERWORLD' | 'CONTINENT_VALORIA' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | 'DUNGEON_ELDORIA' | 'DUNGEON_STONEWATCH' | 'INTERIOR_GUILD' | 'INTERIOR_BLACKSMITH' | 'INTERIOR_APOTHECARY' | 'INTERIOR_KITCHEN' | 'INTERIOR_BANK' | 'INTERIOR_ELDORIA' | 'INTERIOR_STONEWATCH',
     tileMap: TileMap,
     dungeonMap: DungeonMap,
     player: Player,
@@ -226,7 +262,8 @@ export class MiniMapUI {
     dungeonFloor2?: DungeonFloor2,
     dungeonFloor3?: DungeonFloor3,
     dungeonEldoria?: DungeonEldoria,
-    dungeonStonewatch?: DungeonStonewatch
+    dungeonStonewatch?: DungeonStonewatch,
+    continentValoria?: ContinentValoria
   ): void {
     ctx.save();
 
@@ -269,6 +306,9 @@ export class MiniMapUI {
     }
     if (dungeonStonewatch && !this.stonewatchCanvas) {
       this.stonewatchCanvas = this.generateStonewatchCache(dungeonStonewatch);
+    }
+    if (continentValoria && !this.valoriaCanvas) {
+      this.valoriaCanvas = this.generateValoriaCache(continentValoria);
     }
 
     const pTileX = player.x / CONSTANTS.TILE_SIZE;
@@ -374,6 +414,13 @@ export class MiniMapUI {
       mapTileHeight = dungeonStonewatch ? dungeonStonewatch.height : 36;
       mapTitle = '⛏️ Tambang';
       fullMapTitle = '⛏️ Peta Tambang Terkutuk Besi Abisal Stonewatch';
+      titleColor = '#f59e0b';
+    } else if (currentMap === 'CONTINENT_VALORIA') {
+      sourceCanvas = this.valoriaCanvas || this.overworldCanvas;
+      mapTileWidth = continentValoria ? continentValoria.width : 120;
+      mapTileHeight = continentValoria ? continentValoria.height : 120;
+      mapTitle = '🌍 Valoria';
+      fullMapTitle = '🌍 Peta Benua Mistis Valoria (Dunia Baru)';
       titleColor = '#f59e0b';
     }
 
