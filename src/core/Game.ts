@@ -193,6 +193,7 @@ export class Game {
     const spawnX = 50 * CONSTANTS.TILE_SIZE + 6;
     const spawnY = 50 * CONSTANTS.TILE_SIZE + 3;
     this.player = new Player(spawnX, spawnY);
+    this.camera.snapTo(spawnX, spawnY);
 
     ControlSettingsManager.load();
     this.floatingText = new FloatingTextManager();
@@ -3556,7 +3557,9 @@ export class Game {
     this.authUI.update(deltaTime);
 
     // 12. Update Camera to follow player with smooth interpolation
-    this.camera.update(playerCenterX, playerCenterY, deltaTime);
+    const curPlayerCenterX = this.player.x + this.player.width / 2;
+    const curPlayerCenterY = this.player.y + this.player.height / 2;
+    this.camera.update(curPlayerCenterX, curPlayerCenterY, deltaTime);
 
     // 13. Update HUD Coordinates & Player Health/Mana Bar
     if (this.coordsEl) {
