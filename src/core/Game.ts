@@ -51,6 +51,8 @@ import { AchievementSystem } from '../systems/AchievementSystem.ts';
 import { GuildMailboxSystem } from '../systems/GuildMailboxSystem.ts';
 import { LeaderboardUI } from '../ui/LeaderboardUI.ts';
 import { CanvasText } from '../utils/CanvasText.ts';
+import { HD3DRenderer } from '../rendering3d/HD3DRenderer.ts';
+import { RenderMode } from '../rendering3d/HD3DTypes.ts';
 
 export class Game {
   private canvas: HTMLCanvasElement;
@@ -146,6 +148,9 @@ export class Game {
   // Day/Night & Weather Engine
   public timeWeatherEngine: TimeWeatherEngine = new TimeWeatherEngine();
 
+  // HD-2D / 3D Three.js Renderer
+  public hd3dRenderer: HD3DRenderer | null = null;
+
   // Adventurer Party Companion & Auto-Loot Pet
   public companion: Companion | null = null;
   public pet: Pet | null = null;
@@ -199,11 +204,19 @@ export class Game {
   private fpsEl: HTMLElement | null;
   private coordsEl: HTMLElement | null;
 
-  constructor(canvas: HTMLCanvasElement) {
+  constructor(canvas: HTMLCanvasElement, threeCanvas?: HTMLCanvasElement | null) {
     this.canvas = canvas;
     const context = canvas.getContext('2d');
     if (!context) throw new Error('Could not get 2D canvas context');
     this.ctx = context;
+
+    if (threeCanvas) {
+      try {
+        this.hd3dRenderer = new HD3DRenderer(threeCanvas);
+      } catch (err) {
+        console.warn('WebGL / Three.js HD-2D renderer initialization failed:', err);
+      }
+    }
 
     this.input = new InputManager(canvas);
 
@@ -2160,6 +2173,21 @@ export class Game {
     return this.currentMap.startsWith('INTERIOR_');
   }
 
+  public isHD3D(): boolean {
+    return this.hd3dRenderer ? this.hd3dRenderer.isHD3D() : false;
+  }
+
+  public toggleRenderMode(): RenderMode {
+    if (!this.hd3dRenderer) return '2D';
+    const nextMode = this.hd3dRenderer.toggleMode();
+    if (nextMode === 'HD3D') {
+      this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '✨ Mode HD-2D Tiga Dimensi Aktif!', '#38bdf8', 2.5);
+    } else {
+      this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🎨 Mode 2D Klasik Aktif!', '#94a3b8', 2.5);
+    }
+    return nextMode;
+  }
+
   public getInteriorIdFromCurrentMap(): InteriorId | null {
     switch (this.currentMap) {
       case 'INTERIOR_GUILD': return 'GUILD_HALL';
@@ -2620,6 +2648,9 @@ export class Game {
     this.virtualHeight = Math.floor(rawVH / 2) * 2;
 
     this.camera.resize(this.virtualWidth, this.virtualHeight);
+    if (this.hd3dRenderer) {
+      this.hd3dRenderer.resize(cssWidth, cssHeight);
+    }
   }
 
   public start(): void {
@@ -4768,8 +4799,76 @@ export class Game {
 
     // 1. Reset any hardware transforms before clearing the full physical canvas buffer
     ctx.setTransform(1, 0, 0, 1, 0, 0);
-    ctx.fillStyle = '#0f172a';
-    ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+    const is3D = this.isHD3D();
+    if (is3D && this.hd3dRenderer) {
+      let currentMonsters = this.overworldMonsters;
+      let currentChests = this.chests;
+      let currentItems = this.worldItems;
+      let dungeonLayout: number[][] | undefined = undefined;
+      let dungeonTheme: string | undefined = undefined;
+
+      if (this.currentMap === 'CONTINENT_VALORIA') {
+        currentMonsters = this.valoriaMonsters;
+        currentChests = this.valoriaChests;
+        currentItems = this.valoriaWorldItems;
+      } else if (this.currentMap === 'DUNGEON') {
+        currentMonsters = this.dungeonMonsters;
+        currentChests = this.dungeonChests;
+        currentItems = this.dungeonWorldItems;
+        dungeonLayout = this.dungeonMap.getTiles();
+        dungeonTheme = 'SERENA';
+      } else if (this.currentMap === 'DUNGEON_PYRAMID') {
+        currentMonsters = this.pyramidMonsters;
+        currentChests = this.pyramidChests;
+        currentItems = this.pyramidWorldItems;
+        dungeonLayout = this.dungeonPyramid.tiles;
+        dungeonTheme = 'PYRAMID';
+      } else if (this.currentMap === 'DUNGEON_CELESTIA') {
+        currentMonsters = this.celestiaMonsters;
+        currentChests = this.celestiaChests;
+        currentItems = this.celestiaWorldItems;
+        dungeonLayout = this.dungeonCelestia.tiles;
+        dungeonTheme = 'CELESTIA';
+      } else if (this.currentMap === 'DUNGEON_FLOOR_2') {
+        currentMonsters = this.floor2Monsters;
+        currentChests = [];
+        currentItems = this.floor2WorldItems;
+      } else if (this.currentMap === 'DUNGEON_FLOOR_3') {
+        currentMonsters = this.floor3Monsters;
+        currentChests = this.floor3Chests;
+        currentItems = this.floor3WorldItems;
+      } else if (this.currentMap === 'DUNGEON_ELDORIA') {
+        currentMonsters = this.eldoriaMonsters;
+        currentChests = this.eldoriaChests;
+        currentItems = this.eldoriaWorldItems;
+      } else if (this.currentMap === 'DUNGEON_STONEWATCH') {
+        currentMonsters = this.stonewatchMonsters;
+        currentChests = this.stonewatchChests;
+        currentItems = this.stonewatchWorldItems;
+      }
+
+      const currentNPCs = this.currentMap === 'OVERWORLD' ? this.villageManager.npcs : (this.currentMap === 'CONTINENT_VALORIA' ? this.continentValoria.npcs : []);
+
+      this.hd3dRenderer.render(
+        this.player,
+        this.currentMap,
+        this.tileMap,
+        this.continentValoria,
+        this.timeWeatherEngine,
+        currentMonsters,
+        currentChests,
+        currentItems,
+        currentNPCs,
+        dungeonLayout,
+        dungeonTheme
+      );
+
+      ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+    } else {
+      ctx.fillStyle = '#0f172a';
+      ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+    }
 
     // 2. High-DPI Scaling: Scale context by device pixel ratio for razor-sharp HD+ rendering
     ctx.scale(this.dpr, this.dpr);
@@ -4785,7 +4884,8 @@ export class Game {
     const playerCenterX = this.player.x + this.player.width / 2;
     const playerCenterY = this.player.y + this.player.height / 2;
 
-    if (this.currentMap === 'OVERWORLD') {
+    if (!is3D) {
+      if (this.currentMap === 'OVERWORLD') {
       // 1. Render Overworld TileMap
       this.tileMap.render(ctx, this.camera);
 
@@ -5248,8 +5348,14 @@ export class Game {
       // Render Floating Texts
       this.floatingText.render(ctx);
     }
+  } else {
+    // Mode HD-2D Tiga Dimensi: Render efek sihir, percikan benturan, dan teks mengambang di atas kanvas
+    this.skillBarUI.renderWorldEffects(ctx);
+    this.renderHitSparks(ctx);
+    this.floatingText.render(ctx);
+  }
 
-    ctx.restore();
+  ctx.restore();
 
     // 4. High-DPI UI & Text rendering: Enable smooth anti-aliased font and vector card rendering
     ctx.imageSmoothingEnabled = true;

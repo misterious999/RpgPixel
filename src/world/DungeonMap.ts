@@ -149,6 +149,10 @@ export class DungeonMap {
     ];
   }
 
+  public getTiles(): number[][] {
+    return this.tiles;
+  }
+
   public isTileSolid(tileX: number, tileY: number): boolean {
     if (tileX < 0 || tileX >= this.width || tileY < 0 || tileY >= this.height) {
       return true;

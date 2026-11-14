@@ -47,6 +47,20 @@
       touch-action: none;
       width: 100vw;
       height: 100vh;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 2;
+    }
+    canvas#three-canvas {
+      display: none;
+      width: 100vw;
+      height: 100vh;
+      position: absolute;
+      top: 0;
+      left: 0;
+      z-index: 1;
+      pointer-events: none;
     }
     #ui-overlay {
       position: absolute;
@@ -138,11 +152,13 @@
   </div>
 
   <div id="game-container">
+    <canvas id="three-canvas"></canvas>
     <canvas id="game-canvas"></canvas>
     <div id="ui-overlay">
       <div class="hud-stat">
         <div style="display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid rgba(255,255,255,0.12); padding-bottom: 2px; margin-bottom: 3px;">
           <span class="hud-title">⚔️ RPG Pixel</span>
+          <button id="btn-toggle-render-mode" style="background: rgba(56, 189, 248, 0.25); border: 1px solid rgba(56, 189, 248, 0.6); color: #38bdf8; font-size: 9px; font-weight: 700; border-radius: 4px; padding: 1px 6px; cursor: pointer; pointer-events: auto;">✨ HD-2D 3D</button>
           <span id="fps-display" style="font-size: 9.5px; color: #94a3b8; font-weight: 600;">60 FPS</span>
         </div>
         <div id="coords-display">Pos: (0, 0)</div>

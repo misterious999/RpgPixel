@@ -1,5 +1,5 @@
-// ServiceWorker Build Version 6 (Pedesaan Baru, NPC Quest & Dungeon Tingkat Tinggi)
-const CACHE_NAME = 'rpg2d-cache-v6';
+// ServiceWorker Build Version 7 (HD-2D 3D Engine & Dual-Mode Toggle)
+const CACHE_NAME = 'rpg2d-cache-v7';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
