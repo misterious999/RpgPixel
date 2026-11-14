@@ -491,28 +491,75 @@ export class TileMap {
   }
 
   /**
-   * Mendapatkan nama desa berdasarkan koordinat ubin (jika berada di pedesaan)
+   * Mendapatkan nama desa, jalanan, hutan, atau bentang alam berdasarkan koordinat ubin
    */
-  public getVillageName(tileX: number, tileY: number): string | null {
+  public getVillageName(tileX: number, tileY: number): string {
+    // 1. Distrik Perniagaan & Pasar Raya
     if (tileX >= 59 && tileX <= 78 && tileY >= 42 && tileY <= 58) {
-      return 'Distrik Pasar Raya Oakhaven (Grand Bazaar)';
+      return 'Distrik Pasar Raya Oakhaven';
     }
+    // 2. Pusat Kota & Alun-Alun Serikat
     if (tileX >= 36 && tileX <= 78 && tileY >= 40 && tileY <= 60) {
-      return 'Desa Serena (Ibukota Serikat)';
+      return 'Desa Oakhaven (Ibukota Serikat)';
     }
+    // 3. Desa Rimba Peri Eldoria (Barat Laut)
     if (tileX >= 12 && tileX <= 32 && tileY >= 12 && tileY <= 28) {
-      return 'Desa Eldoria (Rimba Peri Kuno)';
+      return 'Desa Rimba Peri Eldoria';
     }
+    // 4. Benteng Tambang Stonewatch (Tenggara)
     if (tileX >= 74 && tileX <= 94 && tileY >= 56 && tileY <= 74) {
-      return 'Desa Stonewatch (Benteng Tambang)';
+      return 'Benteng Tambang Stonewatch';
     }
+    // 5. Dusun Nelayan Tirta Kencana (Pesisir Barat Daya)
     if (tileX >= 26 && tileX <= 42 && tileY >= 68 && tileY <= 80) {
       return 'Dusun Nelayan Tirta Kencana';
     }
+    // 6. Dusun Pertanian Ambervale (Lembah Gandum Timur Laut)
     if (tileX >= 68 && tileX <= 88 && tileY >= 17 && tileY <= 35) {
       return 'Dusun Pertanian Ambervale';
     }
-    return null;
+
+    // 7. Area Khusus Lembah Goa Kripta Kuno (Utara)
+    if (tileX >= 44 && tileX <= 56 && tileY >= 26 && tileY <= 38) {
+      return 'Lembah Gerbang Goa Makam Kuno';
+    }
+
+    // 8. Klasifikasi Lingkungan berdasarkan Ubin (Jalanan, Hutan, Danau, Tebing, dsb)
+    const tile = this.getTileAt(tileX, tileY);
+    if (tile === TileType.DIRT_PATH || tile === TileType.COBBLESTONE) {
+      return 'Jalan Setapak Pedesaan';
+    }
+    if (tile === TileType.WATER) {
+      return 'Perairan Danau Sejuk Azure';
+    }
+    if (tile === TileType.SAND) {
+      return 'Pesisir Pantai Berpasir';
+    }
+    if (tile === TileType.TREE) {
+      return 'Hutan Rimba Belantara';
+    }
+    if (tile === TileType.ROCK || tile === TileType.CLIFF) {
+      return 'Lereng Cadas Pegunungan';
+    }
+    if (tile === TileType.GRASS_FLOWERS) {
+      return 'Padang Bunga Liar Semerbak';
+    }
+
+    // 9. Kuadran Wilayah Alam Terbuka
+    if (tileY <= 16) {
+      return 'Puncak Tebing Mahkota Salju';
+    }
+    if (tileX < 36 && tileY > 28 && tileY < 68) {
+      return 'Hutan Rimba Whisperwood';
+    }
+    if (tileX > 75 && tileY > 35 && tileY < 56) {
+      return 'Dataran Bebatuan Karang Sunyi';
+    }
+    if (tileY >= 75) {
+      return 'Padang Rumput Luar Meadowvale';
+    }
+
+    return 'Padang Rumput Pedesaan Hijau';
   }
 
   public getTileAt(tileX: number, tileY: number): TileType {

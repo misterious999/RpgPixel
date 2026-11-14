@@ -208,7 +208,7 @@ export class Game {
       this.player.y = 50 * CONSTANTS.TILE_SIZE + 3;
       this.player.direction = 'down';
       this.camera.setWorldBounds(this.tileMap.width * CONSTANTS.TILE_SIZE, this.tileMap.height * CONSTANTS.TILE_SIZE);
-      this.camera.update(this.player.x, this.player.y);
+      this.camera.snapTo(this.player.x, this.player.y);
       AudioEngine.playLevelUp();
       this.triggerMapTransition('「 DESA OAKHAVEN 」', 'Kembali Melalui Gulungan Portal');
       this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🌀 Teleportasi ke Alun-Alun Desa!', '#38bdf8', 3.0);
@@ -1091,7 +1091,7 @@ export class Game {
 
     // Perbarui batas kamera untuk map Dungeon (40x40 tile)
     this.camera.setWorldBounds(this.dungeonMap.width * CONSTANTS.TILE_SIZE, this.dungeonMap.height * CONSTANTS.TILE_SIZE);
-    this.camera.update(this.player.x, this.player.y);
+    this.camera.snapTo(this.player.x, this.player.y);
 
     this.triggerMapTransition('「 GOA PURBA ABISAL · TINGKAT 1 」', '~ Sarang Bawah Tanah Raja Slime Purba ~');
     this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '⛩️ Memasuki Goa Bawah Tanah!', '#c084fc', 3.0);
@@ -1140,7 +1140,7 @@ export class Game {
 
     // Perbarui batas kamera untuk Dunia Luar (100x100 tile)
     this.camera.setWorldBounds(CONSTANTS.MAP_WIDTH * CONSTANTS.TILE_SIZE, CONSTANTS.MAP_HEIGHT * CONSTANTS.TILE_SIZE);
-    this.camera.update(this.player.x, this.player.y);
+    this.camera.snapTo(this.player.x, this.player.y);
 
     this.triggerMapTransition('「 LEMBAH SERIKAT OAKHAVEN 」', '~ Kawasan Aman Perlindungan Para Petualang ~');
     this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🌤️ Kembali ke Permukaan', '#facc15', 3.0);
@@ -1242,7 +1242,7 @@ export class Game {
     AudioEngine.playBgm('DUNGEON');
 
     this.camera.setWorldBounds(this.dungeonFloor2.width * CONSTANTS.TILE_SIZE, this.dungeonFloor2.height * CONSTANTS.TILE_SIZE);
-    this.camera.update(this.player.x, this.player.y);
+    this.camera.snapTo(this.player.x, this.player.y);
 
     this.triggerMapTransition('「 MAKAM KUNO RUINAS ABISAL · LANTAI 2 」', '~ Sarang Titan Kolosal & Bayangan Abisal ~');
     this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '⚡ Memasuki Lantai 2!', '#ef4444', 3.0);
@@ -1276,7 +1276,7 @@ export class Game {
     AudioEngine.playBgm('DUNGEON');
 
     this.camera.setWorldBounds(this.dungeonMap.width * CONSTANTS.TILE_SIZE, this.dungeonMap.height * CONSTANTS.TILE_SIZE);
-    this.camera.update(this.player.x, this.player.y);
+    this.camera.snapTo(this.player.x, this.player.y);
 
     this.triggerMapTransition('「 GOA PURBA ABISAL · TINGKAT 1 」', '~ Kembali ke Ruang Altar Bos ~');
     this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '▲ Naik ke Lantai 1', '#c084fc', 3.0);
@@ -1310,7 +1310,7 @@ export class Game {
     AudioEngine.playBgm('DUNGEON');
 
     this.camera.setWorldBounds(this.dungeonFloor3.width * CONSTANTS.TILE_SIZE, this.dungeonFloor3.height * CONSTANTS.TILE_SIZE);
-    this.camera.update(this.player.x, this.player.y);
+    this.camera.snapTo(this.player.x, this.player.y);
 
     this.triggerMapTransition('「 SANCTUARIUM NERAKA ABISAL · LANTAI 3 」', '~ Sarang Raja Naga Api Ignis & Ksatria Neraka ~');
     this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🔥 Memasuki Lantai 3 Neraka!', '#f97316', 3.0);
@@ -1344,7 +1344,7 @@ export class Game {
     AudioEngine.playBgm('DUNGEON');
 
     this.camera.setWorldBounds(this.dungeonFloor2.width * CONSTANTS.TILE_SIZE, this.dungeonFloor2.height * CONSTANTS.TILE_SIZE);
-    this.camera.update(this.player.x, this.player.y);
+    this.camera.snapTo(this.player.x, this.player.y);
 
     this.triggerMapTransition('「 MAKAM KUNO RUINAS ABISAL · LANTAI 2 」', '~ Kembali ke Labirin Titan Abisal ~');
     this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '▲ Naik ke Lantai 2', '#60a5fa', 3.0);
@@ -1471,7 +1471,7 @@ export class Game {
     AudioEngine.playBgm('DUNGEON_ELDORIA');
 
     this.camera.setWorldBounds(this.dungeonEldoria.width * CONSTANTS.TILE_SIZE, this.dungeonEldoria.height * CONSTANTS.TILE_SIZE);
-    this.camera.update(this.player.x, this.player.y);
+    this.camera.snapTo(this.player.x, this.player.y);
 
     this.triggerMapTransition('「 KUIL ROH HUTAN ELDORIA 」', '~ Tempat Bersemayam Ent Kuno Pelindung Alam ~');
     this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🌿 Memasuki Kuil Roh Hutan!', '#4ade80', 3.0);
@@ -1510,7 +1510,7 @@ export class Game {
     AudioEngine.playBgm('OVERWORLD');
 
     this.camera.setWorldBounds(CONSTANTS.MAP_WIDTH * CONSTANTS.TILE_SIZE, CONSTANTS.MAP_HEIGHT * CONSTANTS.TILE_SIZE);
-    this.camera.update(this.player.x, this.player.y);
+    this.camera.snapTo(this.player.x, this.player.y);
 
     this.triggerMapTransition('「 DESA PERI ELDORIA 」', '~ Hutan Kuno Perlindungan Roh Alam ~');
     this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🌤️ Kembali ke Desa Eldoria', '#4ade80', 3.0);
@@ -1544,7 +1544,7 @@ export class Game {
     AudioEngine.playBgm('DUNGEON_STONEWATCH');
 
     this.camera.setWorldBounds(this.dungeonStonewatch.width * CONSTANTS.TILE_SIZE, this.dungeonStonewatch.height * CONSTANTS.TILE_SIZE);
-    this.camera.update(this.player.x, this.player.y);
+    this.camera.snapTo(this.player.x, this.player.y);
 
     this.triggerMapTransition('「 TAMBANG BESI ABISAL STONEWATCH 」', '~ Kedalaman Gelap & Altar Behemoth Obsidian ~');
     this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '⚒️ Memasuki Tambang Besi Abisal!', '#f59e0b', 3.0);
@@ -1583,7 +1583,7 @@ export class Game {
     AudioEngine.playBgm('OVERWORLD');
 
     this.camera.setWorldBounds(CONSTANTS.MAP_WIDTH * CONSTANTS.TILE_SIZE, CONSTANTS.MAP_HEIGHT * CONSTANTS.TILE_SIZE);
-    this.camera.update(this.player.x, this.player.y);
+    this.camera.snapTo(this.player.x, this.player.y);
 
     this.triggerMapTransition('「 DESA BENTENG STONEWATCH 」', '~ Tambang Kurcaci & Benteng Pertahanan ~');
     this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🌤️ Kembali ke Desa Stonewatch', '#f59e0b', 3.0);
@@ -1676,7 +1676,7 @@ export class Game {
     AudioEngine.playBgm('OVERWORLD');
 
     this.camera.setWorldBounds(def.roomWidth * CONSTANTS.TILE_SIZE, def.roomHeight * CONSTANTS.TILE_SIZE);
-    this.camera.update(this.player.x, this.player.y);
+    this.camera.snapTo(this.player.x, this.player.y);
 
     this.triggerMapTransition(`「 ${def.name.toUpperCase()} 」`, def.subtitle);
     this.floatingText.spawn(this.player.x + 10, this.player.y - 18, `🚪 Masuk ke ${def.name}!`, def.accentColor, 2.5);
@@ -1720,7 +1720,7 @@ export class Game {
     AudioEngine.playBgm('OVERWORLD');
 
     this.camera.setWorldBounds(this.tileMap.width * CONSTANTS.TILE_SIZE, this.tileMap.height * CONSTANTS.TILE_SIZE);
-    this.camera.update(this.player.x, this.player.y);
+    this.camera.snapTo(this.player.x, this.player.y);
 
     this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🚪 Keluar ke Pedesaan!', '#facc15', 2.0);
     this.saveSessionSnapshot();
@@ -2556,7 +2556,7 @@ export class Game {
                 minion.x = this.player.x - 16;
                 minion.y = this.player.y;
               }
-              this.camera.update(this.player.x, this.player.y);
+              this.camera.snapTo(this.player.x, this.player.y);
               if (this.player.val > 0) {
                 const lostVal = Math.min(this.player.val, Math.max(10, Math.floor(this.player.val * 0.1)));
                 this.player.removeVal(lostVal);
@@ -3563,7 +3563,8 @@ export class Game {
       const tileX = Math.floor(this.player.x / CONSTANTS.TILE_SIZE);
       const tileY = Math.floor(this.player.y / CONSTANTS.TILE_SIZE);
       const roleInfo = ROLE_INFO[this.player.role];
-      const villageOrRegion = this.tileMap.getVillageName(tileX, tileY);
+      const curRegion = RegionManager.getInstance().getRegion(this.currentMap, tileX, tileY);
+      const villageOrRegion = this.tileMap.getVillageName(tileX, tileY) || curRegion.name;
       const interiorId = this.isCurrentMapInterior() ? this.getInteriorIdFromCurrentMap() : null;
       const interiorDef = interiorId ? this.buildingInteriors.doors[interiorId] : null;
       const locText =
@@ -3579,7 +3580,7 @@ export class Game {
           ? '<span style="color: #4ade80; font-weight: 700;">🌿 Kuil Roh Hutan Eldoria</span>'
           : this.currentMap === 'DUNGEON_STONEWATCH'
           ? '<span style="color: #f59e0b; font-weight: 700;">⚒️ Tambang Besi Abisal Stonewatch</span>'
-          : `<span style="color: #4ade80; font-weight: 700;">🌍 ${villageOrRegion}</span>`;
+          : `<span style="color: ${curRegion.themeColor || '#4ade80'}; font-weight: 700;">${curRegion.icon || '🌍'} ${villageOrRegion}</span>`;
 
       const weapon = this.player.equippedWeapon;
       const weaponHtml = weapon
@@ -5124,7 +5125,6 @@ export class Game {
             const res = targetMonster.takeDamage(finalDmg, minion.x, minion.y);
             AudioEngine.playHit(isCrit);
             this.spawnHitSparks(mCenterX, mCenterY, isCrit);
-            this.camera.shake(isCrit ? 3.0 : 1.6, 0.08);
 
             const hitColor = minion.type === 'skeleton' ? '#c084fc' : (minion.type === 'bear' ? '#f472b6' : '#38bdf8');
             const icon = minion.type === 'skeleton' ? '💀' : (minion.type === 'bear' ? '🐾' : '🗡️');
@@ -5172,7 +5172,6 @@ export class Game {
     this.floatingText.spawn(minion.x + 6, minion.y - 10, `-${atk}`, '#f87171');
     AudioEngine.playPlayerHurt();
     this.spawnHitSparks(minion.x + 6, minion.y + 10, false);
-    this.camera.shake(2.0, 0.10);
 
     if (minion.hp <= 0) {
       this.floatingText.spawn(minion.x + 6, minion.y - 18, `☠️ ${minion.name} gugur!`, '#ef4444', 2.0);
