@@ -42,23 +42,30 @@ export class Camera {
   }
 
   /**
-   * Update pelacakan kamera: Terkunci langsung (Tight Lock-On)
-   * Karakter berada stabil di tengah layar tanpa desinkronisasi kecepatan, tanpa lag, dan tanpa jitter
+   * Update pelacakan kamera: Terkunci langsung (Coupled Integer Lock)
+   * Mengeliminasi desinkronisasi fasa pecahan subpixel secara total.
+   * Karakter berada stabil di tengah layar tanpa jitter, tanpa getaran liar, dan zero motion sickness.
    */
   public update(targetX: number, targetY: number, _deltaTime: number = 0.016): void {
-    const desiredX = targetX - this.viewportWidth / 2;
-    const desiredY = targetY - this.viewportHeight / 2;
+    const halfViewW = Math.floor(this.viewportWidth / 2);
+    const halfViewH = Math.floor(this.viewportHeight / 2);
+
+    const pIntX = Math.floor(targetX);
+    const pIntY = Math.floor(targetY);
+
+    const desiredX = pIntX - halfViewW;
+    const desiredY = pIntY - halfViewH;
 
     if (this.worldWidth > this.viewportWidth) {
       this.x = Math.max(0, Math.min(desiredX, this.worldWidth - this.viewportWidth));
     } else {
-      this.x = (this.worldWidth - this.viewportWidth) / 2;
+      this.x = Math.floor((this.worldWidth - this.viewportWidth) / 2);
     }
 
     if (this.worldHeight > this.viewportHeight) {
       this.y = Math.max(0, Math.min(desiredY, this.worldHeight - this.viewportHeight));
     } else {
-      this.y = (this.worldHeight - this.viewportHeight) / 2;
+      this.y = Math.floor((this.worldHeight - this.viewportHeight) / 2);
     }
   }
 

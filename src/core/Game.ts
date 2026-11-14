@@ -2076,8 +2076,11 @@ export class Game {
     const baseScale = Math.max(1, Math.round(cssHeight / 360));
     this.scale = Math.max(0.75, baseScale * zoomMultiplier);
 
-    this.virtualWidth = Math.ceil(cssWidth / this.scale);
-    this.virtualHeight = Math.ceil(cssHeight / this.scale);
+    // Pastikan virtualWidth dan virtualHeight SELALU genap murni untuk mencegah jitter pecahan .5
+    const rawVW = Math.ceil(cssWidth / this.scale);
+    const rawVH = Math.ceil(cssHeight / this.scale);
+    this.virtualWidth = Math.floor(rawVW / 2) * 2;
+    this.virtualHeight = Math.floor(rawVH / 2) * 2;
 
     this.camera.resize(this.virtualWidth, this.virtualHeight);
   }
@@ -3556,9 +3559,9 @@ export class Game {
     // 11. Update Auth & Cloud Auto-Save
     this.authUI.update(deltaTime);
 
-    // 12. Update Camera to follow player with smooth interpolation
-    const curPlayerCenterX = this.player.x + this.player.width / 2;
-    const curPlayerCenterY = this.player.y + this.player.height / 2;
+    // 12. Update Camera with Coupled Integer Locking (Zero-Jitter & Zero-Motion Sickness)
+    const curPlayerCenterX = Math.floor(this.player.x) + Math.floor(this.player.width / 2);
+    const curPlayerCenterY = Math.floor(this.player.y) + Math.floor(this.player.height / 2);
     this.camera.update(curPlayerCenterX, curPlayerCenterY, deltaTime);
 
     // 13. Update HUD Coordinates & Player Health/Mana Bar
