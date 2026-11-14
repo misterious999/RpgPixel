@@ -42,6 +42,10 @@ import { Pet } from '../systems/TamingSystem.ts';
 import { TitleSystem } from '../systems/TitleSystem.ts';
 import { BankSystem } from '../systems/BankSystem.ts';
 import { MarketSystem } from '../systems/MarketSystem.ts';
+import { LifeSkillSystem } from '../systems/LifeSkillSystem.ts';
+import { WaystoneSystem } from '../systems/WaystoneSystem.ts';
+import { AchievementSystem } from '../systems/AchievementSystem.ts';
+import { GuildMailboxSystem } from '../systems/GuildMailboxSystem.ts';
 import { LeaderboardUI } from '../ui/LeaderboardUI.ts';
 import { CanvasText } from '../utils/CanvasText.ts';
 
@@ -129,6 +133,10 @@ export class Game {
   private titleSystem: TitleSystem = new TitleSystem();
   public bankSystem: BankSystem = new BankSystem();
   public marketSystem: MarketSystem = new MarketSystem();
+  public lifeSkillSystem: LifeSkillSystem = LifeSkillSystem.getInstance();
+  public waystoneSystem: WaystoneSystem = WaystoneSystem.getInstance();
+  public achievementSystem: AchievementSystem = AchievementSystem.getInstance();
+  public guildMailboxSystem: GuildMailboxSystem = GuildMailboxSystem.getInstance();
   private bankInterestTimer: number = 0;
   private leaderboardUI: LeaderboardUI = new LeaderboardUI();
 
@@ -248,6 +256,23 @@ export class Game {
     this.quickPotionUI = new QuickPotionUI(this.player, this.floatingText);
     this.atmosphereEngine = new AtmosphereEngine();
     this.buildingInteriors = new BuildingInteriors();
+
+    // Hook Life Skills, Waystones, and Achievements
+    this.lifeSkillSystem.onCatchFish = () => this.achievementSystem.onFishCatch(this.player);
+    this.lifeSkillSystem.onHarvestWheat = () => this.achievementSystem.onHarvestWheat(this.player);
+    this.lifeSkillSystem.onMineOre = () => this.achievementSystem.onMineOre(this.player);
+    this.lifeSkillSystem.onMillFlour = () => this.achievementSystem.onMillFlour(this.player);
+    this.cookingSystem.onCookSuccess = () => this.achievementSystem.onCook(this.player);
+    this.waystoneSystem.onWaystoneUnlocked = () => {
+      const count = this.waystoneSystem.waystones.filter((w) => w.isUnlocked).length;
+      this.achievementSystem.checkWaystones(count, this.player);
+    };
+    this.waystoneSystem.onTeleport = (tx, ty, wsName) => {
+      this.player.x = tx;
+      this.player.y = ty;
+      this.triggerMapTransition(wsName, 'Teleportasi Kilat Berhasil');
+      this.floatingText.spawn(tx, ty - 24, `⚡ Tiba di ${wsName}!`, '#38bdf8', 2.5);
+    };
 
     // Hook Anime Skill Invocation Banner & Camera Screen Shake
     this.skillBarUI.onSkillCast = (skill) => {
@@ -438,6 +463,7 @@ export class Game {
 
       // 0.1 Bank Royal Val Modal (Pertukaran, Tabungan & Bunga)
       if (this.bankSystem.handleTouch(touchX, touchY, this.player, this.floatingText)) {
+        this.achievementSystem.checkBankVal(this.player.bankSavings || 0, this.player);
         return true;
       }
 
@@ -452,6 +478,7 @@ export class Game {
           (petType) => {
             this.pet = new Pet(petType, this.player.x + 20, this.player.y);
             this.titleSystem.unlockTitle('BEAST_TAMER', this.player, this.floatingText);
+            this.achievementSystem.onTamePet(this.player);
             AudioEngine.playLevelUp();
             this.saveSessionSnapshot();
           },
@@ -493,7 +520,7 @@ export class Game {
         return true;
       }
 
-      // Gelar & Achievement Button (👑)
+      // Gelar Button (👑)
       const titleBtn = { x: this.screenWidth - 128, y: 10, size: 34 };
       if (
         touchX >= titleBtn.x &&
@@ -502,6 +529,18 @@ export class Game {
         touchY <= titleBtn.y + titleBtn.size
       ) {
         this.titleSystem.open(this.player);
+        return true;
+      }
+
+      // Achievement Button (🏆)
+      const achBtn = { x: this.screenWidth - 212, y: 10, size: 34 };
+      if (
+        touchX >= achBtn.x &&
+        touchX <= achBtn.x + achBtn.size &&
+        touchY >= achBtn.y &&
+        touchY <= achBtn.y + achBtn.size
+      ) {
+        this.achievementSystem.openModal();
         return true;
       }
 
@@ -925,23 +964,8 @@ export class Game {
       ])
     );
 
-    // 2. World Items
-    const scatterOffsets = [
-      { dx: -2, dy: -2, item: 'MAGIC_FLOWER', count: 2 },
-      { dx: 2, dy: -1, item: 'WOOD_LOG', count: 3 },
-      { dx: -3, dy: 2, item: 'WOOD_LOG', count: 2 },
-      { dx: 3, dy: 1, item: 'BRONZE_COIN', count: 2 },
-      { dx: -1, dy: 3, item: 'HEALTH_POTION', count: 1 },
-      { dx: 4, dy: -3, item: 'MAGIC_FLOWER', count: 1 },
-      { dx: -4, dy: -2, item: 'BRONZE_COIN', count: 3 },
-      { dx: 1, dy: -4, item: 'WOOD_LOG', count: 4 }
-    ];
-
-    for (const s of scatterOffsets) {
-      this.worldItems.push(
-        new WorldItem(50 * ts + s.dx * ts + 16, 50 * ts + s.dy * ts + 16, s.item, s.count)
-      );
-    }
+    // 2. World Items (Area Alun-alun & Guild bersih tanpa item tercecer)
+    this.worldItems = [];
 
     // 3. Overworld Wild Monsters
     // Pedesaan Oakhaven (x=39..61, y=41..59) bebas monster sepenuhnya!
@@ -1587,6 +1611,9 @@ export class Game {
       this.cookingSystem.isOpen ||
       this.titleSystem.isOpen ||
       this.leaderboardUI.isOpen ||
+      this.waystoneSystem.isOpen ||
+      this.achievementSystem.isOpen ||
+      this.guildMailboxSystem.isOpen ||
       isCompanionModalOpen
     );
   }
@@ -1880,6 +1907,7 @@ export class Game {
       // Buka akses tangga menuju Lantai 2
       this.dungeonMap.isFloor2Unlocked = true;
       this.titleSystem.unlockTitle('CRYPT_CONQUEROR', this.player, this.floatingText);
+      this.achievementSystem.onBossSlimeKill(this.player);
       this.floatingText.spawn(monster.x + 16, monster.y - 32, '🏆 RAJA SLIME DIKALAHKAN!!', '#facc15', 3.5);
       this.floatingText.spawn(monster.x + 16, monster.y - 48, '🚪 TANGGA KE LANTAI 2 TERBUKA!', '#c084fc', 4.0);
     }
@@ -1903,6 +1931,7 @@ export class Game {
 
       this.dungeonFloor2.isFloor3Unlocked = true;
       this.titleSystem.unlockTitle('TITAN_BREAKER', this.player, this.floatingText);
+      this.achievementSystem.onBossTitanKill(this.player);
       this.floatingText.spawn(monster.x + 16, monster.y - 32, '⚡ TITAN ABISAL DITUMBANGKAN!!', '#ef4444', 4.0);
       this.floatingText.spawn(monster.x + 16, monster.y - 48, '🔥 PORTAL KE LANTAI 3 TERBUKA!', '#f97316', 4.0);
     }
@@ -1933,6 +1962,7 @@ export class Game {
       targetItems.push(new WorldItem(monster.x + 36, monster.y + 16, 'MANA_POTION', 3));
 
       this.titleSystem.unlockTitle('DRAGON_SLAYER', this.player, this.floatingText);
+      this.achievementSystem.onBossDragonKill(this.player);
       this.floatingText.spawn(monster.x + 20, monster.y - 32, '👑 RAJA NAGA IGNIS DIKALAHKAN!!', '#facc15', 5.0);
       this.floatingText.spawn(monster.x + 20, monster.y - 50, '🏆 SELURUH LANTAI DUNGEON TELAH DITAKLUKKAN!', '#f97316', 5.5);
     }
@@ -2007,6 +2037,9 @@ export class Game {
     if (this.player.level >= 22) {
       this.titleSystem.unlockTitle('GUILD_LEGEND', this.player, this.floatingText);
     }
+
+    // Achievement monster kill tracking
+    this.achievementSystem.onMonsterKill(this.player);
 
     if (leveledUp) {
       AudioEngine.playLevelUp();
@@ -2103,14 +2136,17 @@ export class Game {
       }
     }
 
-    // Update Atmosphere Engine (Drifting Petals, Forest Mana Spores, Abyssal Motes)
+    // Update Atmosphere Engine (Drifting Petals, Forest Mana Spores, Abyssal Motes, Fireflies, Wind Leaves, Embers)
+    const curAtmosphereRegion = RegionManager.getInstance().currentRegion;
     this.atmosphereEngine.update(
       deltaTime,
       this.camera.x,
       this.camera.y,
       this.virtualWidth,
       this.virtualHeight,
-      this.currentMap === 'DUNGEON'
+      this.currentMap !== 'OVERWORLD' && !this.isCurrentMapInterior(),
+      curAtmosphereRegion ? curAtmosphereRegion.id : undefined,
+      this.timeWeatherEngine.isNight()
     );
 
     if (this.mapTransitionTimer > 0) {
@@ -2141,6 +2177,11 @@ export class Game {
     const pTileX = Math.floor(this.player.x / CONSTANTS.TILE_SIZE);
     const pTileY = Math.floor(this.player.y / CONSTANTS.TILE_SIZE);
     RegionManager.getInstance().update(deltaTime, this.currentMap, pTileX, pTileY);
+
+    // Update Life Skills, Waystones, & Achievements
+    this.lifeSkillSystem.update(deltaTime, this.player, this.currentMap);
+    this.waystoneSystem.update(deltaTime, this.player, this.currentMap);
+    this.achievementSystem.update(deltaTime);
 
     // 3. Update Player & Collisions
     const playerCenterX = this.player.x + this.player.width / 2;
@@ -2315,6 +2356,40 @@ export class Game {
 
     // --- OVERWORLD SPECIFIC UPDATES ---
     if (this.currentMap === 'OVERWORLD' && !this.isAnyModalOpen()) {
+      // 1. Kotak Pos Serikat Petualang Oakhaven
+      if (this.guildMailboxSystem.isNearMailbox(this.player.x, this.player.y, this.currentMap)) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.input.consumeAction();
+          this.guildMailboxSystem.openModal(this.player);
+          return;
+        }
+      }
+
+      // 2. Prasasti Kuno (Ancient Waystone Fast Travel)
+      const nearWaystone = this.waystoneSystem.getNearbyWaystone(this.player.x, this.player.y, this.currentMap);
+      if (nearWaystone && (this.input.isActionJustPressed || this.input.state.isAction)) {
+        this.input.consumeAction();
+        this.waystoneSystem.openModal();
+        return;
+      }
+
+      // 3. Sumber Daya Panen & Tambang (Gandum Ambervale, Gilingan Kincir, Bijih Stonewatch)
+      const nearHarvestNode = this.lifeSkillSystem.getNearbyHarvestNode(this.player.x, this.player.y, this.currentMap);
+      if (nearHarvestNode && (this.input.isActionJustPressed || this.input.state.isAction)) {
+        this.input.consumeAction();
+        this.lifeSkillSystem.interactNode(nearHarvestNode, this.player);
+        return;
+      }
+
+      // 4. Memancing di Danau Azure / Dusun Tirta Kencana
+      if (this.lifeSkillSystem.isNearFishingSpot(this.player.x, this.player.y, this.currentMap)) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.input.consumeAction();
+          this.lifeSkillSystem.startFishing(this.player);
+          return;
+        }
+      }
+
       // Papan Kehormatan Guild (Leaderboard Notice Board) at (53, 48)
       const boardX = 53 * CONSTANTS.TILE_SIZE + 16;
       const boardY = 48 * CONSTANTS.TILE_SIZE + 16;
@@ -3575,6 +3650,15 @@ export class Game {
       this.renderNoticeBoard(ctx, 53 * CONSTANTS.TILE_SIZE, 48 * CONSTANTS.TILE_SIZE, playerCenterX, playerCenterY);
       this.renderPetPen(ctx, 54 * CONSTANTS.TILE_SIZE, 52 * CONSTANTS.TILE_SIZE, playerCenterX, playerCenterY);
 
+      // Render Kotak Pos Serikat Petualang
+      this.guildMailboxSystem.render(ctx, this.currentMap);
+
+      // Render Ancient Waystones (Prasasti Teleportasi Kuno 5 Desa)
+      this.waystoneSystem.render(ctx, this.currentMap);
+
+      // Render Life Skills (Gandum Ambervale, Gilingan Kincir, Batu Bijih Stonewatch)
+      this.lifeSkillSystem.render(ctx, this.currentMap);
+
       // Render Pintu Masuk Interior Gedung (Guild, Bengkel, Apotek, Pondok Eldoria, Barak Stonewatch)
       this.buildingInteriors.renderOverworldDoorMarkers(ctx, playerCenterX, playerCenterY, this.isAnyModalOpen());
 
@@ -3614,6 +3698,18 @@ export class Game {
 
       // 6. Render Player
       this.player.render(ctx);
+
+      // Render Tali Senar Pancing
+      if (this.lifeSkillSystem.isFishing) {
+        ctx.save();
+        ctx.strokeStyle = '#f8fafc';
+        ctx.lineWidth = 1;
+        ctx.beginPath();
+        ctx.moveTo(this.player.x + 16, this.player.y + 14);
+        ctx.lineTo((this.lifeSkillSystem as any).bobberPos.x, (this.lifeSkillSystem as any).bobberPos.y);
+        ctx.stroke();
+        ctx.restore();
+      }
 
       // 6.1 Render Village Foreground Occlusion Layer (Pillars, Posts, Roofs, Archways & Overhead Structures)
       this.villageManager.renderForegroundEnvironment(ctx, this.player.x, this.player.y, this.player.width, this.player.height);
@@ -4026,6 +4122,9 @@ export class Game {
       // 10.35 Cinematic Territory Discovery Banner (Notifikasi Masuk Wilayah)
       RegionManager.getInstance().renderTerritoryBanner(ctx, screenWidth, screenHeight);
 
+      // 10.38 Cinematic Achievement Banner (Piala Emas Pop-up)
+      this.achievementSystem.renderBanner(ctx, screenWidth);
+
       // 10.4 Top HUD: Gelar & Title Button (👑)
       const titleBtnX = screenWidth - 128;
       const titleBtnY = 10;
@@ -4045,6 +4144,27 @@ export class Game {
       ctx.textAlign = 'center';
       ctx.textBaseline = 'middle';
       ctx.fillText('👑', titleBtnX + titleBtnSize / 2, titleBtnY + titleBtnSize / 2);
+      ctx.restore();
+
+      // 10.45 Top HUD: Achievement Button (🏆)
+      const achBtnX = screenWidth - 212;
+      const achBtnY = 10;
+      const achBtnSize = 34;
+
+      ctx.save();
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.85)';
+      ctx.beginPath();
+      ctx.arc(achBtnX + achBtnSize / 2, achBtnY + achBtnSize / 2, achBtnSize / 2, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = '#facc15';
+      ctx.lineWidth = 1.5;
+      ctx.stroke();
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '16px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🏆', achBtnX + achBtnSize / 2, achBtnY + achBtnSize / 2);
       ctx.restore();
 
       // 10.5 Top HUD: Fullscreen Icon (⛶)
@@ -4142,6 +4262,36 @@ export class Game {
               this.isStonewatchDungeonUnlocked ? '#f59e0b' : '#ef4444',
               this.isStonewatchDungeonUnlocked ? '#fde68a' : '#fca5a5'
             );
+          } else if (this.guildMailboxSystem.isNearMailbox(this.player.x, this.player.y, this.currentMap)) {
+            const hasReward = this.guildMailboxSystem.canClaimToday();
+            this.renderBottomActionPrompt(
+              ctx,
+              hasReward ? '[A] Buka Kotak Pos (Ada Ransum Harian!) 📬' : '[A] Buka Kotak Pos Serikat 📬',
+              hasReward ? '#facc15' : '#38bdf8',
+              hasReward ? '#fef08a' : '#93c5fd'
+            );
+          } else if (this.waystoneSystem.getNearbyWaystone(this.player.x, this.player.y, this.currentMap)) {
+            const ws = this.waystoneSystem.getNearbyWaystone(this.player.x, this.player.y, this.currentMap)!;
+            this.renderBottomActionPrompt(ctx, `[A] Prasasti Teleportasi (${ws.name}) ⚡`, ws.color, '#f8fafc');
+          } else if (this.lifeSkillSystem.getNearbyHarvestNode(this.player.x, this.player.y, this.currentMap)) {
+            const node = this.lifeSkillSystem.getNearbyHarvestNode(this.player.x, this.player.y, this.currentMap)!;
+            if (node.type === 'WHEAT') {
+              this.renderBottomActionPrompt(ctx, node.respawnTimer <= 0 ? '[A] Sabit Gandum Emas 🌾' : `[A] Gandum Bertunas (${Math.ceil(node.respawnTimer)}d)`, '#facc15', '#fef08a');
+            } else if (node.type === 'ORE') {
+              this.renderBottomActionPrompt(ctx, node.respawnTimer <= 0 ? '[A] Tambang Bijih Besi ⛏️' : `[A] Batuan Membeku (${Math.ceil(node.respawnTimer)}d)`, '#38bdf8', '#93c5fd');
+            } else if (node.type === 'MILL') {
+              this.renderBottomActionPrompt(ctx, '[A] Giling 2 Gandum jadi Tepung ⚙️', '#f8fafc', '#facc15');
+            }
+          } else if (this.lifeSkillSystem.isNearFishingSpot(this.player.x, this.player.y, this.currentMap)) {
+            if (this.lifeSkillSystem.isFishing) {
+              if (this.lifeSkillSystem.hasBite) {
+                this.renderBottomActionPrompt(ctx, '🎣 [A] STRIKE! TARIK KAIL SEKARANG! 🐟', '#ef4444', '#fef08a');
+              } else {
+                this.renderBottomActionPrompt(ctx, '🎣 [A] Sedang Memancing... (Tarik Batal)', '#38bdf8', '#93c5fd');
+              }
+            } else {
+              this.renderBottomActionPrompt(ctx, '🎣 [A] Lempar Kail Pancing ke Danau', '#06b6d4', '#67e8f9');
+            }
           }
         } else if (this.isCurrentMapInterior()) {
           const interiorId = this.getInteriorIdFromCurrentMap();

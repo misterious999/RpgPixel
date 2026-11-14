@@ -502,5 +502,210 @@ export const ITEM_DEFINITIONS: Record<string, ItemDefinition> = {
       ctx.fillStyle = '#0284c7';
       ctx.fillRect(x + size * 0.44, y + size * 0.4, size * 0.12, size * 0.2);
     }
+  },
+  BLUE_CARP: {
+    id: 'BLUE_CARP',
+    name: 'Ikan Karper Azure',
+    description: 'Ikan air tawar bersisik biru berkilau hasil pancingan dari Danau Azure. Pulihkan 25 HP.',
+    category: 'consumable',
+    maxStack: 20,
+    effectValue: 25,
+    color: '#0284c7',
+    renderIcon: (ctx, x, y, size) => {
+      // Fish body
+      ctx.fillStyle = '#0284c7';
+      ctx.beginPath();
+      ctx.ellipse(x + size * 0.48, y + size * 0.5, size * 0.3, size * 0.18, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+      // Tail fin
+      ctx.fillStyle = '#38bdf8';
+      ctx.beginPath();
+      ctx.moveTo(x + size * 0.72, y + size * 0.45);
+      ctx.lineTo(x + size * 0.88, y + size * 0.3);
+      ctx.lineTo(x + size * 0.88, y + size * 0.65);
+      ctx.closePath();
+      ctx.fill();
+      // Belly highlight
+      ctx.fillStyle = '#bae6fd';
+      ctx.beginPath();
+      ctx.ellipse(x + size * 0.46, y + size * 0.56, size * 0.2, size * 0.08, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+      // Fish eye
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.28, y + size * 0.45, size * 0.05, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#0f172a';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.27, y + size * 0.45, size * 0.025, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  },
+  GOLDEN_KOI: {
+    id: 'GOLDEN_KOI',
+    name: 'Ikan Koi Emas',
+    description: 'Ikan hias langka legendaris pembawa keberuntungan dari Danau Azure. Bernilai tinggi saat ditukar atau dijual.',
+    category: 'treasure',
+    maxStack: 10,
+    color: '#facc15',
+    renderIcon: (ctx, x, y, size) => {
+      // Golden body
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.ellipse(x + size * 0.48, y + size * 0.5, size * 0.3, size * 0.18, -0.2, 0, Math.PI * 2);
+      ctx.fill();
+      // Golden tail fin
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath();
+      ctx.moveTo(x + size * 0.72, y + size * 0.45);
+      ctx.lineTo(x + size * 0.88, y + size * 0.3);
+      ctx.lineTo(x + size * 0.88, y + size * 0.65);
+      ctx.closePath();
+      ctx.fill();
+      // Red scales pattern
+      ctx.fillStyle = '#dc2626';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.45, y + size * 0.46, size * 0.08, 0, Math.PI * 2);
+      ctx.fill();
+      // Golden Eye
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.28, y + size * 0.45, size * 0.05, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#b45309';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.27, y + size * 0.45, size * 0.025, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  },
+  LAKE_SHRIMP: {
+    id: 'LAKE_SHRIMP',
+    name: 'Udang Danau Segar',
+    description: 'Udang manis segar hasil tangkapan nelayan Tirta Kencana. Pulihkan 15 HP.',
+    category: 'consumable',
+    maxStack: 30,
+    effectValue: 15,
+    color: '#fb923c',
+    renderIcon: (ctx, x, y, size) => {
+      ctx.strokeStyle = '#f97316';
+      ctx.lineWidth = size * 0.14;
+      ctx.beginPath();
+      ctx.arc(x + size * 0.5, y + size * 0.5, size * 0.25, 0, Math.PI * 1.4, false);
+      ctx.stroke();
+      ctx.fillStyle = '#fed7aa';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.35, y + size * 0.35, size * 0.06, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  },
+  TREASURE_SHELL: {
+    id: 'TREASURE_SHELL',
+    name: 'Kerang Mutiara Karang',
+    description: 'Kerang mutiara purba dari dasar Danau Azure. Mengandung butiran mutiara berharga 50 Val.',
+    category: 'treasure',
+    maxStack: 20,
+    color: '#e0e7ff',
+    renderIcon: (ctx, x, y, size) => {
+      ctx.fillStyle = '#c7d2fe';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.5, y + size * 0.6, size * 0.32, Math.PI, 0, false);
+      ctx.fill();
+      ctx.strokeStyle = '#818cf8';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      // Pearl inside
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.5, y + size * 0.56, size * 0.1, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  },
+  WHEAT_BUNDLE: {
+    id: 'WHEAT_BUNDLE',
+    name: 'Seikat Gandum Emas',
+    description: 'Bulir-bulir gandum emas berkualitas tinggi hasil panen ladang Dusun Ambervale. Bahan utama tepung.',
+    category: 'material',
+    maxStack: 50,
+    color: '#eab308',
+    renderIcon: (ctx, x, y, size) => {
+      // Stems
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 1.6;
+      ctx.beginPath();
+      ctx.moveTo(x + size * 0.3, y + size * 0.8);
+      ctx.lineTo(x + size * 0.5, y + size * 0.25);
+      ctx.moveTo(x + size * 0.5, y + size * 0.85);
+      ctx.lineTo(x + size * 0.5, y + size * 0.2);
+      ctx.moveTo(x + size * 0.7, y + size * 0.8);
+      ctx.lineTo(x + size * 0.5, y + size * 0.25);
+      ctx.stroke();
+      // Grain heads
+      ctx.fillStyle = '#fde047';
+      ctx.beginPath();
+      ctx.ellipse(x + size * 0.38, y + size * 0.32, size * 0.08, size * 0.14, -0.3, 0, Math.PI * 2);
+      ctx.ellipse(x + size * 0.5, y + size * 0.24, size * 0.08, size * 0.14, 0, 0, Math.PI * 2);
+      ctx.ellipse(x + size * 0.62, y + size * 0.32, size * 0.08, size * 0.14, 0.3, 0, Math.PI * 2);
+      ctx.fill();
+      // Red tie ribbon
+      ctx.fillStyle = '#ef4444';
+      ctx.fillRect(x + size * 0.4, y + size * 0.6, size * 0.2, size * 0.08);
+    }
+  },
+  FLOUR_BAG: {
+    id: 'FLOUR_BAG',
+    name: 'Kantong Tepung Gandum',
+    description: 'Tepung gandum halus putih hasil gilingan kincir angin Dusun Ambervale. Bahan baku roti dan kue.',
+    category: 'material',
+    maxStack: 30,
+    color: '#f8fafc',
+    renderIcon: (ctx, x, y, size) => {
+      // Sack body
+      ctx.fillStyle = '#fef08a';
+      ctx.beginPath();
+      ctx.roundRect(x + size * 0.26, y + size * 0.32, size * 0.48, size * 0.52, 4);
+      ctx.fill();
+      ctx.strokeStyle = '#ca8a04';
+      ctx.lineWidth = 1;
+      ctx.stroke();
+      // Flour spilling
+      ctx.fillStyle = '#ffffff';
+      ctx.beginPath();
+      ctx.arc(x + size * 0.5, y + size * 0.3, size * 0.16, Math.PI, 0, false);
+      ctx.fill();
+      // Wheat emblem on bag
+      ctx.fillStyle = '#b45309';
+      ctx.font = `bold ${Math.floor(size * 0.28)}px sans-serif`;
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('🌾', x + size * 0.5, y + size * 0.6);
+    }
+  },
+  GOLDEN_BREAD: {
+    id: 'GOLDEN_BREAD',
+    name: 'Roti Gandum Emas Kerajaan',
+    description: 'Roti hangat harum dipanggang dengan tepung Ambervale dan madu lebah. Pulihkan 75 HP dan 40 MP!',
+    category: 'consumable',
+    maxStack: 20,
+    effectValue: 75,
+    color: '#d97706',
+    renderIcon: (ctx, x, y, size) => {
+      // Loaf body
+      ctx.fillStyle = '#b45309';
+      ctx.beginPath();
+      ctx.ellipse(x + size * 0.5, y + size * 0.54, size * 0.36, size * 0.24, 0, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.fillStyle = '#f59e0b';
+      ctx.beginPath();
+      ctx.ellipse(x + size * 0.5, y + size * 0.5, size * 0.32, size * 0.18, 0, 0, Math.PI * 2);
+      ctx.fill();
+      // Crust cuts
+      ctx.strokeStyle = '#78350f';
+      ctx.lineWidth = 1.4;
+      ctx.beginPath();
+      ctx.moveTo(x + size * 0.35, y + size * 0.4); ctx.lineTo(x + size * 0.42, y + size * 0.6);
+      ctx.moveTo(x + size * 0.48, y + size * 0.38); ctx.lineTo(x + size * 0.54, y + size * 0.62);
+      ctx.moveTo(x + size * 0.60, y + size * 0.4); ctx.lineTo(x + size * 0.66, y + size * 0.6);
+      ctx.stroke();
+    }
   }
 };

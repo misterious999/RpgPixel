@@ -42,6 +42,28 @@ export const COOKING_RECIPES: CookingRecipe[] = [
       { itemId: 'MAGIC_FLOWER', count: 2 },
       { itemId: 'WOLF_MEAT', count: 1 }
     ]
+  },
+  {
+    id: 'GOLDEN_BREAD_RECIPE',
+    name: 'Roti Gandum Emas Ambervale',
+    resultItemId: 'GOLDEN_BREAD',
+    description: 'Roti hangat harum renyah dipanggang dengan tepung gandum murni Ambervale.',
+    buffDescription: 'Pulihkan 75 HP & 40 MP seketika + Stamina Penuh',
+    ingredients: [
+      { itemId: 'FLOUR_BAG', count: 1 },
+      { itemId: 'SLIME_JELLY', count: 1 }
+    ]
+  },
+  {
+    id: 'LAKE_CARP_SOUP_RECIPE',
+    name: 'Sup Ikan Karper Danau Azure',
+    resultItemId: 'MYSTIC_SOUP',
+    description: 'Sup kaldu ikan segar Danau Azure kaya omega dan rempah herbal pemulih vitalitas.',
+    buffDescription: '+25% Kecepatan Gerak & +25% Bonus EXP (3 menit)',
+    ingredients: [
+      { itemId: 'BLUE_CARP', count: 1 },
+      { itemId: 'MAGIC_FLOWER', count: 1 }
+    ]
   }
 ];
 
