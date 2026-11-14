@@ -455,6 +455,60 @@ export class VillageManager {
         greetingText: 'Selamat datang di Dusun Ambervale! Dengarlah derit kincir angin yang berputar menenangkan!',
         loreText: 'Ladang gandum emas di lembah ini digiling di kincir angin kami menjadi tepung terbaik. Dari sinilah pasokan roti hangat untuk para prajurit dan petualang Serikat berasal!',
         actionPrompt: '🌾 [A] Sapa Pak Bram'
+      },
+
+      // --- NPC DUSUN PEMBURU MISTWOOD RIDGE (LERENG BUKIT KABUT BARAT) ---
+      {
+        id: 'valerie_mistwood',
+        name: 'Valerie sang Pemburu',
+        title: 'Kapten Penjaga Dusun Mistwood',
+        roleType: 'QUEST',
+        questId: 'Q_MISTWOOD_HUNT',
+        x: 18 * ts + 12,
+        y: 42 * ts + 8,
+        width: 32,
+        height: 32,
+        hairColor: '#b45309',
+        outfitColor: '#166534',
+        accentColor: '#4ade80',
+        avatarIcon: '🏹',
+        greetingText: 'Salam dari Mistwood Ridge! Waspadalah melangkah di lereng berkabut tebal.',
+        loreText: 'Dusun lereng bukit kami dipagari pohon cemara kabut dan dihuni para pemanah ulung. Namun baru-baru ini serigala buas dan slime liar bermunculan mengancam perbatasan. Serikat petualang butuh bantuanmu!',
+        actionPrompt: '🏹 [A] Misi Dusun Mistwood'
+      },
+      {
+        id: 'tobias_mistwood',
+        name: 'Tobias si Pengrajin Busur',
+        title: 'Pemahat Kayu & Busur Dusun',
+        roleType: 'AMBIENT',
+        x: 22 * ts + 8,
+        y: 41 * ts + 6,
+        width: 32,
+        height: 32,
+        hairColor: '#78350f',
+        outfitColor: '#713f12',
+        accentColor: '#facc15',
+        avatarIcon: '🪓',
+        greetingText: 'Kayu cemara Mistwood sangat lentur dan tidak mudah patah saat ditarik kencang!',
+        loreText: 'Busur tempur terbaik ditempa dari kayu teras pohon tua di bukit barat ini. Pastikan tali busurmu selalu kering dari embun kabut.',
+        actionPrompt: '🪓 [A] Sapa Tobias'
+      },
+      {
+        id: 'elina_mistwood',
+        name: 'Elina si Pemetik Herbal',
+        title: 'Pencari Jamur Lereng Kabut',
+        roleType: 'AMBIENT',
+        x: 15 * ts + 8,
+        y: 44 * ts + 6,
+        width: 32,
+        height: 32,
+        hairColor: '#a7f3d0',
+        outfitColor: '#047857',
+        accentColor: '#34d399',
+        avatarIcon: '🍄',
+        greetingText: 'Embun pagi di Mistwood Ridge selalu melahirkan jamur bercahaya yang indah!',
+        loreText: 'Udara sejuk berhawa kabut ini sangat cocok untuk tetumbuhan magis. Ramuan pemulih tenaga para petualang sering menggunakan sari tumbuhan langka dari bukit ini.',
+        actionPrompt: '🍄 [A] Sapa Elina'
       }
     ];
   }
@@ -1021,7 +1075,10 @@ export class VillageManager {
     // 13. ARSITEKTUR DUSUN PERTANIAN AMBERVALE (Timur Laut - Lembah Gandum)
     this.drawAmbervaleFarmstead(ctx);
 
-    // 14. RENDER SELURUH NPC DESA (Quest, Ambient, & Riddle)
+    // 14. ARSITEKTUR DUSUN PEMBURU MISTWOOD RIDGE (Barat Daya - Lereng Bukit Kabut)
+    this.drawMistwoodHunterRidge(ctx);
+
+    // 15. RENDER SELURUH NPC DESA (Quest, Ambient, & Riddle)
     for (const npc of this.npcs) {
       if (npc.isInsideBuilding) continue;
       this.renderNPC(ctx, npc, playerCenterX, playerCenterY, isSuppressed);
@@ -1150,7 +1207,8 @@ export class VillageManager {
       { x: 19 * ts, y: 15 * ts, w: 74, h: 56, r: '#047857', wall: '#065f46', name: 'Paviliun Roh Eldoria' },
       { x: 82.5 * ts, y: 61 * ts, w: 80, h: 58, r: '#1e1b4b', wall: '#334155', name: 'Benteng Tambang Stonewatch' },
       { x: 31 * ts, y: 70 * ts, w: 76, h: 58, r: '#0369a1', wall: '#78350f', name: 'Pondok Nelayan Tirta Kencana' },
-      { x: 77.5 * ts, y: 26 * ts, w: 78, h: 60, r: '#b45309', wall: '#ca8a04', name: 'Lumbung Gandum Ambervale' }
+      { x: 77.5 * ts, y: 26 * ts, w: 78, h: 60, r: '#b45309', wall: '#ca8a04', name: 'Lumbung Gandum Ambervale' },
+      { x: 18 * ts, y: 39 * ts, w: 76, h: 58, r: '#064e3b', wall: '#78350f', name: 'Pondok Pemburu Mistwood' }
     ];
     for (const c of cottages) {
       if (this.isPlayerBehindStructure(playerX, playerW, playerFeetY, c.x, c.y, c.w, c.h)) {
@@ -1179,7 +1237,9 @@ export class VillageManager {
       { x: 30.5 * ts, y: 73 * ts },
       { x: 36.5 * ts, y: 73.5 * ts },
       { x: 73 * ts, y: 26 * ts },
-      { x: 81 * ts, y: 26 * ts }
+      { x: 81 * ts, y: 26 * ts },
+      { x: 17 * ts, y: 43 * ts },
+      { x: 23 * ts, y: 43 * ts }
     ];
     for (const l of streetlamps) {
       if (
@@ -1198,7 +1258,8 @@ export class VillageManager {
       { x: 58 * ts, y: 49 * ts, text: '🎪 Distrik Pasar Raya ➡️ | Tambang Stonewatch ➡️' },
       { x: 50 * ts + 16, y: 44 * ts, text: '⬆️ Goa Kripta Kuno (Dungeon)' },
       { x: 50 * ts + 16, y: 58 * ts, text: '⬇️ Danau Azure | ⬅️ Dusun Nelayan Tirta Kencana' },
-      { x: 70 * ts, y: 43 * ts, text: '⬆️ Dusun Pertanian Ambervale (Kincir Angin)' }
+      { x: 70 * ts, y: 43 * ts, text: '⬆️ Dusun Pertanian Ambervale (Kincir Angin)' },
+      { x: 36 * ts, y: 44 * ts, text: '⬅️ Dusun Pemburu Mistwood Ridge' }
     ];
     for (const s of signposts) {
       if (
@@ -1880,6 +1941,120 @@ export class VillageManager {
 
     // 7. PAPAN PETUNJUK DUSUN
     this.drawSignpost(ctx, 74 * ts, 21 * ts, '🌾 Dusun Pertanian Ambervale');
+  }
+
+  /**
+   * Render Dusun Pemburu Mistwood Ridge (Lereng Bukit Hutan Kabut Barat)
+   * Dilengkapi Pondok Pemburu Kayu Gelap, Sasaran Panahan Jerami (Archery Target),
+   * Rak Busur & Tombak, Api Unggun Batu, Pagar Kayu, & Lentera Jalan.
+   */
+  private drawMistwoodHunterRidge(ctx: CanvasRenderingContext2D): void {
+    const ts = CONSTANTS.TILE_SIZE;
+
+    // 1. PONDOK PEMBURU MISTWOOD (18*ts, 39*ts)
+    this.drawCottage(ctx, 18 * ts, 39 * ts, 76, 58, '#064e3b', '#78350f', 'Pondok Pemburu Mistwood');
+
+    // 2. TARGET SASARAN PANAHAN JERAMI (Archery Target) di 15.5*ts, 41.5*ts
+    const tx = 15.5 * ts;
+    const ty = 41.5 * ts;
+    // Kaki penyangga kayu menyilang (Tripod)
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(tx - 6, ty + 24);
+    ctx.lineTo(tx + 6, ty + 8);
+    ctx.lineTo(tx + 18, ty + 24);
+    ctx.moveTo(tx + 6, ty + 8);
+    ctx.lineTo(tx + 6, ty + 24);
+    ctx.stroke();
+
+    // Papan bundar sasaran (lingkaran konsentris putih, biru, merah, kuning emas)
+    ctx.fillStyle = '#f8fafc';
+    ctx.beginPath();
+    ctx.arc(tx + 6, ty + 8, 12, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 1;
+    ctx.stroke();
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.arc(tx + 6, ty + 8, 9, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#ef4444';
+    ctx.beginPath();
+    ctx.arc(tx + 6, ty + 8, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.arc(tx + 6, ty + 8, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Anak panah tertancap di bullseye
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 1.2;
+    ctx.beginPath();
+    ctx.moveTo(tx + 6, ty + 8);
+    ctx.lineTo(tx + 14, ty + 3);
+    ctx.stroke();
+    ctx.fillStyle = '#f8fafc';
+    ctx.fillRect(tx + 13, ty + 2, 2, 2);
+
+    // 3. API UNGGUN BATU PEMBURU (Campfire) di 20.5*ts, 43*ts
+    const cx = 20.5 * ts;
+    const cy = 43 * ts;
+    // Lingkaran batu kali
+    ctx.fillStyle = '#475569';
+    for (let i = 0; i < 8; i++) {
+      const angle = (i * Math.PI * 2) / 8;
+      ctx.beginPath();
+      ctx.arc(cx + Math.cos(angle) * 8, cy + Math.sin(angle) * 5, 2.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    // Kayu bakar menyilang
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(cx - 5, cy + 3);
+    ctx.lineTo(cx + 5, cy - 3);
+    ctx.moveTo(cx - 5, cy - 3);
+    ctx.lineTo(cx + 5, cy + 3);
+    ctx.stroke();
+
+    // Api berdenyut
+    const fireFlicker = Math.sin(this.animTimer * 8) * 1.5;
+    ctx.fillStyle = '#ea580c';
+    ctx.beginPath();
+    ctx.arc(cx, cy - 2, 5 + fireFlicker * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#facc15';
+    ctx.beginPath();
+    ctx.arc(cx, cy - 2, 2.8, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 4. RAK SENJATA & BUSUR KAYU di 22.5*ts, 41*ts
+    const rx = 22.5 * ts;
+    const ry = 41 * ts;
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(rx, ry + 6, 16, 12);
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 1;
+    ctx.strokeRect(rx, ry + 6, 16, 12);
+    // Busur melengkung digantung
+    ctx.strokeStyle = '#b45309';
+    ctx.lineWidth = 1.6;
+    ctx.beginPath();
+    ctx.arc(rx + 8, ry + 10, 6, Math.PI * 0.3, Math.PI * 0.9);
+    ctx.stroke();
+
+    // 5. LENTERA JALAN MISTWOOD
+    this.drawStreetlamp(ctx, 17 * ts, 43 * ts);
+    this.drawStreetlamp(ctx, 23 * ts, 43 * ts);
+
+    // 6. PAPAN PETUNJUK DUSUN
+    this.drawSignpost(ctx, 24 * ts, 41 * ts, '🏹 Dusun Pemburu Mistwood Ridge');
   }
 
   /**

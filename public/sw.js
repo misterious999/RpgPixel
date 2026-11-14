@@ -1,5 +1,5 @@
-// ServiceWorker Build Version 5 (Dermaga Solid & Pemisahan Tombol Pancing)
-const CACHE_NAME = 'rpg2d-cache-v5';
+// ServiceWorker Build Version 6 (Pedesaan Baru, NPC Quest & Dungeon Tingkat Tinggi)
+const CACHE_NAME = 'rpg2d-cache-v6';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

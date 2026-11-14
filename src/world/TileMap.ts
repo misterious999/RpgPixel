@@ -488,6 +488,33 @@ export class TileMap {
         }
       }
     }
+
+    // --- 7. WILAYAH DUSUN PEMBURU MISTWOOD RIDGE (LERENG BUKIT KABUT BARAT: x=14..26, y=38..48) ---
+    for (let my = 38; my <= 48; my++) {
+      for (let mx = 14; mx <= 26; mx++) {
+        if (this.tiles[my] && this.tiles[my][mx] !== undefined) {
+          if (this.tiles[my][mx] !== TileType.WATER) {
+            this.tiles[my][mx] = TileType.GRASS;
+          }
+        }
+      }
+    }
+    // Pelataran Cobblestone Pondok Pemburu Mistwood (x=17..23, y=40..44)
+    for (let my = 40; my <= 44; my++) {
+      for (let mx = 17; mx <= 23; mx++) {
+        if (this.tiles[my] && this.tiles[my][mx] !== undefined) {
+          this.tiles[my][mx] = TileType.COBBLESTONE;
+        }
+      }
+    }
+    // Jalan Setapak Penghubung Oakhaven Barat ke Dusun Mistwood Ridge (x=23..36, y=42..46)
+    for (let mx = 23; mx <= 36; mx++) {
+      for (let my = 42; my <= 43; my++) {
+        if (this.tiles[my] && this.tiles[my][mx] !== undefined && this.tiles[my][mx] !== TileType.WATER) {
+          this.tiles[my][mx] = TileType.DIRT_PATH;
+        }
+      }
+    }
   }
 
   /**
@@ -504,8 +531,10 @@ export class TileMap {
     const inTirtaKencana = tileX >= 26 && tileX <= 42 && tileY >= 68 && tileY <= 80;
     // 5. Dusun Pertanian Ambervale (Lembah Gandum - Timur Laut)
     const inAmbervale = tileX >= 68 && tileX <= 88 && tileY >= 17 && tileY <= 35;
+    // 6. Dusun Pemburu Mistwood Ridge (Lereng Bukit Kabut - Barat)
+    const inMistwood = tileX >= 14 && tileX <= 26 && tileY >= 38 && tileY <= 48;
 
-    return inSerena || inEldoria || inStonewatch || inTirtaKencana || inAmbervale;
+    return inSerena || inEldoria || inStonewatch || inTirtaKencana || inAmbervale || inMistwood;
   }
 
   /**
@@ -535,6 +564,10 @@ export class TileMap {
     // 6. Dusun Pertanian Ambervale (Lembah Gandum Timur Laut)
     if (tileX >= 68 && tileX <= 88 && tileY >= 17 && tileY <= 35) {
       return 'Dusun Pertanian Ambervale';
+    }
+    // 7. Dusun Pemburu Mistwood Ridge (Lereng Bukit Kabut Barat)
+    if (tileX >= 14 && tileX <= 26 && tileY >= 38 && tileY <= 48) {
+      return 'Dusun Pemburu Mistwood Ridge';
     }
 
     // 7. Area Khusus Lembah Goa Kripta Kuno (Utara)

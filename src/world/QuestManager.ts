@@ -362,6 +362,135 @@ export const INITIAL_QUESTS: Quest[] = [
     badge: 'ARC VIII · IKATAN',
     themeColor: '#fb923c',
     arcTitle: 'ARC VIII: SUMPAH PERSAHABATAN PARTAI'
+  },
+
+  // =========================================================================
+  // ARC IX: PERBURUAN RIMBA MISTWOOD RIDGE (DUSUN MISTWOOD RIDGE)
+  // =========================================================================
+  {
+    id: 'Q_MISTWOOD_HUNT',
+    title: '[Arc IX] Perburuan Serigala Mistwood Ridge',
+    category: 'ANIME_ARC',
+    giver: 'Valerie sang Pemburu',
+    description: 'Dusun Pemburu Mistwood Ridge terancam oleh serigala rimba buas dan binatang predator bukit berkabut. Basmi 4 Serigala Rimba atau Slime Hutan untuk mengamankan jalur dusun!',
+    targetType: 'KILL_MONSTER',
+    targetMonsterTypes: ['WILD_WOLF', 'FOREST_SLIME'],
+    targetName: 'Serigala Rimba / Slime Hutan',
+    currentCount: 0,
+    requiredCount: 4,
+    rewardGold: 1,
+    rewardVal: 220,
+    rewardExp: 420,
+    rewardItems: [
+      { itemId: 'HEALTH_POTION', count: 3 },
+      { itemId: 'WOLF_MEAT', count: 2 }
+    ],
+    status: 'AVAILABLE',
+    badge: 'ARC IX · DUSUN MISTWOOD',
+    themeColor: '#10b981',
+    arcTitle: 'ARC IX: JEJAK MISTWOOD RIDGE'
+  },
+
+  // =========================================================================
+  // ARC X: EKSPEDISI RAJA PASIR PURBA VALORIA (BADUI AL-KHADIR & DUNGEON PIRAMIDA)
+  // =========================================================================
+  {
+    id: 'Q_PYRAMID_EXPEDITION',
+    title: '[Arc X] Ekspedisi Katakombe Piramida Surya',
+    category: 'DUNGEON',
+    giver: 'Tariq Penjelajah Badui',
+    description: 'Kafilah Badui Al-Khadir diganggu oleh mumi kuno dan pengawal anubis dari Piramida Surya Purba. Jelajahi katakombe piramida dan kalahkan 4 monster penjaga!',
+    targetType: 'KILL_MONSTER',
+    targetMonsterTypes: ['MUMMY_WARRIOR', 'ANUBIS_GUARDIAN'],
+    targetName: 'Mumi Purba / Pengawal Anubis',
+    currentCount: 0,
+    requiredCount: 4,
+    rewardGold: 2,
+    rewardVal: 380,
+    rewardExp: 750,
+    rewardItems: [
+      { itemId: 'DUNGEON_GEM', count: 2 },
+      { itemId: 'DARK_IRON_ORE', count: 4 }
+    ],
+    status: 'AVAILABLE',
+    badge: 'ARC X · PIRAMIDA PASIR',
+    themeColor: '#f59e0b',
+    arcTitle: 'ARC X: RAHASIA PIRAMIDA PURBA'
+  },
+  {
+    id: 'Q_BOSS_PHARAOH',
+    title: '[Arc X] Kebangkitan Firaun Surya Ramses',
+    category: 'BOSS',
+    giver: 'Tariq Penjelajah Badui',
+    description: 'Di ruang altar tertinggi Piramida Surya, bangkitlah Firaun Ramses sang Penguasa Surya Purba. Kalahkan sang firaun abadi demi menghentikan badai pasir kutukan di Benua Valoria!',
+    targetType: 'KILL_MONSTER',
+    targetMonsterType: 'BOSS_SUN_PHARAOH',
+    targetName: 'Firaun Purba Ramses',
+    currentCount: 0,
+    requiredCount: 1,
+    rewardGold: 4,
+    rewardVal: 650,
+    rewardExp: 1600,
+    rewardItems: [
+      { itemId: 'PLATINUM_COIN', count: 2 },
+      { itemId: 'ELIXIR_FULL', count: 2 },
+      { itemId: 'DUNGEON_GEM', count: 4 }
+    ],
+    status: 'AVAILABLE',
+    badge: 'ARC X · BOS FIRAUN',
+    themeColor: '#eab308',
+    arcTitle: 'ARC X: RAHASIA PIRAMIDA PURBA'
+  },
+
+  // =========================================================================
+  // ARC XI: TAKHTA PRIMORDIAL CELESTIA (DUSUN CELESTIA & GOA KRISTAL ABISAL)
+  // =========================================================================
+  {
+    id: 'Q_CRYSTAL_GEODE',
+    title: '[Arc XI] Penjelajahan Goa Kristal Abisal',
+    category: 'DUNGEON',
+    giver: 'Alkemis Aurelius',
+    description: 'Goa Kristal Abisal di kedalaman Celestia dihuni oleh Golem Kristal dan Roh Astral. Kalahkan 4 monster kristal abisal untuk mengumpulkan intisari spektrum energi!',
+    targetType: 'KILL_MONSTER',
+    targetMonsterTypes: ['CRYSTAL_GOLEM', 'ASTRAL_WISP'],
+    targetName: 'Golem Kristal / Roh Astral',
+    currentCount: 0,
+    requiredCount: 4,
+    rewardGold: 3,
+    rewardVal: 450,
+    rewardExp: 900,
+    rewardItems: [
+      { itemId: 'DUNGEON_GEM', count: 3 },
+      { itemId: 'MAGIC_FLOWER', count: 5 }
+    ],
+    status: 'AVAILABLE',
+    badge: 'ARC XI · GOA KRISTAL',
+    themeColor: '#38bdf8',
+    arcTitle: 'ARC XI: TAKHTA NAGA KRISTAL ASTRAL'
+  },
+  {
+    id: 'Q_BOSS_CRYSTAL_DRAGON',
+    title: '[Arc XI] Penaklukan Naga Primordial Celestia',
+    category: 'BOSS',
+    giver: 'Alkemis Aurelius',
+    description: 'Di takhta terdalam Goa Kristal Celestia, Naga Primordial Kristal Celestia terbangun dengan kekuatan spektrum prisma mematikan. Tumbangkan sang penguasa tertinggi alam kristal!',
+    targetType: 'KILL_MONSTER',
+    targetMonsterType: 'BOSS_CRYSTAL_DRAGON',
+    targetName: 'Naga Primordial Kristal Celestia',
+    currentCount: 0,
+    requiredCount: 1,
+    rewardGold: 6,
+    rewardVal: 900,
+    rewardExp: 2500,
+    rewardItems: [
+      { itemId: 'PLATINUM_COIN', count: 3 },
+      { itemId: 'ELIXIR_FULL', count: 3 },
+      { itemId: 'DUNGEON_GEM', count: 5 }
+    ],
+    status: 'AVAILABLE',
+    badge: 'ARC XI · BOS NAGA KRISTAL',
+    themeColor: '#c084fc',
+    arcTitle: 'ARC XI: TAKHTA NAGA KRISTAL ASTRAL'
   }
 ];
 

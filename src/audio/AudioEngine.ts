@@ -23,6 +23,8 @@ export class AudioEngine {
     | 'DUNGEON_FLOOR_3'
     | 'DUNGEON_ELDORIA'
     | 'DUNGEON_STONEWATCH'
+    | 'DUNGEON_PYRAMID'
+    | 'DUNGEON_CELESTIA'
     | 'INTERIOR_GUILD'
     | 'INTERIOR_BLACKSMITH'
     | 'INTERIOR_APOTHECARY'
@@ -756,6 +758,8 @@ export class AudioEngine {
       | 'DUNGEON_FLOOR_3'
       | 'DUNGEON_ELDORIA'
       | 'DUNGEON_STONEWATCH'
+      | 'DUNGEON_PYRAMID'
+      | 'DUNGEON_CELESTIA'
       | 'INTERIOR_GUILD'
       | 'INTERIOR_BLACKSMITH'
       | 'INTERIOR_APOTHECARY'
@@ -789,6 +793,10 @@ export class AudioEngine {
     const stonewatchNotes = [123.47, 130.81, 146.83, 110.0, 98.0, 123.47];
     // Benua Valoria: Petualangan eksotis tanah gurun & savana mistis (Phrygian Dominant)
     const valoriaNotes = [220.0, 233.08, 277.18, 293.66, 329.63, 349.23, 392.0, 440.0];
+    // Dungeon Piramida Surya: Skala Phrygian Mesir Kuno bernuansa keagungan firaun
+    const pyramidNotes = [293.66, 311.13, 369.99, 392.0, 440.0, 466.16, 554.37, 587.33];
+    // Dungeon Goa Kristal Celestia: Arpeggio kosmik etereal nada tinggi berkilau
+    const celestiaNotes = [329.63, 392.0, 493.88, 587.33, 659.25, 783.99, 880.0, 987.77];
 
     let notes = overworldNotes;
     let speed = 450;
@@ -828,6 +836,14 @@ export class AudioEngine {
       notes = stonewatchNotes;
       speed = 500;
       oscType = 'triangle';
+    } else if (map === 'DUNGEON_PYRAMID') {
+      notes = pyramidNotes;
+      speed = 460;
+      oscType = 'triangle';
+    } else if (map === 'DUNGEON_CELESTIA') {
+      notes = celestiaNotes;
+      speed = 480;
+      oscType = 'sine';
     }
 
     this.bgmInterval = window.setInterval(() => {

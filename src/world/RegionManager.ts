@@ -176,6 +176,19 @@ export class RegionManager {
       isSafeZone: false,
       centerTile: { x: 50, y: 8 },
       contains: (_x, y) => y <= 16
+    },
+
+    // 13. Dusun Pemburu Mistwood Ridge (Barat Daya)
+    {
+      id: 'MISTWOOD_RIDGE',
+      name: 'Dusun Pemburu Mistwood Ridge',
+      subtitle: '~ Pondok Kayu Lereng Kabut & Suaka Pemanah Rimba ~',
+      icon: '🏹',
+      themeColor: '#10b981',
+      accentColor: '#86efac',
+      isSafeZone: true,
+      centerTile: { x: 20, y: 42 },
+      contains: (x, y) => x >= 14 && x <= 26 && y >= 38 && y <= 48
     }
   ];
 
@@ -203,6 +216,18 @@ export class RegionManager {
       isSafeZone: true,
       centerTile: { x: 74, y: 76 },
       contains: (x, y) => x >= 64 && x <= 86 && y >= 66 && y <= 86
+    },
+    // 2.5. Kemah Badui Gurun Al-Khadir
+    {
+      id: 'VALORIA_AL_KHADIR',
+      name: 'Kemah Badui Gurun Al-Khadir',
+      subtitle: '~ Kafilah Tenda Sutra Gurun & Pintu Gerbang Piramida Surya ~',
+      icon: '⛺',
+      themeColor: '#eab308',
+      accentColor: '#fde047',
+      isSafeZone: true,
+      centerTile: { x: 55, y: 76 },
+      contains: (x, y) => x >= 48 && x <= 64 && y >= 72 && y <= 84
     },
     // 3. Dusun Salju Frostpeak Haven
     {
@@ -363,6 +388,30 @@ export class RegionManager {
         icon: '⛏️',
         themeColor: '#f59e0b',
         accentColor: '#fde047',
+        isSafeZone: false,
+        centerTile: { x: 18, y: 18 },
+        contains: () => true
+      };
+    } else if (currentMap === 'DUNGEON_PYRAMID') {
+      return {
+        id: 'DUNGEON_PYRAMID',
+        name: 'Katakombe Piramida Surya Purba',
+        subtitle: '~ Altar Firaun Ramses & Ruang Keabadian Pasir Emas ~',
+        icon: '☀️',
+        themeColor: '#eab308',
+        accentColor: '#fde047',
+        isSafeZone: false,
+        centerTile: { x: 18, y: 18 },
+        contains: () => true
+      };
+    } else if (currentMap === 'DUNGEON_CELESTIA') {
+      return {
+        id: 'DUNGEON_CELESTIA',
+        name: 'Goa Kristal Abisal Celestia',
+        subtitle: '~ Takhta Primordial Naga Kristal Kosmik ~',
+        icon: '💎',
+        themeColor: '#06b6d4',
+        accentColor: '#c084fc',
         isSafeZone: false,
         centerTile: { x: 18, y: 18 },
         contains: () => true

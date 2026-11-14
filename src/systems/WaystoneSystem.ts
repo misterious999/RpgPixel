@@ -81,6 +81,18 @@ export class WaystoneSystem {
       map: 'OVERWORLD',
       continentName: 'Benua Aethelgard'
     },
+    {
+      id: 'WAYSTONE_MISTWOOD',
+      name: 'Dusun Mistwood Ridge',
+      subtitle: 'Pondok Pemburu Lereng Kabut Barat',
+      icon: '🏹',
+      tileX: 20,
+      tileY: 42,
+      isUnlocked: false,
+      color: '#10b981',
+      map: 'OVERWORLD',
+      continentName: 'Benua Aethelgard'
+    },
 
     // --- BENUA 2: VALORIA (DUNIA BARU MISTIS) ---
     {
@@ -104,6 +116,18 @@ export class WaystoneSystem {
       tileY: 74,
       isUnlocked: false,
       color: '#f59e0b',
+      map: 'CONTINENT_VALORIA',
+      continentName: 'Benua Valoria'
+    },
+    {
+      id: 'WAYSTONE_AL_KHADIR',
+      name: 'Kemah Badui Al-Khadir',
+      subtitle: 'Kafilah Tenda Sutra & Pintu Masuk Piramida',
+      icon: '⛺',
+      tileX: 54,
+      tileY: 76,
+      isUnlocked: false,
+      color: '#eab308',
       map: 'CONTINENT_VALORIA',
       continentName: 'Benua Valoria'
     },

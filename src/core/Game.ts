@@ -34,6 +34,8 @@ import { DungeonFloor2 } from '../world/DungeonFloor2.ts';
 import { DungeonFloor3 } from '../world/DungeonFloor3.ts';
 import { DungeonEldoria } from '../world/DungeonEldoria.ts';
 import { DungeonStonewatch } from '../world/DungeonStonewatch.ts';
+import { DungeonPyramid } from '../world/DungeonPyramid.ts';
+import { DungeonCelestia } from '../world/DungeonCelestia.ts';
 import { ContinentValoria } from '../world/ContinentValoria.ts';
 import { BuildingInteriors, InteriorId } from '../world/BuildingInteriors.ts';
 import { RegionManager } from '../world/RegionManager.ts';
@@ -84,6 +86,8 @@ export class Game {
     | 'DUNGEON_FLOOR_3'
     | 'DUNGEON_ELDORIA'
     | 'DUNGEON_STONEWATCH'
+    | 'DUNGEON_PYRAMID'
+    | 'DUNGEON_CELESTIA'
     | 'INTERIOR_GUILD'
     | 'INTERIOR_BLACKSMITH'
     | 'INTERIOR_APOTHECARY'
@@ -126,6 +130,18 @@ export class Game {
   private stonewatchChests: Chest[] = [];
   private stonewatchWorldItems: WorldItem[] = [];
   public isStonewatchDungeonUnlocked: boolean = false;
+
+  // Dungeon Pyramid (Ancient Sun Pyramid - Benua Valoria Gurun)
+  private dungeonPyramid: DungeonPyramid = new DungeonPyramid();
+  private pyramidMonsters: Monster[] = [];
+  private pyramidChests: Chest[] = [];
+  private pyramidWorldItems: WorldItem[] = [];
+
+  // Dungeon Celestia (Goa Kristal Abisal - Benua Valoria Lembah Celestia)
+  private dungeonCelestia: DungeonCelestia = new DungeonCelestia();
+  private celestiaMonsters: Monster[] = [];
+  private celestiaChests: Chest[] = [];
+  private celestiaWorldItems: WorldItem[] = [];
 
   // Day/Night & Weather Engine
   public timeWeatherEngine: TimeWeatherEngine = new TimeWeatherEngine();
@@ -323,6 +339,8 @@ export class Game {
     this.initFloor3Monsters();
     this.initEldoriaDungeon();
     this.initStonewatchDungeon();
+    this.initPyramidDungeon();
+    this.initCelestiaDungeon();
 
     // Pulihkan status akses tangga/portal lantai jika pemain sudah memiliki gelar bos
     if (this.titleSystem.unlockedTitles.has('CRYPT_CONQUEROR')) {
@@ -965,6 +983,12 @@ export class Game {
       } else if (data.currentMap === 'DUNGEON_STONEWATCH') {
         this.currentMap = 'DUNGEON_STONEWATCH';
         this.camera.setWorldBounds(this.dungeonStonewatch.width * CONSTANTS.TILE_SIZE, this.dungeonStonewatch.height * CONSTANTS.TILE_SIZE);
+      } else if (data.currentMap === 'DUNGEON_PYRAMID') {
+        this.currentMap = 'DUNGEON_PYRAMID';
+        this.camera.setWorldBounds(this.dungeonPyramid.width * CONSTANTS.TILE_SIZE, this.dungeonPyramid.height * CONSTANTS.TILE_SIZE);
+      } else if (data.currentMap === 'DUNGEON_CELESTIA') {
+        this.currentMap = 'DUNGEON_CELESTIA';
+        this.camera.setWorldBounds(this.dungeonCelestia.width * CONSTANTS.TILE_SIZE, this.dungeonCelestia.height * CONSTANTS.TILE_SIZE);
       } else if (data.currentMap === 'CONTINENT_VALORIA') {
         this.currentMap = 'CONTINENT_VALORIA';
         this.camera.setWorldBounds(this.continentValoria.width * CONSTANTS.TILE_SIZE, this.continentValoria.height * CONSTANTS.TILE_SIZE);
@@ -1166,6 +1190,10 @@ export class Game {
 
   public showValoriaNPCDialog(npc: any): void {
     AudioEngine.play('btn_click');
+    if (npc.roleType === 'QUEST' || npc.questId) {
+      this.villageManager.openDialog(npc);
+      return;
+    }
     const randomDialog = npc.dialog[Math.floor(Math.random() * npc.dialog.length)];
     this.floatingText.spawn(this.player.x + 10, this.player.y - 28, `${npc.icon} ${npc.name}: "${randomDialog}"`, npc.accentColor || '#facc15', 4.0);
   }
@@ -1867,6 +1895,239 @@ export class Game {
     this.saveSessionSnapshot();
   }
 
+  private initPyramidDungeon(): void {
+    const ts = CONSTANTS.TILE_SIZE;
+    this.pyramidMonsters = [
+      // Katakombe Mumi Barat (x:4..12, y:18..26)
+      new Monster('pyr_mummy_1', 'MUMMY_WARRIOR', 8 * ts, 21 * ts),
+      new Monster('pyr_mummy_2', 'MUMMY_WARRIOR', 6 * ts, 20 * ts),
+      new Monster('pyr_anubis_1', 'ANUBIS_GUARDIAN', 10 * ts, 22 * ts),
+      // Kuil Relik Anubis Timur (x:24..32, y:18..26)
+      new Monster('pyr_anubis_2', 'ANUBIS_GUARDIAN', 26 * ts, 21 * ts),
+      new Monster('pyr_mummy_3', 'MUMMY_WARRIOR', 28 * ts, 20 * ts),
+      new Monster('pyr_anubis_3', 'ANUBIS_GUARDIAN', 29 * ts, 22 * ts),
+      // Koridor Utama Firaun (x: 18)
+      new Monster('pyr_mummy_4', 'MUMMY_WARRIOR', 18 * ts, 24 * ts),
+      new Monster('pyr_anubis_4', 'ANUBIS_GUARDIAN', 18 * ts, 18 * ts),
+      // Ruang Altar Surya Firaun Ramses (x:9..27, y:4..14)
+      new Monster('pyr_anubis_5', 'ANUBIS_GUARDIAN', 15 * ts, 11 * ts),
+      new Monster('pyr_anubis_6', 'ANUBIS_GUARDIAN', 21 * ts, 11 * ts),
+      new Monster('pyr_boss_pharaoh', 'BOSS_SUN_PHARAOH', 18 * ts - 14, 6 * ts)
+    ];
+
+    this.pyramidChests = [
+      new Chest(7 * ts + 8, 21 * ts + 8, [
+        { itemId: 'GOLD_COIN', count: 2 },
+        { itemId: 'PLATINUM_COIN', count: 1 },
+        { itemId: 'DUNGEON_GEM', count: 2 },
+        { itemId: 'HEALTH_POTION', count: 3 }
+      ]),
+      new Chest(27 * ts + 8, 20 * ts + 8, [
+        { itemId: 'GOLD_COIN', count: 2 },
+        { itemId: 'PLATINUM_COIN', count: 1 },
+        { itemId: 'DUNGEON_GEM', count: 2 },
+        { itemId: 'MANA_POTION', count: 3 }
+      ]),
+      new Chest(24 * ts + 8, 5 * ts + 8, [
+        { itemId: 'GOLD_COIN', count: 4 },
+        { itemId: 'PLATINUM_COIN', count: 2 },
+        { itemId: 'DUNGEON_GEM', count: 4 },
+        { itemId: 'ELIXIR_FULL', count: 2 },
+        { itemId: 'DARK_IRON_ORE', count: 6 }
+      ])
+    ];
+  }
+
+  private initCelestiaDungeon(): void {
+    const ts = CONSTANTS.TILE_SIZE;
+    this.celestiaMonsters = [
+      // Goa Geode Ametis Barat (x:4..12, y:18..26)
+      new Monster('cel_golem_1', 'CRYSTAL_GOLEM', 8 * ts, 21 * ts),
+      new Monster('cel_wisp_1', 'ASTRAL_WISP', 6 * ts, 20 * ts),
+      new Monster('cel_wisp_2', 'ASTRAL_WISP', 10 * ts, 22 * ts),
+      // Labirin Spire Kristal Timur (x:24..32, y:18..26)
+      new Monster('cel_wisp_3', 'ASTRAL_WISP', 26 * ts, 21 * ts),
+      new Monster('cel_golem_2', 'CRYSTAL_GOLEM', 28 * ts, 20 * ts),
+      new Monster('cel_wisp_4', 'ASTRAL_WISP', 29 * ts, 22 * ts),
+      // Koridor Astral Promenade (di sekitar kolam mana)
+      new Monster('cel_golem_3', 'CRYSTAL_GOLEM', 14 * ts, 22 * ts),
+      new Monster('cel_wisp_5', 'ASTRAL_WISP', 18 * ts, 22 * ts),
+      new Monster('cel_golem_4', 'CRYSTAL_GOLEM', 22 * ts, 22 * ts),
+      // Takhta Primordial Naga Kristal (x:9..27, y:4..14)
+      new Monster('cel_golem_5', 'CRYSTAL_GOLEM', 15 * ts, 11 * ts),
+      new Monster('cel_golem_6', 'CRYSTAL_GOLEM', 21 * ts, 11 * ts),
+      new Monster('cel_boss_dragon', 'BOSS_CRYSTAL_DRAGON', 18 * ts - 18, 6 * ts)
+    ];
+
+    this.celestiaChests = [
+      new Chest(7 * ts + 8, 21 * ts + 8, [
+        { itemId: 'GOLD_COIN', count: 3 },
+        { itemId: 'PLATINUM_COIN', count: 1 },
+        { itemId: 'DUNGEON_GEM', count: 3 },
+        { itemId: 'MAGIC_FLOWER', count: 5 }
+      ]),
+      new Chest(27 * ts + 8, 20 * ts + 8, [
+        { itemId: 'GOLD_COIN', count: 3 },
+        { itemId: 'PLATINUM_COIN', count: 2 },
+        { itemId: 'DUNGEON_GEM', count: 3 },
+        { itemId: 'ELIXIR_FULL', count: 1 }
+      ]),
+      new Chest(24 * ts + 8, 5 * ts + 8, [
+        { itemId: 'GOLD_COIN', count: 5 },
+        { itemId: 'PLATINUM_COIN', count: 3 },
+        { itemId: 'DUNGEON_GEM', count: 5 },
+        { itemId: 'ELIXIR_FULL', count: 3 },
+        { itemId: 'PORTAL_SCROLL', count: 2 }
+      ])
+    ];
+  }
+
+  public enterDungeonPyramid(): void {
+    if (this.transitionCooldown > 0) return;
+    this.transitionCooldown = 1.0;
+    this.input.consumeAction();
+
+    this.currentMap = 'DUNGEON_PYRAMID';
+    this.player.x = this.dungeonPyramid.entranceSpawnX;
+    this.player.y = this.dungeonPyramid.entranceSpawnY;
+    this.player.direction = 'up';
+
+    if (this.companion) {
+      this.companion.x = this.player.x - 20;
+      this.companion.y = this.player.y + 10;
+    }
+    if (this.pet) {
+      this.pet.x = this.player.x + 20;
+      this.pet.y = this.player.y + 10;
+    }
+    for (const minion of this.player.minions) {
+      minion.x = this.player.x - 16;
+      minion.y = this.player.y;
+    }
+
+    AudioEngine.playMapTransition(true);
+    AudioEngine.playBgm('DUNGEON_PYRAMID');
+
+    this.camera.setWorldBounds(this.dungeonPyramid.width * CONSTANTS.TILE_SIZE, this.dungeonPyramid.height * CONSTANTS.TILE_SIZE);
+    this.camera.snapTo(this.player.x, this.player.y);
+
+    this.triggerMapTransition('「 KATAKOMBE PIRAMIDA SURYA 」', '~ Altar Firaun Ramses & Ruang Keabadian ~');
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '☀️ Memasuki Katakombe Piramida!', '#eab308', 3.0);
+    this.saveSessionSnapshot();
+  }
+
+  public exitDungeonPyramid(isDeath: boolean = false): void {
+    if (this.transitionCooldown > 0 && !isDeath) return;
+    this.transitionCooldown = 1.0;
+    this.input.consumeAction();
+
+    this.currentMap = 'CONTINENT_VALORIA';
+    if (isDeath) {
+      this.player.x = 28 * CONSTANTS.TILE_SIZE;
+      this.player.y = 92 * CONSTANTS.TILE_SIZE;
+    } else {
+      this.player.x = 56 * CONSTANTS.TILE_SIZE;
+      this.player.y = 58 * CONSTANTS.TILE_SIZE;
+    }
+    this.player.direction = 'down';
+
+    if (this.companion) {
+      this.companion.x = this.player.x - 20;
+      this.companion.y = this.player.y;
+    }
+    if (this.pet) {
+      this.pet.x = this.player.x + 20;
+      this.pet.y = this.player.y;
+    }
+    for (const minion of this.player.minions) {
+      minion.x = this.player.x - 16;
+      minion.y = this.player.y;
+    }
+
+    AudioEngine.playMapTransition(false);
+    AudioEngine.playBgm('CONTINENT_VALORIA');
+
+    this.camera.setWorldBounds(this.continentValoria.width * CONSTANTS.TILE_SIZE, this.continentValoria.height * CONSTANTS.TILE_SIZE);
+    this.camera.snapTo(this.player.x, this.player.y);
+
+    this.triggerMapTransition('「 BENUA VALORIA 」', '~ Reruntuhan Gurun Pasir Emas Solaria ~');
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🌤️ Kembali ke Gurun Valoria', '#eab308', 3.0);
+    this.saveSessionSnapshot();
+  }
+
+  public enterDungeonCelestia(): void {
+    if (this.transitionCooldown > 0) return;
+    this.transitionCooldown = 1.0;
+    this.input.consumeAction();
+
+    this.currentMap = 'DUNGEON_CELESTIA';
+    this.player.x = this.dungeonCelestia.entranceSpawnX;
+    this.player.y = this.dungeonCelestia.entranceSpawnY;
+    this.player.direction = 'up';
+
+    if (this.companion) {
+      this.companion.x = this.player.x - 20;
+      this.companion.y = this.player.y + 10;
+    }
+    if (this.pet) {
+      this.pet.x = this.player.x + 20;
+      this.pet.y = this.player.y + 10;
+    }
+    for (const minion of this.player.minions) {
+      minion.x = this.player.x - 16;
+      minion.y = this.player.y;
+    }
+
+    AudioEngine.playMapTransition(true);
+    AudioEngine.playBgm('DUNGEON_CELESTIA');
+
+    this.camera.setWorldBounds(this.dungeonCelestia.width * CONSTANTS.TILE_SIZE, this.dungeonCelestia.height * CONSTANTS.TILE_SIZE);
+    this.camera.snapTo(this.player.x, this.player.y);
+
+    this.triggerMapTransition('「 GOA KRISTAL ABISAL CELESTIA 」', '~ Takhta Primordial Naga Kristal Kosmik ~');
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '💎 Memasuki Goa Kristal Abisal!', '#06b6d4', 3.0);
+    this.saveSessionSnapshot();
+  }
+
+  public exitDungeonCelestia(isDeath: boolean = false): void {
+    if (this.transitionCooldown > 0 && !isDeath) return;
+    this.transitionCooldown = 1.0;
+    this.input.consumeAction();
+
+    this.currentMap = 'CONTINENT_VALORIA';
+    if (isDeath) {
+      this.player.x = 28 * CONSTANTS.TILE_SIZE;
+      this.player.y = 92 * CONSTANTS.TILE_SIZE;
+    } else {
+      this.player.x = 94 * CONSTANTS.TILE_SIZE;
+      this.player.y = 24 * CONSTANTS.TILE_SIZE;
+    }
+    this.player.direction = 'down';
+
+    if (this.companion) {
+      this.companion.x = this.player.x - 20;
+      this.companion.y = this.player.y;
+    }
+    if (this.pet) {
+      this.pet.x = this.player.x + 20;
+      this.pet.y = this.player.y;
+    }
+    for (const minion of this.player.minions) {
+      minion.x = this.player.x - 16;
+      minion.y = this.player.y;
+    }
+
+    AudioEngine.playMapTransition(false);
+    AudioEngine.playBgm('CONTINENT_VALORIA');
+
+    this.camera.setWorldBounds(this.continentValoria.width * CONSTANTS.TILE_SIZE, this.continentValoria.height * CONSTANTS.TILE_SIZE);
+    this.camera.snapTo(this.player.x, this.player.y);
+
+    this.triggerMapTransition('「 LEMBAH KRISTAL CELESTIA 」', '~ Monolit Kristal Mana Mistis ~');
+    this.floatingText.spawn(this.player.x + 10, this.player.y - 18, '🌤️ Kembali ke Lembah Celestia', '#c084fc', 3.0);
+    this.saveSessionSnapshot();
+  }
+
   /**
    * Cek terpusat apakah ada modal, dialog, atau menu overlay yang sedang terbuka.
    * Meliputi: Inventory/Kartu, Village Dialog, Guild Appraisal, Blacksmith Workshop,
@@ -2564,6 +2825,22 @@ export class Game {
             return true;
           }
         }
+      } else if (this.currentMap === 'DUNGEON_PYRAMID') {
+        // Dungeon Pyramid Chests
+        for (const chest of this.pyramidChests) {
+          const cb = chest.getCollisionBox();
+          if (box.x < cb.x + cb.width && box.x + box.width > cb.x && box.y < cb.y + cb.height && box.y + box.height > cb.y) {
+            return true;
+          }
+        }
+      } else if (this.currentMap === 'DUNGEON_CELESTIA') {
+        // Dungeon Celestia Chests
+        for (const chest of this.celestiaChests) {
+          const cb = chest.getCollisionBox();
+          if (box.x < cb.x + cb.width && box.x + box.width > cb.x && box.y < cb.y + cb.height && box.y + box.height > cb.y) {
+            return true;
+          }
+        }
       }
       return false;
     };
@@ -2588,7 +2865,13 @@ export class Game {
         ? this.dungeonFloor3
         : this.currentMap === 'DUNGEON_ELDORIA'
         ? this.dungeonEldoria
-        : this.dungeonStonewatch;
+        : this.currentMap === 'DUNGEON_STONEWATCH'
+        ? this.dungeonStonewatch
+        : this.currentMap === 'DUNGEON_PYRAMID'
+        ? this.dungeonPyramid
+        : this.currentMap === 'DUNGEON_CELESTIA'
+        ? this.dungeonCelestia
+        : this.tileMap;
     this.player.update(deltaTime, activeInput, activeMap, obstacleChecker);
 
     // Update Day/Night & Weather Engine
@@ -2615,6 +2898,8 @@ export class Game {
       if (this.currentMap === 'DUNGEON_FLOOR_3') return this.dungeonFloor3.isTileSolid(tx, ty);
       if (this.currentMap === 'DUNGEON_ELDORIA') return this.dungeonEldoria.isTileSolid(tx, ty, this.player.isSwimming);
       if (this.currentMap === 'DUNGEON_STONEWATCH') return this.dungeonStonewatch.isTileSolid(tx, ty);
+      if (this.currentMap === 'DUNGEON_PYRAMID') return this.dungeonPyramid.isTileSolid(tx, ty);
+      if (this.currentMap === 'DUNGEON_CELESTIA') return this.dungeonCelestia.isTileSolid(tx, ty, this.player.isSwimming);
       return false;
     };
 
@@ -2633,7 +2918,11 @@ export class Game {
           ? this.floor3Monsters
           : this.currentMap === 'DUNGEON_ELDORIA'
           ? this.eldoriaMonsters
-          : this.stonewatchMonsters;
+          : this.currentMap === 'DUNGEON_STONEWATCH'
+          ? this.stonewatchMonsters
+          : this.currentMap === 'DUNGEON_PYRAMID'
+          ? this.pyramidMonsters
+          : this.celestiaMonsters;
 
       this.companion.update(
         deltaTime,
@@ -2662,7 +2951,11 @@ export class Game {
           ? this.floor3WorldItems
           : this.currentMap === 'DUNGEON_ELDORIA'
           ? this.eldoriaWorldItems
-          : this.stonewatchWorldItems;
+          : this.currentMap === 'DUNGEON_STONEWATCH'
+          ? this.stonewatchWorldItems
+          : this.currentMap === 'DUNGEON_PYRAMID'
+          ? this.pyramidWorldItems
+          : this.celestiaWorldItems;
 
       this.pet.update(deltaTime, this.player, activeItems, this.floatingText, getActiveIsTileSolid);
       this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
@@ -2975,11 +3268,33 @@ export class Game {
           return;
         }
 
-        // 3. NPC Valoria Interaksi Dialog
+        // 2.5 Pintu Masuk Piramida Surya Purba
+        if (this.continentValoria.isNearPyramidEntrance(playerCenterX, playerCenterY)) {
+          if (this.input.isActionJustPressed || this.input.state.isAction) {
+            this.input.consumeAction();
+            this.enterDungeonPyramid();
+            return;
+          }
+        }
+
+        // 2.6 Pintu Masuk Goa Kristal Abisal Celestia
+        if (this.continentValoria.isNearCelestiaCaveEntrance(playerCenterX, playerCenterY)) {
+          if (this.input.isActionJustPressed || this.input.state.isAction) {
+            this.input.consumeAction();
+            this.enterDungeonCelestia();
+            return;
+          }
+        }
+
+        // 3. NPC Valoria Interaksi Dialog (Mendukung Quest & Ambient)
         const nearValoriaNPC = this.continentValoria.getNearbyNPC(playerCenterX, playerCenterY);
         if (nearValoriaNPC && (this.input.isActionJustPressed || this.input.state.isAction)) {
           this.input.consumeAction();
-          this.showValoriaNPCDialog(nearValoriaNPC);
+          if (nearValoriaNPC.roleType === 'QUEST' || nearValoriaNPC.questId) {
+            this.villageManager.openDialog(nearValoriaNPC as any);
+          } else {
+            this.showValoriaNPCDialog(nearValoriaNPC);
+          }
           return;
         }
       }
@@ -3907,6 +4222,334 @@ export class Game {
 
       // Minions vs Stonewatch Monsters
       this.updateMinions(deltaTime, this.stonewatchMonsters);
+    } else if (this.currentMap === 'DUNGEON_PYRAMID') {
+      // --- DUNGEON PYRAMID SPECIFIC UPDATES (Katakombe Piramida Surya) ---
+      // Ladder up to Benua Valoria Gurun
+      if (!this.isAnyModalOpen() && this.dungeonPyramid.isNearLadderUp(playerCenterX, playerCenterY)) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.exitDungeonPyramid();
+          return;
+        }
+      }
+
+      // Update Pyramid Engine & Telegraphs
+      this.dungeonPyramid.update(deltaTime);
+
+      // Check Boss AOE Telegraph Ground Damage (Ledakan Surya / Solar Wrath)
+      for (const tel of this.dungeonPyramid.telegraphs) {
+        if (tel.timer <= deltaTime * 1.5) {
+          const dist = Math.hypot(playerCenterX - tel.x, playerCenterY - tel.y);
+          if (dist < tel.radius) {
+            const died = this.player.takeDamage(tel.damage);
+            this.camera.shake(6.5, 0.25);
+            AudioEngine.playHit(true);
+            this.floatingText.spawn(this.player.x + 12, this.player.y - 14, `☀️ HANTAMAN SURYA FIRAUN -${tel.damage}!`, '#eab308', 2.2);
+            if (died) {
+              AudioEngine.playPlayerDeath();
+              this.exitDungeonPyramid(true);
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur di Piramida Surya dan dievakuasi ke Port Valoria!', '#ef4444', 3.5);
+              return;
+            }
+          }
+        }
+      }
+
+      // Pyramid World Items
+      for (let i = this.pyramidWorldItems.length - 1; i >= 0; i--) {
+        const item = this.pyramidWorldItems[i];
+        if (item.isCollected || item.count <= 0) {
+          this.pyramidWorldItems.splice(i, 1);
+          continue;
+        }
+        const pickedUp = item.update(deltaTime, playerCenterX, playerCenterY);
+        if (pickedUp) {
+          const added = this.player.inventory.addItem(item.itemId, item.count);
+          if (added > 0) {
+            AudioEngine.playItemPickup(item.itemId === 'GOLD_COIN');
+            const def = ITEM_DEFINITIONS[item.itemId];
+            const name = def ? def.name : item.itemId;
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `+${added} ${name}`, '#38bdf8');
+            this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
+            this.pyramidWorldItems.splice(i, 1);
+          }
+        }
+      }
+
+      // Pyramid Chests
+      for (const chest of this.pyramidChests) {
+        chest.update(deltaTime);
+        if (!chest.isOpen && chest.isNearPlayer(playerCenterX, playerCenterY)) {
+          if (this.input.isActionJustPressed || this.input.state.isAction) {
+            this.input.consumeAction();
+            AudioEngine.playChestOpen();
+            const rewards = chest.open();
+            for (const reward of rewards) {
+              this.player.inventory.addItem(reward.itemId, reward.count);
+              const def = ITEM_DEFINITIONS[reward.itemId];
+              const name = def ? def.name : reward.itemId;
+              this.floatingText.spawn(chest.x + 11, chest.y - 12, `+${reward.count} ${name}`, '#facc15', 2.0);
+            }
+            this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
+            const leveledUp = this.player.addExp(120);
+            if (leveledUp) {
+              AudioEngine.playLevelUp();
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 30, `🎉 LEVEL UP! Sekarang Lv. ${this.player.level}`, '#fde047', 3.0);
+            }
+            this.authUI.saveCurrentGame();
+          }
+        }
+      }
+
+      // Pyramid Monsters AI & Boss Telegraph Hook
+      for (const monster of this.pyramidMonsters) {
+        monster.update(
+          deltaTime,
+          playerCenterX,
+          playerCenterY,
+          (tx, ty) => this.dungeonPyramid.isTileSolid(tx, ty),
+          (atk) => {
+            const died = this.player.takeDamage(atk);
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `-${atk} HP`, '#ef4444');
+            AudioEngine.playPlayerHurt();
+            this.camera.shake(5.2, 0.22);
+            if (died) {
+              AudioEngine.playPlayerDeath();
+              this.exitDungeonPyramid(true);
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur di Piramida Surya dan dievakuasi ke Port Valoria!', '#ef4444', 3.5);
+            }
+          },
+          this.player.minions,
+          (minion, atk) => {
+            this.handleMonsterAttackMinion(monster, minion, atk);
+          },
+          this.companion,
+          (tx, ty, r, dur, dmg) => {
+            this.dungeonPyramid.spawnTelegraph(tx, ty, r, dur, dmg);
+          }
+        );
+      }
+
+      // Player Melee Attack vs Pyramid Monsters
+      const attackHitbox = this.player.getAttackHitbox();
+      if (attackHitbox) {
+        for (const monster of this.pyramidMonsters) {
+          if (monster.isDead) continue;
+          if (this.hitMonstersInSwing.has(monster.id)) continue;
+          if (
+            attackHitbox.x < monster.x + monster.width &&
+            attackHitbox.x + attackHitbox.width > monster.x &&
+            attackHitbox.y < monster.y + monster.height &&
+            attackHitbox.y + attackHitbox.height > monster.y
+          ) {
+            this.hitMonstersInSwing.add(monster.id);
+            const { damage, isCrit } = this.player.getAttackDamage();
+            const res = monster.takeDamage(damage, playerCenterX, playerCenterY);
+            AudioEngine.playHit(isCrit);
+            this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, isCrit);
+            this.camera.shake(isCrit ? 5.5 : 3.0, isCrit ? 0.2 : 0.12);
+            const hitText = isCrit ? `💥 CRIT -${res.damage}!` : `-${res.damage}`;
+            this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 10, hitText, isCrit ? '#facc15' : '#ffffff');
+            if (res.isDead) {
+              this.handleMonsterDefeated(monster);
+            }
+          }
+        }
+      }
+
+      // Skills vs Pyramid Monsters
+      for (const effect of this.skillBarUI.visualEffects) {
+        if (['slash', 'fire', 'ice', 'lightning', 'wind', 'earth', 'abnormal', 'shockwave', 'grasp', 'devour'].includes(effect.type)) {
+          for (const monster of this.pyramidMonsters) {
+            if (monster.isDead) continue;
+            const dist = Math.hypot(effect.x - (monster.x + monster.width / 2), effect.y - (monster.y + monster.height / 2));
+            if (dist < effect.radius + monster.width / 2) {
+              if (monster.hurtTimer <= 0) {
+                let spellDmg = 42 + this.player.level * 4.8;
+                if (effect.type === 'abnormal' || effect.type === 'devour') {
+                  spellDmg = 90 + this.player.level * 7.8;
+                } else if (effect.type === 'grasp' || effect.type === 'shockwave') {
+                  spellDmg = 50 + this.player.level * 5.4;
+                }
+                const res = monster.takeDamage(spellDmg, effect.x, effect.y);
+                AudioEngine.playHit(false);
+                this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, true);
+                this.camera.shake(4.0, 0.16);
+                this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 8, `✨ -${res.damage}`, effect.color);
+                if (res.isDead) {
+                  this.handleMonsterDefeated(monster);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Minions vs Pyramid Monsters
+      this.updateMinions(deltaTime, this.pyramidMonsters);
+    } else if (this.currentMap === 'DUNGEON_CELESTIA') {
+      // --- DUNGEON CELESTIA SPECIFIC UPDATES (Goa Kristal Abisal) ---
+      // Ladder up to Lembah Celestia
+      if (!this.isAnyModalOpen() && this.dungeonCelestia.isNearLadderUp(playerCenterX, playerCenterY)) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.exitDungeonCelestia();
+          return;
+        }
+      }
+
+      // Update Celestia Engine & Telegraphs
+      this.dungeonCelestia.update(deltaTime);
+
+      // Check Boss AOE Telegraph Ground Damage (Laser Prisma Kosmik / Supernova)
+      for (const tel of this.dungeonCelestia.telegraphs) {
+        if (tel.timer <= deltaTime * 1.5) {
+          const dist = Math.hypot(playerCenterX - tel.x, playerCenterY - tel.y);
+          if (dist < tel.radius) {
+            const died = this.player.takeDamage(tel.damage);
+            this.camera.shake(7.0, 0.28);
+            AudioEngine.playHit(true);
+            this.floatingText.spawn(this.player.x + 12, this.player.y - 14, `💎 LASER PRISMA KOSMIK -${tel.damage}!`, '#06b6d4', 2.2);
+            if (died) {
+              AudioEngine.playPlayerDeath();
+              this.exitDungeonCelestia(true);
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur di Goa Kristal dan dievakuasi ke Port Valoria!', '#ef4444', 3.5);
+              return;
+            }
+          }
+        }
+      }
+
+      // Celestia World Items
+      for (let i = this.celestiaWorldItems.length - 1; i >= 0; i--) {
+        const item = this.celestiaWorldItems[i];
+        if (item.isCollected || item.count <= 0) {
+          this.celestiaWorldItems.splice(i, 1);
+          continue;
+        }
+        const pickedUp = item.update(deltaTime, playerCenterX, playerCenterY);
+        if (pickedUp) {
+          const added = this.player.inventory.addItem(item.itemId, item.count);
+          if (added > 0) {
+            AudioEngine.playItemPickup(item.itemId === 'GOLD_COIN');
+            const def = ITEM_DEFINITIONS[item.itemId];
+            const name = def ? def.name : item.itemId;
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `+${added} ${name}`, '#38bdf8');
+            this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
+            this.celestiaWorldItems.splice(i, 1);
+          }
+        }
+      }
+
+      // Celestia Chests
+      for (const chest of this.celestiaChests) {
+        chest.update(deltaTime);
+        if (!chest.isOpen && chest.isNearPlayer(playerCenterX, playerCenterY)) {
+          if (this.input.isActionJustPressed || this.input.state.isAction) {
+            this.input.consumeAction();
+            AudioEngine.playChestOpen();
+            const rewards = chest.open();
+            for (const reward of rewards) {
+              this.player.inventory.addItem(reward.itemId, reward.count);
+              const def = ITEM_DEFINITIONS[reward.itemId];
+              const name = def ? def.name : reward.itemId;
+              this.floatingText.spawn(chest.x + 11, chest.y - 12, `+${reward.count} ${name}`, '#facc15', 2.0);
+            }
+            this.questManager.checkCollectQuests(this.player.inventory, this.floatingText, this.player.x, this.player.y);
+            const leveledUp = this.player.addExp(150);
+            if (leveledUp) {
+              AudioEngine.playLevelUp();
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 30, `🎉 LEVEL UP! Sekarang Lv. ${this.player.level}`, '#fde047', 3.0);
+            }
+            this.authUI.saveCurrentGame();
+          }
+        }
+      }
+
+      // Celestia Monsters AI & Boss Telegraph Hook (Astral Wisp dapat mengambang di MANA_POOL)
+      for (const monster of this.celestiaMonsters) {
+        monster.update(
+          deltaTime,
+          playerCenterX,
+          playerCenterY,
+          (tx, ty) => this.dungeonCelestia.isTileSolid(tx, ty, monster.type === 'ASTRAL_WISP'),
+          (atk) => {
+            const died = this.player.takeDamage(atk);
+            this.floatingText.spawn(this.player.x + 10, this.player.y - 14, `-${atk} HP`, '#ef4444');
+            AudioEngine.playPlayerHurt();
+            this.camera.shake(5.5, 0.24);
+            if (died) {
+              AudioEngine.playPlayerDeath();
+              this.exitDungeonCelestia(true);
+              this.floatingText.spawn(this.player.x + 10, this.player.y - 20, '☠️ Kamu gugur di Goa Kristal dan dievakuasi ke Port Valoria!', '#ef4444', 3.5);
+            }
+          },
+          this.player.minions,
+          (minion, atk) => {
+            this.handleMonsterAttackMinion(monster, minion, atk);
+          },
+          this.companion,
+          (tx, ty, r, dur, dmg) => {
+            this.dungeonCelestia.spawnTelegraph(tx, ty, r, dur, dmg);
+          }
+        );
+      }
+
+      // Player Melee Attack vs Celestia Monsters
+      const attackHitbox = this.player.getAttackHitbox();
+      if (attackHitbox) {
+        for (const monster of this.celestiaMonsters) {
+          if (monster.isDead) continue;
+          if (this.hitMonstersInSwing.has(monster.id)) continue;
+          if (
+            attackHitbox.x < monster.x + monster.width &&
+            attackHitbox.x + attackHitbox.width > monster.x &&
+            attackHitbox.y < monster.y + monster.height &&
+            attackHitbox.y + attackHitbox.height > monster.y
+          ) {
+            this.hitMonstersInSwing.add(monster.id);
+            const { damage, isCrit } = this.player.getAttackDamage();
+            const res = monster.takeDamage(damage, playerCenterX, playerCenterY);
+            AudioEngine.playHit(isCrit);
+            this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, isCrit);
+            this.camera.shake(isCrit ? 5.8 : 3.2, isCrit ? 0.22 : 0.13);
+            const hitText = isCrit ? `💥 CRIT -${res.damage}!` : `-${res.damage}`;
+            this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 10, hitText, isCrit ? '#facc15' : '#ffffff');
+            if (res.isDead) {
+              this.handleMonsterDefeated(monster);
+            }
+          }
+        }
+      }
+
+      // Skills vs Celestia Monsters
+      for (const effect of this.skillBarUI.visualEffects) {
+        if (['slash', 'fire', 'ice', 'lightning', 'wind', 'earth', 'abnormal', 'shockwave', 'grasp', 'devour'].includes(effect.type)) {
+          for (const monster of this.celestiaMonsters) {
+            if (monster.isDead) continue;
+            const dist = Math.hypot(effect.x - (monster.x + monster.width / 2), effect.y - (monster.y + monster.height / 2));
+            if (dist < effect.radius + monster.width / 2) {
+              if (monster.hurtTimer <= 0) {
+                let spellDmg = 48 + this.player.level * 5.2;
+                if (effect.type === 'abnormal' || effect.type === 'devour') {
+                  spellDmg = 100 + this.player.level * 8.2;
+                } else if (effect.type === 'grasp' || effect.type === 'shockwave') {
+                  spellDmg = 56 + this.player.level * 5.8;
+                }
+                const res = monster.takeDamage(spellDmg, effect.x, effect.y);
+                AudioEngine.playHit(false);
+                this.spawnHitSparks(monster.x + monster.width / 2, monster.y + monster.height / 2, true);
+                this.camera.shake(4.2, 0.18);
+                this.floatingText.spawn(monster.x + monster.width / 2, monster.y - 8, `✨ -${res.damage}`, effect.color);
+                if (res.isDead) {
+                  this.handleMonsterDefeated(monster);
+                }
+              }
+            }
+          }
+        }
+      }
+
+      // Minions vs Celestia Monsters
+      this.updateMinions(deltaTime, this.celestiaMonsters);
     } else if (this.isCurrentMapInterior()) {
       // --- INTERIOR BUILDING SPECIFIC UPDATES ---
       if (this.villageManager.isDialogOpen) {
@@ -4072,6 +4715,10 @@ export class Game {
           ? '<span style="color: #4ade80; font-weight: 700;">🌿 Kuil Roh Hutan Eldoria</span>'
           : this.currentMap === 'DUNGEON_STONEWATCH'
           ? '<span style="color: #f59e0b; font-weight: 700;">⚒️ Tambang Besi Abisal Stonewatch</span>'
+          : this.currentMap === 'DUNGEON_PYRAMID'
+          ? '<span style="color: #eab308; font-weight: 700;">☀️ Katakombe Piramida Surya</span>'
+          : this.currentMap === 'DUNGEON_CELESTIA'
+          ? '<span style="color: #06b6d4; font-weight: 700;">💎 Goa Kristal Abisal Celestia</span>'
           : this.currentMap === 'CONTINENT_VALORIA'
           ? `<span style="color: ${curRegion.themeColor || '#f59e0b'}; font-weight: 700;">${curRegion.icon || '🌍'} ${villageOrRegion}</span>`
           : `<span style="color: ${curRegion.themeColor || '#4ade80'}; font-weight: 700;">${curRegion.icon || '🌍'} ${villageOrRegion}</span>`;
@@ -4511,6 +5158,64 @@ export class Game {
 
       // 9. Render Floating Texts
       this.floatingText.render(ctx);
+    } else if (this.currentMap === 'DUNGEON_PYRAMID') {
+      // --- DUNGEON PYRAMID WORLD RENDERING (Katakombe Piramida Surya) ---
+      this.dungeonPyramid.render(ctx, this.camera);
+
+      for (const item of this.pyramidWorldItems) {
+        item.render(ctx);
+      }
+
+      for (const chest of this.pyramidChests) {
+        chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY), this.isAnyModalOpen());
+      }
+
+      for (const monster of this.pyramidMonsters) {
+        monster.render(ctx);
+      }
+
+      if (this.companion) {
+        this.companion.render(ctx);
+      }
+      if (this.pet) {
+        this.pet.render(ctx);
+      }
+
+      this.player.render(ctx);
+      this.skillBarUI.renderWorldEffects(ctx);
+      this.dungeonPyramid.renderAtmosphericLighting(ctx, this.camera, playerCenterX, playerCenterY);
+      this.atmosphereEngine.render(ctx);
+      this.renderHitSparks(ctx);
+      this.floatingText.render(ctx);
+    } else if (this.currentMap === 'DUNGEON_CELESTIA') {
+      // --- DUNGEON CELESTIA WORLD RENDERING (Goa Kristal Abisal) ---
+      this.dungeonCelestia.render(ctx, this.camera);
+
+      for (const item of this.celestiaWorldItems) {
+        item.render(ctx);
+      }
+
+      for (const chest of this.celestiaChests) {
+        chest.render(ctx, chest.isNearPlayer(playerCenterX, playerCenterY), this.isAnyModalOpen());
+      }
+
+      for (const monster of this.celestiaMonsters) {
+        monster.render(ctx);
+      }
+
+      if (this.companion) {
+        this.companion.render(ctx);
+      }
+      if (this.pet) {
+        this.pet.render(ctx);
+      }
+
+      this.player.render(ctx);
+      this.skillBarUI.renderWorldEffects(ctx);
+      this.dungeonCelestia.renderAtmosphericLighting(ctx, this.camera, playerCenterX, playerCenterY);
+      this.atmosphereEngine.render(ctx);
+      this.renderHitSparks(ctx);
+      this.floatingText.render(ctx);
     } else if (this.isCurrentMapInterior()) {
       // --- INTERIOR ROOM WORLD RENDERING ---
       const interiorId = this.getInteriorIdFromCurrentMap();
@@ -4580,7 +5285,11 @@ export class Game {
           ? this.floor3Monsters
           : this.currentMap === 'DUNGEON_ELDORIA'
           ? this.eldoriaMonsters
-          : this.stonewatchMonsters;
+          : this.currentMap === 'DUNGEON_STONEWATCH'
+          ? this.stonewatchMonsters
+          : this.currentMap === 'DUNGEON_PYRAMID'
+          ? this.pyramidMonsters
+          : this.celestiaMonsters;
 
       const activeChests =
         this.isCurrentMapInterior()
@@ -4597,7 +5306,11 @@ export class Game {
           ? this.floor3Chests
           : this.currentMap === 'DUNGEON_ELDORIA'
           ? this.eldoriaChests
-          : this.stonewatchChests;
+          : this.currentMap === 'DUNGEON_STONEWATCH'
+          ? this.stonewatchChests
+          : this.currentMap === 'DUNGEON_PYRAMID'
+          ? this.pyramidChests
+          : this.celestiaChests;
 
       this.miniMapUI.render(
         ctx,
@@ -4619,7 +5332,9 @@ export class Game {
         this.dungeonFloor3,
         this.dungeonEldoria,
         this.dungeonStonewatch,
-        this.continentValoria
+        this.continentValoria,
+        this.dungeonPyramid,
+        this.dungeonCelestia
       );
 
       // 10.1 Render Active Quest HUD Tracker (Top-Left)
@@ -4787,6 +5502,10 @@ export class Game {
           this.renderBottomActionPrompt(ctx, '[A] Naik Tangga (Desa Eldoria) ▲', '#4ade80', '#86efac');
         } else if (this.currentMap === 'DUNGEON_STONEWATCH' && this.dungeonStonewatch.isNearLadderUp(playerCenterX, playerCenterY)) {
           this.renderBottomActionPrompt(ctx, '[A] Naik Tangga (Desa Stonewatch) ▲', '#f59e0b', '#fde68a');
+        } else if (this.currentMap === 'DUNGEON_PYRAMID' && this.dungeonPyramid.isNearLadderUp(playerCenterX, playerCenterY)) {
+          this.renderBottomActionPrompt(ctx, '[A] Naik Tangga (Gurun Valoria) ▲', '#eab308', '#fef08a');
+        } else if (this.currentMap === 'DUNGEON_CELESTIA' && this.dungeonCelestia.isNearLadderUp(playerCenterX, playerCenterY)) {
+          this.renderBottomActionPrompt(ctx, '[A] Naik Tangga (Lembah Celestia) ▲', '#06b6d4', '#c084fc');
         } else if (this.currentMap === 'OVERWORLD') {
           const eldEntDist = Math.hypot(21 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 13 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
           const stoneEntDist = Math.hypot(85 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 58 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
@@ -4861,8 +5580,13 @@ export class Game {
             this.renderBottomActionPrompt(ctx, '⛵ [A] Berlayar Pulang ke Benua Aethelgard', '#38bdf8', '#93c5fd');
           } else if (nearWaystone) {
             this.renderBottomActionPrompt(ctx, `[A] Prasasti Teleportasi (${nearWaystone.name}) ⚡`, nearWaystone.color, '#f8fafc');
+          } else if (this.continentValoria.isNearPyramidEntrance(playerCenterX, playerCenterY)) {
+            this.renderBottomActionPrompt(ctx, '[A] Masuk Katakombe Piramida Surya ☀️', '#eab308', '#fef08a');
+          } else if (this.continentValoria.isNearCelestiaCaveEntrance(playerCenterX, playerCenterY)) {
+            this.renderBottomActionPrompt(ctx, '[A] Masuk Goa Kristal Abisal Celestia 💎', '#06b6d4', '#c084fc');
           } else if (nearValoriaNPC) {
-            this.renderBottomActionPrompt(ctx, `[A] Bicara dengan ${nearValoriaNPC.name} 💬`, nearValoriaNPC.accentColor, '#fef08a');
+            const promptText = nearValoriaNPC.actionPrompt || `[A] Bicara dengan ${nearValoriaNPC.name} 💬`;
+            this.renderBottomActionPrompt(ctx, promptText, nearValoriaNPC.accentColor, '#fef08a');
           }
         } else if (this.isCurrentMapInterior()) {
           const interiorId = this.getInteriorIdFromCurrentMap();
@@ -5512,6 +6236,12 @@ export class Game {
     } else if (this.currentMap === 'DUNGEON_STONEWATCH') {
       mainTheme = '#f59e0b';
       subTheme = '#fde68a';
+    } else if (this.currentMap === 'DUNGEON_PYRAMID') {
+      mainTheme = '#eab308';
+      subTheme = '#fef08a';
+    } else if (this.currentMap === 'DUNGEON_CELESTIA') {
+      mainTheme = '#06b6d4';
+      subTheme = '#c084fc';
     }
 
     // Dark anime backdrop with gold/purple trim
@@ -5588,6 +6318,9 @@ export class Game {
       if (this.currentMap === 'DUNGEON_FLOOR_3') return this.dungeonFloor3.isTileSolid(tx, ty);
       if (this.currentMap === 'DUNGEON_ELDORIA') return this.dungeonEldoria.isTileSolid(tx, ty, this.player.isSwimming);
       if (this.currentMap === 'DUNGEON_STONEWATCH') return this.dungeonStonewatch.isTileSolid(tx, ty);
+      if (this.currentMap === 'CONTINENT_VALORIA') return this.continentValoria.isTileSolid(tx, ty, this.player.isSwimming);
+      if (this.currentMap === 'DUNGEON_PYRAMID') return this.dungeonPyramid.isTileSolid(tx, ty);
+      if (this.currentMap === 'DUNGEON_CELESTIA') return this.dungeonCelestia.isTileSolid(tx, ty, this.player.isSwimming);
       return false;
     };
 

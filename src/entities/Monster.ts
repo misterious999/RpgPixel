@@ -27,7 +27,13 @@ export type MonsterType =
   | 'DESERT_SCORPION'
   | 'SAND_GOLEM'
   | 'FROST_WOLF'
-  | 'CRYSTAL_ELEMENTAL';
+  | 'CRYSTAL_ELEMENTAL'
+  | 'MUMMY_WARRIOR'
+  | 'ANUBIS_GUARDIAN'
+  | 'BOSS_SUN_PHARAOH'
+  | 'CRYSTAL_GOLEM'
+  | 'ASTRAL_WISP'
+  | 'BOSS_CRYSTAL_DRAGON';
 export type MonsterTier = 'LOW' | 'MID' | 'HIGH' | 'BOSS';
 
 export interface MonsterDrop {
@@ -455,6 +461,98 @@ export class Monster {
         this.tier = 'MID';
         this.tierLabel = 'Lembah Celestia';
         break;
+
+      // --- MONSTER DUNGEON PIRAMIDA SURYA (TINGKAT TINGGI LV 16-22) ---
+      case 'MUMMY_WARRIOR':
+        this.name = 'Mumi Prajurit Pasir Purba';
+        this.width = 24;
+        this.height = 32;
+        this.maxHp = 290;
+        this.level = 16;
+        this.attackPower = 32;
+        this.expReward = 280;
+        this.goldReward = 4;
+        this.speed = 36;
+        this.aggroRange = 135;
+        this.tier = 'HIGH';
+        this.tierLabel = 'Katakombe Piramida';
+        break;
+
+      case 'ANUBIS_GUARDIAN':
+        this.name = 'Pengawal Anubis Tombak Emas';
+        this.width = 26;
+        this.height = 34;
+        this.maxHp = 350;
+        this.level = 18;
+        this.attackPower = 36;
+        this.expReward = 360;
+        this.goldReward = 5;
+        this.speed = 46;
+        this.aggroRange = 145;
+        this.tier = 'HIGH';
+        this.tierLabel = 'Ksatria Anubis';
+        break;
+
+      case 'BOSS_SUN_PHARAOH':
+        this.name = 'Firaun Purba Ramses sang Penguasa Surya';
+        this.width = 44;
+        this.height = 52;
+        this.maxHp = 1750;
+        this.level = 22;
+        this.attackPower = 46;
+        this.expReward = 2600;
+        this.goldReward = 8;
+        this.speed = 32;
+        this.aggroRange = 190;
+        this.tier = 'BOSS';
+        this.tierLabel = 'Penguasa Piramida Surya';
+        break;
+
+      // --- MONSTER DUNGEON GOA KRISTAL CELESTIA (TINGKAT MAHIR LV 22-28) ---
+      case 'CRYSTAL_GOLEM':
+        this.name = 'Golem Kristal Prisma Abisal';
+        this.width = 28;
+        this.height = 36;
+        this.maxHp = 440;
+        this.level = 22;
+        this.attackPower = 40;
+        this.expReward = 480;
+        this.goldReward = 6;
+        this.speed = 30;
+        this.aggroRange = 140;
+        this.tier = 'HIGH';
+        this.tierLabel = 'Goa Kristal Abisal';
+        break;
+
+      case 'ASTRAL_WISP':
+        this.name = 'Roh Astral Cahaya Bintang';
+        this.width = 24;
+        this.height = 24;
+        this.maxHp = 380;
+        this.level = 24;
+        this.attackPower = 46;
+        this.expReward = 560;
+        this.goldReward = 7;
+        this.speed = 55;
+        this.aggroRange = 150;
+        this.tier = 'HIGH';
+        this.tierLabel = 'Roh Astral';
+        break;
+
+      case 'BOSS_CRYSTAL_DRAGON':
+        this.name = 'Naga Primordial Kristal Celestia';
+        this.width = 54;
+        this.height = 56;
+        this.maxHp = 2500;
+        this.level = 28;
+        this.attackPower = 56;
+        this.expReward = 4500;
+        this.goldReward = 12;
+        this.speed = 40;
+        this.aggroRange = 210;
+        this.tier = 'BOSS';
+        this.tierLabel = 'Penguasa Tertinggi Alam Kristal';
+        break;
     }
 
     this.hp = this.maxHp;
@@ -817,6 +915,24 @@ export class Monster {
         break;
       case 'CRYSTAL_ELEMENTAL':
         this.renderCrystalElemental(ctx, x, y, isFlashing);
+        break;
+      case 'MUMMY_WARRIOR':
+        this.renderMummyWarrior(ctx, x, y, isFlashing);
+        break;
+      case 'ANUBIS_GUARDIAN':
+        this.renderAnubisGuardian(ctx, x, y, isFlashing);
+        break;
+      case 'BOSS_SUN_PHARAOH':
+        this.renderBossSunPharaoh(ctx, x, y, isFlashing);
+        break;
+      case 'CRYSTAL_GOLEM':
+        this.renderCrystalGolem(ctx, x, y, isFlashing);
+        break;
+      case 'ASTRAL_WISP':
+        this.renderAstralWisp(ctx, x, y, isFlashing);
+        break;
+      case 'BOSS_CRYSTAL_DRAGON':
+        this.renderBossCrystalDragon(ctx, x, y, isFlashing);
         break;
     }
 
@@ -1847,6 +1963,296 @@ export class Monster {
     ctx.fill();
   }
 
+  private renderMummyWarrior(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const sway = Math.sin(this.animTimer * 4) * 1.5;
+    // Badan perban linen
+    ctx.fillStyle = flash ? '#ffffff' : '#d4d4d8';
+    ctx.fillRect(x + 4 + sway, y + 6, 12, 16);
+    // Garis lilitan perban
+    ctx.fillStyle = '#71717a';
+    ctx.fillRect(x + 4 + sway, y + 9, 12, 1);
+    ctx.fillRect(x + 4 + sway, y + 13, 12, 1);
+    ctx.fillRect(x + 4 + sway, y + 17, 12, 1);
+    // Kepala perban
+    ctx.fillStyle = flash ? '#ffffff' : '#e4e4e7';
+    ctx.fillRect(x + 5 + sway, y + 1, 10, 8);
+    // Mata merah terkutuk
+    ctx.fillStyle = '#dc2626';
+    ctx.fillRect(x + 7 + sway, y + 4, 2, 2);
+    ctx.fillRect(x + 11 + sway, y + 4, 2, 2);
+    // Khopesh / Pedang perunggu kuno di tangan
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(x + 16 + sway, y + 8, 2, 12);
+    ctx.fillRect(x + 14 + sway, y + 12, 4, 2);
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(x + 18 + sway, y + 7, 3, 2);
+  }
+
+  private renderAnubisGuardian(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const bob = Math.sin(this.animTimer * 5) * 1;
+    // Tubuh jakal hitam legam
+    ctx.fillStyle = flash ? '#ffffff' : '#0f172a';
+    ctx.fillRect(x + 5, y + 8 + bob, 12, 14);
+    // Kepala serigala/jakal
+    ctx.fillRect(x + 6, y + 2 + bob, 10, 8);
+    // Telinga jakal tinggi meruncing
+    ctx.fillStyle = '#1e293b';
+    ctx.beginPath();
+    ctx.moveTo(x + 6, y + 3 + bob);
+    ctx.lineTo(x + 8, y - 4 + bob);
+    ctx.lineTo(x + 9, y + 3 + bob);
+    ctx.moveTo(x + 13, y + 3 + bob);
+    ctx.lineTo(x + 14, y - 4 + bob);
+    ctx.lineTo(x + 16, y + 3 + bob);
+    ctx.fill();
+    // Kerah kalung pelindung emas firaun
+    ctx.fillStyle = '#eab308';
+    ctx.fillRect(x + 5, y + 8 + bob, 12, 3);
+    ctx.fillStyle = '#06b6d4';
+    ctx.fillRect(x + 10, y + 9 + bob, 2, 2);
+    // Mata emas bersinar
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(x + 7, y + 4 + bob, 2, 2);
+    ctx.fillRect(x + 13, y + 4 + bob, 2, 2);
+    // Tombak Anubis panjang
+    ctx.fillStyle = '#d97706';
+    ctx.fillRect(x + 18, y - 6 + bob, 2, 28);
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.moveTo(x + 19, y - 10 + bob);
+    ctx.lineTo(x + 22, y - 5 + bob);
+    ctx.lineTo(x + 16, y - 5 + bob);
+    ctx.closePath();
+    ctx.fill();
+  }
+
+  private renderBossSunPharaoh(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const pulse = Math.sin(this.animTimer * 4) * 3;
+    const cx = x + this.width / 2;
+    const cy = y + this.height / 2;
+
+    // Halo Matahari Purba di belakang Boss
+    ctx.save();
+    ctx.strokeStyle = 'rgba(234, 179, 8, 0.45)';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.arc(cx, cy - 4, 22 + pulse * 0.5, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // Sinar-sinar surya memancar
+    const rayCount = 8;
+    for (let i = 0; i < rayCount; i++) {
+      const angle = (i * Math.PI * 2) / rayCount + this.animTimer * 0.8;
+      const r1 = 20;
+      const r2 = 26 + pulse;
+      ctx.beginPath();
+      ctx.moveTo(cx + Math.cos(angle) * r1, cy - 4 + Math.sin(angle) * r1);
+      ctx.lineTo(cx + Math.cos(angle) * r2, cy - 4 + Math.sin(angle) * r2);
+      ctx.strokeStyle = '#f59e0b';
+      ctx.lineWidth = 2;
+      ctx.stroke();
+    }
+    ctx.restore();
+
+    // Tubuh Firaun megah
+    ctx.fillStyle = flash ? '#ffffff' : '#f8fafc';
+    ctx.fillRect(x + 12, y + 18, 20, 22);
+
+    // Selempang kerajaan & permata dada
+    ctx.fillStyle = '#eab308';
+    ctx.fillRect(x + 14, y + 20, 16, 5);
+    ctx.fillStyle = '#ef4444';
+    ctx.fillRect(x + 20, y + 21, 4, 3);
+
+    // Kepala Firaun
+    ctx.fillStyle = flash ? '#ffffff' : '#fcd34d';
+    ctx.fillRect(x + 16, y + 8, 12, 11);
+
+    // Nemes Headdress (mahkota bergaris emas dan biru laut)
+    ctx.fillStyle = '#eab308';
+    ctx.fillRect(x + 11, y + 4, 22, 5);
+    ctx.fillStyle = '#1d4ed8';
+    ctx.fillRect(x + 13, y + 4, 3, 5);
+    ctx.fillRect(x + 19, y + 4, 3, 5);
+    ctx.fillRect(x + 25, y + 4, 3, 5);
+
+    // Sayap tudung Nemes di kiri & kanan bahu
+    ctx.fillStyle = '#ca8a04';
+    ctx.fillRect(x + 10, y + 9, 5, 12);
+    ctx.fillRect(x + 29, y + 9, 5, 12);
+
+    // Uraeus (Ular kobra pelindung emas di kening)
+    ctx.fillStyle = '#22c55e';
+    ctx.fillRect(x + 21, y + 2, 2, 4);
+
+    // Mata berkobar surya
+    ctx.fillStyle = '#f97316';
+    ctx.fillRect(x + 18, y + 12, 3, 3);
+    ctx.fillRect(x + 23, y + 12, 3, 3);
+
+    // Tongkat Kerajaan Crook (Heqa) di tangan kiri
+    ctx.fillStyle = '#fbbf24';
+    ctx.fillRect(x + 6, y + 14, 3, 24);
+    ctx.beginPath();
+    ctx.arc(x + 7.5, y + 13, 4, Math.PI, Math.PI * 2);
+    ctx.stroke();
+
+    // Cambuk Flail (Nekhakha) di tangan kanan
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(x + 35, y + 14, 3, 24);
+    ctx.fillStyle = '#f97316';
+    ctx.fillRect(x + 37, y + 12, 4, 8);
+  }
+
+  private renderCrystalGolem(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const pulse = Math.sin(this.animTimer * 4) * 2;
+    // Badan bongkahan ametis tebal
+    ctx.fillStyle = flash ? '#ffffff' : '#6b21a8';
+    ctx.fillRect(x + 6, y + 8, 18, 18);
+    // Bahu kristal sudut tajam
+    ctx.fillStyle = flash ? '#ffffff' : '#9333ea';
+    ctx.beginPath();
+    ctx.moveTo(x + 2, y + 12);
+    ctx.lineTo(x + 7, y + 4);
+    ctx.lineTo(x + 11, y + 12);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(x + 19, y + 12);
+    ctx.lineTo(x + 23, y + 4);
+    ctx.lineTo(x + 28, y + 12);
+    ctx.fill();
+    // Kepala prisma ametis
+    ctx.fillStyle = flash ? '#ffffff' : '#a855f7';
+    ctx.fillRect(x + 10, y + 1, 10, 8);
+    // Mata kristal kembar
+    ctx.fillStyle = '#38bdf8';
+    ctx.fillRect(x + 12, y + 4, 2, 2);
+    ctx.fillRect(x + 16, y + 4, 2, 2);
+    // Inti denyut energi ametis di dada
+    ctx.fillStyle = '#f472b6';
+    ctx.beginPath();
+    ctx.arc(x + 15, y + 17, 3 + pulse * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    // Kaki kristal pilar
+    ctx.fillStyle = '#581c87';
+    ctx.fillRect(x + 7, y + 26, 6, 6);
+    ctx.fillRect(x + 17, y + 26, 6, 6);
+  }
+
+  private renderAstralWisp(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const floatY = Math.sin(this.animTimer * 5) * 3;
+    const cx = x + 9;
+    const cy = y + 9 + floatY;
+
+    // Lingkaran aura kosmik berpendar
+    ctx.fillStyle = 'rgba(99, 102, 241, 0.35)';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Tubuh inti astral berkilau
+    ctx.fillStyle = flash ? '#ffffff' : '#818cf8';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 6, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Pusat bintang terang
+    ctx.fillStyle = '#c7d2fe';
+    ctx.beginPath();
+    ctx.arc(cx, cy, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 3 Partikel bintang pengorbit
+    const orbitCount = 3;
+    for (let i = 0; i < orbitCount; i++) {
+      const angle = (i * Math.PI * 2) / orbitCount + this.animTimer * 3;
+      const ox = cx + Math.cos(angle) * 8;
+      const oy = cy + Math.sin(angle) * 6;
+      ctx.fillStyle = '#38bdf8';
+      ctx.fillRect(ox - 1, oy - 1, 2, 2);
+    }
+  }
+
+  private renderBossCrystalDragon(ctx: CanvasRenderingContext2D, x: number, y: number, flash: boolean): void {
+    const flap = Math.sin(this.animTimer * 4) * 5;
+    const cx = x + this.width / 2;
+    const cy = y + this.height / 2;
+
+    // Sayap Kristal Kiri
+    ctx.fillStyle = flash ? '#ffffff' : 'rgba(147, 51, 234, 0.7)';
+    ctx.beginPath();
+    ctx.moveTo(cx - 6, cy);
+    ctx.lineTo(cx - 24, cy - 14 + flap);
+    ctx.lineTo(cx - 28, cy + 2 + flap);
+    ctx.lineTo(cx - 10, cy + 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 1.5;
+    ctx.stroke();
+
+    // Sayap Kristal Kanan
+    ctx.fillStyle = flash ? '#ffffff' : 'rgba(147, 51, 234, 0.7)';
+    ctx.beginPath();
+    ctx.moveTo(cx + 6, cy);
+    ctx.lineTo(cx + 24, cy - 14 + flap);
+    ctx.lineTo(cx + 28, cy + 2 + flap);
+    ctx.lineTo(cx + 10, cy + 8);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    // Ekor Kristal Berduri
+    ctx.strokeStyle = '#7e22ce';
+    ctx.lineWidth = 4;
+    ctx.beginPath();
+    ctx.moveTo(cx, cy + 14);
+    ctx.quadraticCurveTo(cx - 10 + flap, cy + 22, cx + 4 + flap, cy + 26);
+    ctx.stroke();
+
+    // Tubuh Utama Naga Kristal
+    ctx.fillStyle = flash ? '#ffffff' : '#6b21a8';
+    ctx.beginPath();
+    ctx.ellipse(cx, cy + 4, 12, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Sisik dada kristal berlian
+    ctx.fillStyle = '#06b6d4';
+    ctx.beginPath();
+    ctx.moveTo(cx, cy - 2);
+    ctx.lineTo(cx + 6, cy + 6);
+    ctx.lineTo(cx, cy + 14);
+    ctx.lineTo(cx - 6, cy + 6);
+    ctx.closePath();
+    ctx.fill();
+
+    // Kepala Naga
+    ctx.fillStyle = flash ? '#ffffff' : '#581c87';
+    ctx.fillRect(cx - 7, cy - 16, 14, 14);
+
+    // Tanduk Kristal Runcing Ganda
+    ctx.fillStyle = '#a855f7';
+    ctx.beginPath();
+    ctx.moveTo(cx - 5, cy - 16);
+    ctx.lineTo(cx - 11, cy - 25);
+    ctx.lineTo(cx - 2, cy - 16);
+    ctx.fill();
+    ctx.beginPath();
+    ctx.moveTo(cx + 5, cy - 16);
+    ctx.lineTo(cx + 11, cy - 25);
+    ctx.lineTo(cx + 2, cy - 16);
+    ctx.fill();
+
+    // Mata Naga Kosmik Neon
+    ctx.fillStyle = '#06b6d4';
+    ctx.fillRect(cx - 5, cy - 10, 3, 2);
+    ctx.fillRect(cx + 2, cy - 10, 3, 2);
+
+    // Nafas Prisma Mengalir dari moncong
+    ctx.fillStyle = '#c084fc';
+    ctx.fillRect(cx - 1, cy - 2, 2, 2);
+  }
+
   private renderHealthBar(ctx: CanvasRenderingContext2D, x: number, y: number): void {
     const isBoss = this.tier === 'BOSS' || this.type.startsWith('BOSS_');
     const barW = isBoss ? 64 : 24;
@@ -1867,6 +2273,8 @@ export class Monster {
       else if (this.type === 'BOSS_ANCIENT_ENT') barFillColor = '#10b981';
       else if (this.type === 'BOSS_OBSIDIAN_BEHEMOTH') barFillColor = '#8b5cf6';
       else if (this.type === 'BOSS_SLIME') barFillColor = '#ec4899';
+      else if (this.type === 'BOSS_SUN_PHARAOH') barFillColor = '#eab308';
+      else if (this.type === 'BOSS_CRYSTAL_DRAGON') barFillColor = '#06b6d4';
       else if (this.tier === 'MID') barFillColor = '#f59e0b';
       else if (this.tier === 'HIGH') barFillColor = '#a855f7';
 

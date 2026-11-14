@@ -8,6 +8,8 @@ import { DungeonFloor2 } from '../world/DungeonFloor2.ts';
 import { DungeonFloor3 } from '../world/DungeonFloor3.ts';
 import { DungeonEldoria } from '../world/DungeonEldoria.ts';
 import { DungeonStonewatch } from '../world/DungeonStonewatch.ts';
+import { DungeonPyramid } from '../world/DungeonPyramid.ts';
+import { DungeonCelestia } from '../world/DungeonCelestia.ts';
 import { RegionManager } from '../world/RegionManager.ts';
 import { ContinentValoria, ValoriaTileType } from '../world/ContinentValoria.ts';
 
@@ -23,6 +25,8 @@ export class MiniMapUI {
   private floor3Canvas: HTMLCanvasElement | null = null;
   private eldoriaCanvas: HTMLCanvasElement | null = null;
   private stonewatchCanvas: HTMLCanvasElement | null = null;
+  private pyramidCanvas: HTMLCanvasElement | null = null;
+  private celestiaCanvas: HTMLCanvasElement | null = null;
   private valoriaCanvas: HTMLCanvasElement | null = null;
   private interiorCanvas: HTMLCanvasElement | null = null;
 
@@ -159,6 +163,44 @@ export class MiniMapUI {
   }
 
   /**
+   * Menghasilkan peta statis Katakombe Piramida Surya
+   */
+  private generatePyramidCache(dungeonPyramid: DungeonPyramid): HTMLCanvasElement {
+    const c = document.createElement('canvas');
+    c.width = dungeonPyramid.width;
+    c.height = dungeonPyramid.height;
+    const ctx = c.getContext('2d')!;
+
+    for (let y = 0; y < dungeonPyramid.height; y++) {
+      for (let x = 0; x < dungeonPyramid.width; x++) {
+        const isSolid = dungeonPyramid.isTileSolid(x, y);
+        ctx.fillStyle = isSolid ? '#271102' : '#78350f';
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+    return c;
+  }
+
+  /**
+   * Menghasilkan peta statis Goa Kristal Abisal Celestia
+   */
+  private generateCelestiaCache(dungeonCelestia: DungeonCelestia): HTMLCanvasElement {
+    const c = document.createElement('canvas');
+    c.width = dungeonCelestia.width;
+    c.height = dungeonCelestia.height;
+    const ctx = c.getContext('2d')!;
+
+    for (let y = 0; y < dungeonCelestia.height; y++) {
+      for (let x = 0; x < dungeonCelestia.width; x++) {
+        const isSolid = dungeonCelestia.isTileSolid(x, y);
+        ctx.fillStyle = isSolid ? '#0f0728' : '#3b0764';
+        ctx.fillRect(x, y, 1, 1);
+      }
+    }
+    return c;
+  }
+
+  /**
    * Menghasilkan peta statis Benua Baru Valoria (120x120 tiles)
    */
   private generateValoriaCache(continentValoria: ContinentValoria): HTMLCanvasElement {
@@ -248,7 +290,7 @@ export class MiniMapUI {
     ctx: CanvasRenderingContext2D,
     screenWidth: number,
     screenHeight: number,
-    currentMap: 'OVERWORLD' | 'CONTINENT_VALORIA' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | 'DUNGEON_ELDORIA' | 'DUNGEON_STONEWATCH' | 'INTERIOR_GUILD' | 'INTERIOR_BLACKSMITH' | 'INTERIOR_APOTHECARY' | 'INTERIOR_KITCHEN' | 'INTERIOR_BANK' | 'INTERIOR_ELDORIA' | 'INTERIOR_STONEWATCH',
+    currentMap: 'OVERWORLD' | 'CONTINENT_VALORIA' | 'DUNGEON' | 'DUNGEON_FLOOR_2' | 'DUNGEON_FLOOR_3' | 'DUNGEON_ELDORIA' | 'DUNGEON_STONEWATCH' | 'DUNGEON_PYRAMID' | 'DUNGEON_CELESTIA' | 'INTERIOR_GUILD' | 'INTERIOR_BLACKSMITH' | 'INTERIOR_APOTHECARY' | 'INTERIOR_KITCHEN' | 'INTERIOR_BANK' | 'INTERIOR_ELDORIA' | 'INTERIOR_STONEWATCH',
     tileMap: TileMap,
     dungeonMap: DungeonMap,
     player: Player,
@@ -264,7 +306,9 @@ export class MiniMapUI {
     dungeonFloor3?: DungeonFloor3,
     dungeonEldoria?: DungeonEldoria,
     dungeonStonewatch?: DungeonStonewatch,
-    continentValoria?: ContinentValoria
+    continentValoria?: ContinentValoria,
+    dungeonPyramid?: DungeonPyramid,
+    dungeonCelestia?: DungeonCelestia
   ): void {
     ctx.save();
 
@@ -307,6 +351,12 @@ export class MiniMapUI {
     }
     if (dungeonStonewatch && !this.stonewatchCanvas) {
       this.stonewatchCanvas = this.generateStonewatchCache(dungeonStonewatch);
+    }
+    if (dungeonPyramid && !this.pyramidCanvas) {
+      this.pyramidCanvas = this.generatePyramidCache(dungeonPyramid);
+    }
+    if (dungeonCelestia && !this.celestiaCanvas) {
+      this.celestiaCanvas = this.generateCelestiaCache(dungeonCelestia);
     }
     if (continentValoria && !this.valoriaCanvas) {
       this.valoriaCanvas = this.generateValoriaCache(continentValoria);
@@ -416,6 +466,20 @@ export class MiniMapUI {
       mapTitle = '⛏️ Tambang';
       fullMapTitle = '⛏️ Peta Tambang Terkutuk Besi Abisal Stonewatch';
       titleColor = '#f59e0b';
+    } else if (currentMap === 'DUNGEON_PYRAMID') {
+      sourceCanvas = this.pyramidCanvas || this.dungeonCanvas!;
+      mapTileWidth = dungeonPyramid ? dungeonPyramid.width : 36;
+      mapTileHeight = dungeonPyramid ? dungeonPyramid.height : 36;
+      mapTitle = '☀️ Piramida Surya';
+      fullMapTitle = '☀️ Peta Katakombe Piramida Surya Purba';
+      titleColor = '#eab308';
+    } else if (currentMap === 'DUNGEON_CELESTIA') {
+      sourceCanvas = this.celestiaCanvas || this.dungeonCanvas!;
+      mapTileWidth = dungeonCelestia ? dungeonCelestia.width : 36;
+      mapTileHeight = dungeonCelestia ? dungeonCelestia.height : 36;
+      mapTitle = '💎 Goa Celestia';
+      fullMapTitle = '💎 Peta Goa Kristal Abisal Celestia';
+      titleColor = '#06b6d4';
     } else if (currentMap === 'CONTINENT_VALORIA') {
       sourceCanvas = this.valoriaCanvas || this.overworldCanvas;
       mapTileWidth = continentValoria ? continentValoria.width : 120;
@@ -575,6 +639,22 @@ export class MiniMapUI {
         const lx = toRadarX(dungeonStonewatch.ladderX / CONSTANTS.TILE_SIZE);
         const ly = toRadarY(dungeonStonewatch.ladderY / CONSTANTS.TILE_SIZE);
         ctx.fillStyle = '#f59e0b';
+        ctx.beginPath();
+        ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (currentMap === 'DUNGEON_PYRAMID' && dungeonPyramid) {
+        // Tangga kembali ke Benua Valoria Gurun
+        const lx = toRadarX(dungeonPyramid.ladderX / CONSTANTS.TILE_SIZE);
+        const ly = toRadarY(dungeonPyramid.ladderY / CONSTANTS.TILE_SIZE);
+        ctx.fillStyle = '#eab308';
+        ctx.beginPath();
+        ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
+        ctx.fill();
+      } else if (currentMap === 'DUNGEON_CELESTIA' && dungeonCelestia) {
+        // Tangga kembali ke Lembah Celestia
+        const lx = toRadarX(dungeonCelestia.ladderX / CONSTANTS.TILE_SIZE);
+        const ly = toRadarY(dungeonCelestia.ladderY / CONSTANTS.TILE_SIZE);
+        ctx.fillStyle = '#06b6d4';
         ctx.beginPath();
         ctx.arc(lx, ly, 3.5, 0, Math.PI * 2);
         ctx.fill();
@@ -880,6 +960,26 @@ export class MiniMapUI {
         ctx.strokeStyle = '#fde047';
         ctx.lineWidth = 1.2;
         ctx.stroke();
+      } else if (currentMap === 'DUNGEON_PYRAMID' && dungeonPyramid) {
+        const lx = toMapX(dungeonPyramid.ladderX / CONSTANTS.TILE_SIZE);
+        const ly = toMapY(dungeonPyramid.ladderY / CONSTANTS.TILE_SIZE);
+        ctx.fillStyle = '#eab308';
+        ctx.beginPath();
+        ctx.arc(lx, ly, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#fef08a';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
+      } else if (currentMap === 'DUNGEON_CELESTIA' && dungeonCelestia) {
+        const lx = toMapX(dungeonCelestia.ladderX / CONSTANTS.TILE_SIZE);
+        const ly = toMapY(dungeonCelestia.ladderY / CONSTANTS.TILE_SIZE);
+        ctx.fillStyle = '#06b6d4';
+        ctx.beginPath();
+        ctx.arc(lx, ly, 5, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.strokeStyle = '#c084fc';
+        ctx.lineWidth = 1.2;
+        ctx.stroke();
       } else if (currentMap.startsWith('INTERIOR_')) {
         const lx = toMapX(mapTileWidth / 2);
         const ly = toMapY(mapTileHeight - 1.5);
@@ -1015,6 +1115,22 @@ export class MiniMapUI {
           { color: '#8b5cf6', label: 'Obsidian Behemoth Abisal (Bos)' },
           { color: '#fb923c', label: 'Monster Tambang Terkutuk' },
           { color: '#fde047', label: 'Peti Harta Karun' }
+        ];
+      } else if (currentMap === 'DUNGEON_PYRAMID') {
+        legends = [
+          { color: '#38bdf8', label: 'Posisi Kamu (Hero)' },
+          { color: '#eab308', label: 'Tangga Keluar ke Gurun Valoria' },
+          { color: '#f59e0b', label: 'Firaun Purba Ramses (Bos)' },
+          { color: '#d97706', label: 'Mumi & Pengawal Anubis' },
+          { color: '#fde047', label: 'Peti Harta Karun Purba' }
+        ];
+      } else if (currentMap === 'DUNGEON_CELESTIA') {
+        legends = [
+          { color: '#38bdf8', label: 'Posisi Kamu (Hero)' },
+          { color: '#06b6d4', label: 'Tangga Keluar ke Lembah Celestia' },
+          { color: '#c084fc', label: 'Naga Primordial Celestia (Bos)' },
+          { color: '#818cf8', label: 'Golem Kristal & Roh Astral' },
+          { color: '#fde047', label: 'Peti Harta Karun Kristal' }
         ];
       } else if (currentMap.startsWith('INTERIOR_')) {
         legends = [

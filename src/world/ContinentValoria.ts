@@ -23,12 +23,20 @@ export interface ValoriaNPC {
   name: string;
   title: string;
   village: string;
+  roleType?: 'QUEST' | 'AMBIENT';
+  questId?: string;
   x: number;
   y: number;
+  width?: number;
+  height?: number;
   icon: string;
+  avatarIcon?: string;
   hairColor: string;
   outfitColor: string;
   accentColor: string;
+  greetingText?: string;
+  loreText?: string;
+  actionPrompt?: string;
   dialog: string[];
 }
 
@@ -255,6 +263,38 @@ export class ContinentValoria {
       }
     }
 
+    // Pintu Masuk Goa Kristal Abisal Celestia (Tebing Utara: x: 92..96, y: 20..22)
+    for (let cy = 20; cy <= 22; cy++) {
+      for (let cx = 92; cx <= 96; cx++) {
+        this.tiles[cy][cx] = ValoriaTileType.COBBLESTONE;
+      }
+    }
+
+    // --- 5.5. WILAYAH PEDESAAN 5: PERKEMAHAN BADUI GURUN AL-KHADIR (x: 50..62, y: 72..82) ---
+    for (let by = 72; by <= 82; by++) {
+      for (let bx = 50; bx <= 62; bx++) {
+        if (this.tiles[by] && this.tiles[by][bx] !== undefined) {
+          this.tiles[by][bx] = ValoriaTileType.DESERT_SAND;
+        }
+      }
+    }
+    // Pelataran karpet & api unggun kemah Badui Al-Khadir (x: 52..58, y: 74..78)
+    for (let by = 74; by <= 78; by++) {
+      for (let bx = 52; bx <= 58; bx++) {
+        if (this.tiles[by] && this.tiles[by][bx] !== undefined) {
+          this.tiles[by][bx] = ValoriaTileType.COBBLESTONE;
+        }
+      }
+    }
+    // Jalan Setapak dari Jalur Karavan ke Kemah Al-Khadir dan Piramida Surya (x: 54..56, y: 60..85)
+    for (let by = 60; by <= 85; by++) {
+      for (let bx = 54; bx <= 56; bx++) {
+        if (this.tiles[by] && this.tiles[by][bx] !== undefined) {
+          this.tiles[by][bx] = ValoriaTileType.DIRT_PATH;
+        }
+      }
+    }
+
     // --- 6. LANDMARK LEGENDA: RERUNTUHAN PIRAMIDA MATAHARI PURBA (x: 50..62, y: 50..62) ---
     // Kompleks piramida batu pasir kuno di tengah gurun
     for (let ry = 50; ry <= 62; ry++) {
@@ -398,16 +438,97 @@ export class ContinentValoria {
         name: 'Arkhemis Aurelius',
         title: 'Peneliti Kristal Mana Purba',
         village: 'Lembah Kristal Celestia',
+        roleType: 'QUEST',
+        questId: 'Q_CRYSTAL_GEODE',
         x: 90 * ts + 16,
         y: 26 * ts + 10,
         icon: '🔮',
+        avatarIcon: '🔮',
         hairColor: '#a855f7',
         outfitColor: '#581c87',
         accentColor: '#c084fc',
+        greetingText: 'Selamat datang di Lembah Celestia, tempat keajaiban kristal mana abisal beresonansi.',
+        loreText: 'Goa Kristal Abisal di tebing utara menyimpan rahasia penciptaan kristal purba. Namun Golem Kristal dan Roh Astral di dalamnya terbangun liar! Maukah engkau mengumpulkan intisari energi dan menaklukkan naga primordial kristal di dalamnya?',
+        actionPrompt: '🔮 [A] Misi Goa Kristal',
         dialog: [
           'Dengarkan resonansi nada kristal-kristal ini... Ini adalah denyut nadi bumi Valoria.',
           'Kami mempelajari rahasia kuno yang tertinggal dari peradaban Piramida Matahari.',
           'Gunakan Waystone kuno di sini jika engkau ingin menjelajah antar-benua seketika!'
+        ]
+      },
+      {
+        id: 'npc_vespera_celestia',
+        name: 'Vespera sang Astronom Astral',
+        title: 'Pengamat Bintang Lembah Celestia',
+        village: 'Lembah Kristal Celestia',
+        roleType: 'AMBIENT',
+        x: 93 * ts + 16,
+        y: 28 * ts + 12,
+        icon: '🔭',
+        hairColor: '#38bdf8',
+        outfitColor: '#1e1b4b',
+        accentColor: '#c084fc',
+        dialog: [
+          'Resonansi kristal di goa utara bergetar seirama dengan orbit bintang-bintang kosmik.',
+          'Di dalam Goa Kristal Abisal, terdapat naga purba kristal dengan kekuatan spektrum prisma yang menakjubkan!'
+        ]
+      },
+
+      // 5. Perkemahan Badui Gurun Al-Khadir (Dekat Reruntuhan Piramida)
+      {
+        id: 'npc_tariq_nomad',
+        name: 'Tariq sang Penjelajah Gurun',
+        title: 'Agen Serikat Petualang Gurun',
+        village: 'Kemah Badui Gurun Al-Khadir',
+        roleType: 'QUEST',
+        questId: 'Q_PYRAMID_EXPEDITION',
+        x: 54 * ts + 16,
+        y: 76 * ts + 10,
+        icon: '🏹',
+        avatarIcon: '🏹',
+        hairColor: '#78350f',
+        outfitColor: '#d97706',
+        accentColor: '#fbbf24',
+        greetingText: 'Salam hangat di bawah terik mentari gurun, Petualang!',
+        loreText: 'Katakombe Piramida Surya Purba di utara kemah kami memancarkan getaran kuno yang mengganggu kafilah. Mumi prajurit dan pengawal Anubis bangkit dari peristirahatan mereka. Serikat Petualang membutuhkan bantuanmu untuk menjelajahinya!',
+        actionPrompt: '🏹 [A] Misi Piramida Surya',
+        dialog: [
+          'Katakombe Piramida Surya di utara sedang memancarkan hawa panas purba yang aneh.',
+          'Kafilah kami membutuhkan petualang tangguh untuk menenangkan kutukan sang Firaun Ramses!'
+        ]
+      },
+      {
+        id: 'npc_khadija_nomad',
+        name: 'Khadija sang Penenun Sutra',
+        title: 'Pengrajin Tenda Badui',
+        village: 'Kemah Badui Gurun Al-Khadir',
+        roleType: 'AMBIENT',
+        x: 57 * ts + 12,
+        y: 75 * ts + 14,
+        icon: '🧵',
+        hairColor: '#d97706',
+        outfitColor: '#92400e',
+        accentColor: '#fde047',
+        dialog: [
+          'Kain tenda kafilah kami ditenun dengan pola pelindung dari badai pasir gurun Solaria.',
+          'Unta-unta kami beristirahat di sini setelah perjalanan jauh dari Port Valoria.'
+        ]
+      },
+      {
+        id: 'npc_zayd_nomad',
+        name: 'Zayd si Pawang Unta',
+        title: 'Pemandu Kafilah Pasir Emas',
+        village: 'Kemah Badui Gurun Al-Khadir',
+        roleType: 'AMBIENT',
+        x: 52 * ts + 10,
+        y: 77 * ts + 12,
+        icon: '🐫',
+        hairColor: '#451a03',
+        outfitColor: '#b45309',
+        accentColor: '#fbbf24',
+        dialog: [
+          'Jangan pernah menyepelekan badai pasir di sekitar reruntuhan piramida. Ia dapat menelan siapa saja yang lengah!',
+          'Tetaplah berada di dekat api unggun saat malam tiba, malam di gurun ini sedingin es.'
         ]
       }
     ];
@@ -482,6 +603,8 @@ export class ContinentValoria {
     if (tileX >= 20 && tileX <= 42 && tileY >= 12 && tileY <= 30) return true;
     // Celestia
     if (tileX >= 78 && tileX <= 102 && tileY >= 18 && tileY <= 38) return true;
+    // Kemah Badui Al-Khadir
+    if (tileX >= 48 && tileX <= 64 && tileY >= 72 && tileY <= 84) return true;
     // Piramida Matahari
     if (tileX >= 50 && tileX <= 62 && tileY >= 50 && tileY <= 62) return true;
     return false;
@@ -494,8 +617,14 @@ export class ContinentValoria {
     if (tileX >= 64 && tileX <= 86 && tileY >= 66 && tileY <= 86) {
       return 'Dusun Oasis Karavan Al-Zahra';
     }
+    if (tileX >= 48 && tileX <= 64 && tileY >= 72 && tileY <= 84) {
+      return 'Kemah Badui Gurun Al-Khadir';
+    }
     if (tileX >= 20 && tileX <= 42 && tileY >= 12 && tileY <= 30) {
       return 'Dusun Salju Frostpeak Haven';
+    }
+    if (tileX >= 90 && tileX <= 98 && tileY >= 19 && tileY <= 24) {
+      return 'Pintu Masuk Goa Kristal Abisal Celestia';
     }
     if (tileX >= 78 && tileX <= 102 && tileY >= 18 && tileY <= 38) {
       return 'Lembah Kristal Celestia';
@@ -513,6 +642,18 @@ export class ContinentValoria {
       return 'Pesisir Samudra Abisal Barat';
     }
     return 'Padang Savana Luar Valoria';
+  }
+
+  public isNearPyramidEntrance(playerCenterX: number, playerCenterY: number): boolean {
+    const px = 56 * this.tileSize;
+    const py = 57 * this.tileSize;
+    return Math.hypot(px - playerCenterX, py - playerCenterY) < 42;
+  }
+
+  public isNearCelestiaCaveEntrance(playerCenterX: number, playerCenterY: number): boolean {
+    const cx = 95 * this.tileSize;
+    const cy = 23 * this.tileSize;
+    return Math.hypot(cx - playerCenterX, cy - playerCenterY) < 42;
   }
 
   public render(ctx: CanvasRenderingContext2D, camera: Camera): void {
@@ -547,8 +688,14 @@ export class ContinentValoria {
     // 6. Render Kristal Mana Raksasa Celestia (x: 88 * ts, y: 26 * ts)
     this.renderGiantCrystal(ctx, 89 * ts, 26 * ts);
 
+    // 6.5. Render Pintu Masuk Goa Kristal Abisal Celestia (x: 94 * ts, y: 20 * ts)
+    this.renderCelestiaCaveEntrance(ctx, 94 * ts, 20 * ts);
+
     // 7. Render Tenda Karavan Al-Zahra (x: 68 * ts, y: 79 * ts)
     this.renderOasisTent(ctx, 67 * ts, 79 * ts);
+
+    // 7.5. Render Perkemahan Badui Gurun Al-Khadir (x: 54 * ts, y: 75 * ts)
+    this.renderBedouinCamp(ctx, 54 * ts, 75 * ts);
 
     // 8. Render NPC Benua Valoria
     this.renderNPCs(ctx, camera);
@@ -1010,6 +1157,142 @@ export class ContinentValoria {
     ctx.lineTo(x + 20, y + 36);
     ctx.closePath();
     ctx.fill();
+
+    ctx.restore();
+  }
+
+  /**
+   * Render Perkemahan Badui Gurun Al-Khadir (Tenda Kafilah Sutra, Permadani, & Api Unggun)
+   */
+  private renderBedouinCamp(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    ctx.save();
+    // 1. Permadani Corak Gurun Terbentang di Pasir
+    ctx.fillStyle = '#991b1b';
+    ctx.fillRect(x - 20, y + 25, 40, 20);
+    ctx.strokeStyle = '#facc15';
+    ctx.lineWidth = 1.5;
+    ctx.strokeRect(x - 20, y + 25, 40, 20);
+    // Corak tengah permadani
+    ctx.fillStyle = '#f59e0b';
+    ctx.beginPath();
+    ctx.moveTo(x, y + 28);
+    ctx.lineTo(x + 10, y + 35);
+    ctx.lineTo(x, y + 42);
+    ctx.lineTo(x - 10, y + 35);
+    ctx.closePath();
+    ctx.fill();
+
+    // 2. Tenda Kafilah Badui Al-Khadir (Tenda Sutra Emas & Coklat)
+    ctx.fillStyle = '#78350f';
+    ctx.beginPath();
+    ctx.moveTo(x + 25, y - 5);
+    ctx.lineTo(x + 55, y + 28);
+    ctx.lineTo(x - 5, y + 28);
+    ctx.closePath();
+    ctx.fill();
+
+    // Jalur sutra emas tenda
+    ctx.strokeStyle = '#fde047';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.moveTo(x + 10, y + 12);
+    ctx.lineTo(x + 40, y + 12);
+    ctx.stroke();
+
+    // Pintu tirai tenda
+    ctx.fillStyle = '#451a03';
+    ctx.beginPath();
+    ctx.moveTo(x + 25, y + 8);
+    ctx.lineTo(x + 35, y + 28);
+    ctx.lineTo(x + 15, y + 28);
+    ctx.closePath();
+    ctx.fill();
+
+    // 3. Api Unggun Pasir Badui
+    const fireX = x + 25;
+    const fireY = y + 40;
+    ctx.fillStyle = '#475569';
+    for (let i = 0; i < 6; i++) {
+      const angle = (i * Math.PI * 2) / 6;
+      ctx.beginPath();
+      ctx.arc(fireX + Math.cos(angle) * 7, fireY + Math.sin(angle) * 4, 2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+    const flicker = Math.sin(this.animTimer * 6) * 1.5;
+    ctx.fillStyle = '#ea580c';
+    ctx.beginPath();
+    ctx.arc(fireX, fireY - 2, 4 + flicker * 0.4, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.fillStyle = '#fef08a';
+    ctx.beginPath();
+    ctx.arc(fireX, fireY - 2, 2, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 4. Plang Nama Perkemahan
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(x - 22, y + 6, 3, 14);
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(x - 30, y - 4, 38, 12);
+    ctx.fillStyle = '#fef08a';
+    ctx.font = 'bold 6.5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('⛺ Al-Khadir', x - 11, y + 4);
+
+    ctx.restore();
+  }
+
+  /**
+   * Render Pintu Masuk Goa Kristal Abisal Celestia (Tebing Timur Laut x: 94*ts, y: 20*ts)
+   */
+  private renderCelestiaCaveEntrance(ctx: CanvasRenderingContext2D, x: number, y: number): void {
+    ctx.save();
+    // 1. Lengkungan Batu Tebing Berbalut Kristal Ametis
+    ctx.fillStyle = '#1e1b4b';
+    ctx.beginPath();
+    ctx.arc(x + 16, y + 16, 26, Math.PI, 0);
+    ctx.lineTo(x + 42, y + 36);
+    ctx.lineTo(x - 10, y + 36);
+    ctx.closePath();
+    ctx.fill();
+
+    // Mulut Goa Gelap Kosmik
+    ctx.fillStyle = '#090514';
+    ctx.beginPath();
+    ctx.arc(x + 16, y + 18, 16, Math.PI, 0);
+    ctx.lineTo(x + 32, y + 36);
+    ctx.lineTo(x, y + 36);
+    ctx.closePath();
+    ctx.fill();
+
+    // Prisma Kristal Ametis Menjulang di Sisi Kiri & Kanan Pintu Goa
+    ctx.fillStyle = '#a855f7';
+    ctx.beginPath();
+    ctx.moveTo(x - 6, y + 36);
+    ctx.lineTo(x - 2, y + 12);
+    ctx.lineTo(x + 2, y + 36);
+    ctx.fill();
+
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.moveTo(x + 30, y + 36);
+    ctx.lineTo(x + 34, y + 10);
+    ctx.lineTo(x + 38, y + 36);
+    ctx.fill();
+
+    // Denyut Cahaya Kosmik dari Kedalaman Goa
+    const pulse = Math.sin(this.animTimer * 3) * 2;
+    ctx.fillStyle = 'rgba(192, 132, 252, 0.4)';
+    ctx.beginPath();
+    ctx.ellipse(x + 16, y + 26, 12 + pulse, 6 + pulse * 0.5, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    // Plang Aksara Kristal
+    ctx.fillStyle = '#581c87';
+    ctx.fillRect(x - 2, y - 2, 36, 10);
+    ctx.fillStyle = '#67e8f9';
+    ctx.font = 'bold 6.5px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('💎 Goa Kristal', x + 16, y + 5);
 
     ctx.restore();
   }
