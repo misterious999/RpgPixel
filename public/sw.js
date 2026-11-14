@@ -1,5 +1,5 @@
-// ServiceWorker Build Version 8 (Pemulihan Mode 2D Penuh & Peningkatan Hotkey Skill)
-const CACHE_NAME = 'rpg2d-cache-v8';
+// ServiceWorker Build Version 9 (Pemulihan Tampilan Stats HP & MP HUD Overlay)
+const CACHE_NAME = 'rpg2d-cache-v9';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
