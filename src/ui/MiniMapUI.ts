@@ -34,6 +34,69 @@ export class MiniMapUI {
 
   constructor() {}
 
+  /**
+   * Mengubah nama wilayah panjang menjadi versi ringkas elegan untuk tampilan MiniMap NORMAL
+   */
+  public getShortRegionName(name: string): string {
+    const cleanNames: Record<string, string> = {
+      'Desa Oakhaven': 'Oakhaven',
+      'Distrik Pasar Raya': 'Pasar Raya',
+      'Desa Rimba Peri Eldoria': 'Ds. Eldoria',
+      'Benteng Tambang Stonewatch': 'Stonewatch',
+      'Dusun Nelayan Tirta Kencana': 'Tirta Kencana',
+      'Dusun Pertanian Ambervale': 'Ambervale',
+      'Lembah Kripta Kuno': 'Kripta Kuno',
+      'Danau Sejuk Azure': 'Danau Azure',
+      'Rimba Liar Whisperwood': 'Whisperwood',
+      'Dataran Cadas Sunyi': 'Cadas Sunyi',
+      'Padang Rumput Meadowvale': 'Meadowvale',
+      'Puncak Tebing Mahkota Utara': 'Mahkota Utara',
+      'Dusun Pemburu Mistwood Ridge': 'Mistwood',
+      'Kota Pelabuhan Port Valoria': 'Port Valoria',
+      'Dusun Oasis Karavan Al-Zahra': 'Oasis Al-Zahra',
+      'Kemah Badui Gurun Al-Khadir': 'Al-Khadir',
+      'Dusun Salju Frostpeak Haven': 'Frostpeak',
+      'Lembah Kristal Celestia': 'Lembah Celestia',
+      'Reruntuhan Piramida Matahari Purba': 'Piramida Surya',
+      'Gurun Pasir Emas Solaria': 'Gurun Solaria',
+      'Lereng Salju Pegunungan Frostpeak': 'Mata Air Frost',
+      'Padang Savana Luar Valoria': 'Savana Valoria',
+      'Padang Liar Lembah Serikat': 'Lembah Serikat',
+      'Goa Makam Purba (Lt. 1)': 'Goa Lt. 1',
+      'Labirin Titan Abisal (Lt. 2)': 'Makam Lt. 2',
+      'Sanctuarium Neraka Magma (Lt. 3)': 'Neraka Lt. 3',
+      'Kuil Roh Hutan Purba Eldoria': 'Kuil Eldoria',
+      'Tambang Terkutuk Besi Abisal': 'Tambang Besi',
+      'Katakombe Piramida Surya Purba': 'Piramida Surya',
+      'Goa Kristal Abisal Celestia': 'Goa Celestia',
+      'Balai Besar Serikat Petualang': 'Balai Serikat',
+      'Bengkel Tempa Master Brokk': 'Bengkel Besi',
+      'Toko Ramuan & Penginapan Lily': 'Toko Ramuan',
+      'Dapur Kuliner Chef Gaston': 'Dapur Gaston',
+      'Bank Kerajaan Oakhaven': 'Bank Val',
+      'Pondok Suci Tetua Roh Eldoria': 'Pondok Roh',
+      'Markas Komando Tambang Stonewatch': 'Markas Tambang'
+    };
+
+    if (cleanNames[name]) return cleanNames[name];
+
+    return name
+      .replace(/^(Dusun|Desa|Reruntuhan|Benteng|Kemah\s+Badui\s+Gurun|Padang\s+Rumput|Padang\s+Savana\s+Luar|Padang\s+Liar)\s+/i, '')
+      .trim();
+  }
+
+  /**
+   * Memotong teks secara dinamis dan menambahkan tanda ellipsis (…) jika melebihi lebar piksel maksimal
+   */
+  private fitText(ctx: CanvasRenderingContext2D, text: string, maxPixelWidth: number): string {
+    if (ctx.measureText(text).width <= maxPixelWidth) return text;
+    let t = text;
+    while (t.length > 2 && ctx.measureText(t + '…').width > maxPixelWidth) {
+      t = t.slice(0, -1);
+    }
+    return t + '…';
+  }
+
   public update(deltaTime: number): void {
     this.pulseTimer += deltaTime;
   }
@@ -245,10 +308,10 @@ export class MiniMapUI {
     }
 
     if (this.mode === 'NORMAL') {
-      const mw = 100;
-      const mh = 72;
+      const mw = 114;
+      const mh = 86;
       const mx = screenWidth - mw - 10;
-      const my = 52;
+      const my = 50;
       if (touchX >= mx && touchX <= mx + mw && touchY >= my && touchY <= my + mh) {
         this.mode = 'EXPANDED';
         return true;
@@ -491,42 +554,73 @@ export class MiniMapUI {
 
     // --- MODE NORMAL (POJOK KANAN ATAS HUD) ---
     if (this.mode === 'NORMAL') {
-      const mw = 104;
-      const mh = 74;
+      const mw = 114;
+      const mh = 86;
       const mx = screenWidth - mw - 10;
-      const my = 52;
+      const my = 50;
 
-      // Background container
-      ctx.fillStyle = 'rgba(15, 23, 42, 0.9)';
+      // 1. Background Container Glassmorphism
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.92)';
       ctx.beginPath();
       ctx.roundRect(mx, my, mw, mh, 8);
       ctx.fill();
-      ctx.strokeStyle = '#475569';
-      ctx.lineWidth = 1.5;
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.35)';
+      ctx.lineWidth = 1.2;
       ctx.stroke();
 
-      // Judul Mini-map
-      ctx.fillStyle = titleColor;
+      // 2. Header Bar Strip (Background Gelap Tipis di Puncak MiniMap)
+      ctx.fillStyle = 'rgba(2, 6, 23, 0.65)';
+      ctx.beginPath();
+      ctx.roundRect(mx, my, mw, 18, [8, 8, 0, 0]);
+      ctx.fill();
+
+      // Garis Pembatas Header
+      ctx.strokeStyle = 'rgba(255, 255, 255, 0.1)';
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      ctx.moveTo(mx, my + 18);
+      ctx.lineTo(mx + mw, my + 18);
+      ctx.stroke();
+
+      // Judul Nama Wilayah Ringkas & Rapi (Tidak Akan Pernah Menabrak atau Terpotong Berantakan)
+      const isOverworldOrValoria = currentMap === 'OVERWORLD' || currentMap === 'CONTINENT_VALORIA';
+      const cleanTitle = isOverworldOrValoria ? `${currentRegion.icon} ${this.getShortRegionName(currentRegion.name)}` : mapTitle;
       ctx.font = 'bold 9px sans-serif';
+      const maxTitleW = mw - 30; // Sisakan ruang aman untuk tombol perbesar
+      const displayTitle = this.fitText(ctx, cleanTitle, maxTitleW);
+      ctx.fillStyle = titleColor;
       ctx.textAlign = 'left';
-      ctx.textBaseline = 'top';
-      ctx.fillText(mapTitle, mx + 6, my + 4);
+      ctx.textBaseline = 'middle';
+      ctx.fillText(displayTitle, mx + 6, my + 9);
 
-      // Label Perbesar
-      ctx.fillStyle = '#94a3b8';
+      // Tombol Ikon Perbesar (⛶) di Kanan Header
+      const expBtnW = 16;
+      const expBtnH = 12;
+      const expBtnX = mx + mw - expBtnW - 5;
+      const expBtnY = my + 3;
+      ctx.fillStyle = 'rgba(56, 189, 248, 0.15)';
+      ctx.beginPath();
+      ctx.roundRect(expBtnX, expBtnY, expBtnW, expBtnH, 3);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(56, 189, 248, 0.4)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+
+      ctx.fillStyle = '#38bdf8';
       ctx.font = '8px sans-serif';
-      ctx.textAlign = 'right';
-      ctx.fillText('🔍 [Ketuk]', mx + mw - 6, my + 4);
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('⛶', expBtnX + expBtnW / 2, expBtnY + expBtnH / 2);
 
-      // Area Peta Terpotong (Viewport Radar berpusat pada Pemain)
-      const radarX = mx + 6;
-      const radarY = my + 16;
-      const radarW = mw - 12;
-      const radarH = mh - 22;
+      // 3. Area Radar Viewport (Peta Terpotong)
+      const radarX = mx + 4;
+      const radarY = my + 21;
+      const radarW = mw - 8;
+      const radarH = mh - 25;
 
       ctx.save();
       ctx.beginPath();
-      ctx.roundRect(radarX, radarY, radarW, radarH, 4);
+      ctx.roundRect(radarX, radarY, radarW, radarH, 5);
       ctx.clip();
 
       // Gambar terrain radar
@@ -742,6 +836,34 @@ export class MiniMapUI {
       ctx.moveTo(plRadarX, plRadarY);
       ctx.lineTo(plRadarX + dx, plRadarY + dy);
       ctx.stroke();
+
+      // 5. Kompas Petunjuk Arah Utara ('U' / North) di Puncak Radar
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.82)';
+      ctx.beginPath();
+      ctx.arc(radarX + radarW / 2, radarY + 7, 5.5, 0, Math.PI * 2);
+      ctx.fill();
+      ctx.strokeStyle = 'rgba(250, 204, 21, 0.6)';
+      ctx.lineWidth = 0.8;
+      ctx.stroke();
+
+      ctx.fillStyle = '#fde047';
+      ctx.font = 'bold 7px sans-serif';
+      ctx.textAlign = 'center';
+      ctx.textBaseline = 'middle';
+      ctx.fillText('U', radarX + radarW / 2, radarY + 7);
+
+      // 6. Badge Koordinat Mini di Pojok Bawah Radar
+      const coordText = `(${Math.floor(pTileX)}, ${Math.floor(pTileY)})`;
+      ctx.font = '7px sans-serif';
+      const coordW = ctx.measureText(coordText).width + 6;
+      ctx.fillStyle = 'rgba(15, 23, 42, 0.78)';
+      ctx.beginPath();
+      ctx.roundRect(radarX + 3, radarY + radarH - 11, coordW, 9, 2);
+      ctx.fill();
+      ctx.fillStyle = '#94a3b8';
+      ctx.textAlign = 'left';
+      ctx.textBaseline = 'middle';
+      ctx.fillText(coordText, radarX + 6, radarY + radarH - 6.5);
 
       ctx.restore();
     }

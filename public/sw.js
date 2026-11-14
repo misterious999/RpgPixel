@@ -1,5 +1,5 @@
-// ServiceWorker Build Version 9 (Pemulihan Tampilan Stats HP & MP HUD Overlay)
-const CACHE_NAME = 'rpg2d-cache-v9';
+// ServiceWorker Build Version 10 (Redesain Elegan MiniMap HUD & Penataan Nama Wilayah)
+const CACHE_NAME = 'rpg2d-cache-v10';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
