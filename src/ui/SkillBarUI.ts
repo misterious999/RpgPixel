@@ -228,12 +228,12 @@ export class SkillBarUI {
       // --- KNIGHT SKILLS ---
       case 'slash':
         this.visualEffects.push({
-          x: px,
-          y: py,
+          x: px + (this.player.direction === 'right' ? 24 : (this.player.direction === 'left' ? -24 : 0)),
+          y: py + (this.player.direction === 'down' ? 24 : (this.player.direction === 'up' ? -24 : 0)),
           type: 'slash',
-          timer: 0.3,
-          maxTimer: 0.3,
-          radius: 28,
+          timer: 0.35,
+          maxTimer: 0.35,
+          radius: 38,
           color: '#f97316'
         });
         break;
@@ -314,12 +314,12 @@ export class SkillBarUI {
 
       case 'poison_blade':
         this.visualEffects.push({
-          x: px,
-          y: py,
+          x: px + (this.player.direction === 'right' ? 22 : (this.player.direction === 'left' ? -22 : 0)),
+          y: py + (this.player.direction === 'down' ? 22 : (this.player.direction === 'up' ? -22 : 0)),
           type: 'slash',
           timer: 0.35,
           maxTimer: 0.35,
-          radius: 32,
+          radius: 36,
           color: '#22c55e'
         });
         this.floatingText.spawn(px, py - 26, '🧪 TOXIC DAGGER STRIKE!', '#22c55e', 1.8);
@@ -327,12 +327,12 @@ export class SkillBarUI {
 
       case 'critical_strike':
         this.visualEffects.push({
-          x: px,
-          y: py,
+          x: px + (this.player.direction === 'right' ? 24 : (this.player.direction === 'left' ? -24 : 0)),
+          y: py + (this.player.direction === 'down' ? 24 : (this.player.direction === 'up' ? -24 : 0)),
           type: 'slash',
           timer: 0.4,
           maxTimer: 0.4,
-          radius: 38,
+          radius: 40,
           color: '#f43f5e'
         });
         this.floatingText.spawn(px, py - 30, '🗡️ ASSASSINATE BURST CRITICAL!', '#f43f5e', 2.0);

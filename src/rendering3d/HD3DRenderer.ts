@@ -29,11 +29,9 @@ export class HD3DRenderer {
     this.canvas = canvas;
     this.settings = { ...DEFAULT_HD3D_SETTINGS };
 
-    // Muat preferensi mode dari localStorage jika ada
-    const savedMode = localStorage.getItem('rpg2d_render_mode') as RenderMode | null;
-    if (savedMode === '2D' || savedMode === 'HD3D') {
-      this.settings.mode = savedMode;
-    }
+    // Selalu pastikan game membuka mode 2D Klasik secara default agar seluruh bangunan, pintu & skill tampil utuh
+    this.settings.mode = '2D';
+    localStorage.setItem('rpg2d_render_mode', '2D');
 
     // 1. Inisialisasi WebGL Renderer
     this.renderer = new THREE.WebGLRenderer({

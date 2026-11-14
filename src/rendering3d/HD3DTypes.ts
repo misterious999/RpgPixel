@@ -11,7 +11,7 @@ export interface HD3DSettings {
 }
 
 export const DEFAULT_HD3D_SETTINGS: HD3DSettings = {
-  mode: 'HD3D', // Default to HD3D as requested, easily toggleable
+  mode: '2D', // Default to rock-solid 2D Klasik mode
   cameraFov: 45,
   cameraAngle: 50,
   cameraDistance: 17,

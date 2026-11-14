@@ -470,6 +470,14 @@ export class Game {
         this.quickPotionUI.useHpPotion();
       } else if (e.key === '2') {
         this.quickPotionUI.useMpPotion();
+      } else if (e.key === '3' || e.key === 'q' || e.key === 'Q') {
+        this.skillBarUI.castSkill(0);
+      } else if (e.key === '4' || e.key === 'r' || e.key === 'R') {
+        this.skillBarUI.castSkill(1);
+      } else if (e.key === '5' || e.key === 't' || e.key === 'T') {
+        this.skillBarUI.castSkill(2);
+      } else if (e.key === '6' || e.key === 'f' || e.key === 'F') {
+        this.skillBarUI.castSkill(3);
       } else if (e.key === 'm' || e.key === 'M') {
         this.miniMapUI.mode = this.miniMapUI.mode === 'NORMAL' ? 'EXPANDED' : (this.miniMapUI.mode === 'EXPANDED' ? 'MINIMIZED' : 'NORMAL');
         AudioEngine.playButtonClick();

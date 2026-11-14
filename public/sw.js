@@ -1,5 +1,5 @@
-// ServiceWorker Build Version 7 (HD-2D 3D Engine & Dual-Mode Toggle)
-const CACHE_NAME = 'rpg2d-cache-v7';
+// ServiceWorker Build Version 8 (Pemulihan Mode 2D Penuh & Peningkatan Hotkey Skill)
+const CACHE_NAME = 'rpg2d-cache-v8';
 const STATIC_ASSETS = [
   '/',
   '/index.html',
