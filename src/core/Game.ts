@@ -1137,9 +1137,10 @@ export class Game {
   public sailToValoria(): void {
     const ts = CONSTANTS.TILE_SIZE;
     this.currentMap = 'CONTINENT_VALORIA';
-    this.player.x = 24 * ts + 16;
+    // Mendarat di dermaga pelabuhan Port Valoria (tepat di depan titian kapal)
+    this.player.x = 19 * ts + 16;
     this.player.y = 92 * ts + 16;
-    this.player.direction = 'up';
+    this.player.direction = 'right';
     this.camera.setWorldBounds(this.continentValoria.width * ts, this.continentValoria.height * ts);
     this.camera.snapTo(this.player.x, this.player.y);
     AudioEngine.play('quest_complete');
@@ -1151,6 +1152,7 @@ export class Game {
   public sailToOverworld(): void {
     const ts = CONSTANTS.TILE_SIZE;
     this.currentMap = 'OVERWORLD';
+    // Mendarat di dermaga kayu Dusun Nelayan Tirta Kencana
     this.player.x = 33 * ts + 16;
     this.player.y = 73 * ts + 16;
     this.player.direction = 'up';
@@ -1170,45 +1172,152 @@ export class Game {
 
   private renderOverworldShip(ctx: CanvasRenderingContext2D): void {
     const ts = CONSTANTS.TILE_SIZE;
-    const sx = 28 * ts;
-    const sy = 71 * ts;
+    // Kapal bersandar di perairan sebelah barat dermaga (x: 25.5..31.5, y: 71..76)
+    const sx = 25.5 * ts;
+    const sy = 71.5 * ts;
     ctx.save();
-    // Lambung Kapal Samudra Ekspedisi Jati
-    ctx.fillStyle = '#451a03';
+
+    // 1. Bayangan Lambung Kapal di Air & Riak Air
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.4)';
     ctx.beginPath();
-    ctx.moveTo(sx, sy + 25);
-    ctx.lineTo(sx + 110, sy + 25);
-    ctx.lineTo(sx + 95, sy + 58);
-    ctx.lineTo(sx + 15, sy + 58);
-    ctx.closePath();
+    ctx.ellipse(sx + 85, sy + 62, 85, 14, 0, 0, Math.PI * 2);
     ctx.fill();
-    ctx.strokeStyle = '#b45309';
-    ctx.lineWidth = 2;
+
+    // Riak Air Busa Putih di Sekitar Lambung Kapal
+    const waveBob = Math.sin(performance.now() * 0.002) * 1.5;
+    ctx.strokeStyle = 'rgba(186, 230, 253, 0.6)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(sx + 85, sy + 58 + waveBob, 88, 8, 0, 0, Math.PI * 2);
     ctx.stroke();
 
-    // Tiang Layar & Layar Samudra
+    // 2. Lambung Kapal Samudra Ekspedisi Jati Megah
+    ctx.fillStyle = '#451a03'; // Kayu jati tua gelap
+    ctx.beginPath();
+    ctx.moveTo(sx + 5, sy + 28);
+    ctx.lineTo(sx + 175, sy + 28);
+    ctx.lineTo(sx + 155, sy + 64);
+    ctx.lineTo(sx + 25, sy + 64);
+    ctx.closePath();
+    ctx.fill();
+    ctx.strokeStyle = '#78350f';
+    ctx.lineWidth = 2.5;
+    ctx.stroke();
+
+    // Papan Kayu Lambung Melintang & Lis Emas
+    ctx.fillStyle = '#b45309';
+    ctx.fillRect(sx + 15, sy + 38, 148, 4);
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(sx + 20, sy + 48, 138, 3);
+
+    // 3. Kabin Buritan Kapal (Quarterdeck Cabin) di Bagian Haluan Kiri
+    ctx.fillStyle = '#271102';
+    ctx.fillRect(sx + 15, sy + 14, 45, 16);
+    ctx.strokeStyle = '#78350f';
+    ctx.strokeRect(sx + 15, sy + 14, 45, 16);
+    // Jendela Kabin Bercahaya Hangat
+    ctx.fillStyle = '#fef08a';
+    ctx.fillRect(sx + 24, sy + 18, 8, 7);
+    ctx.fillRect(sx + 40, sy + 18, 8, 7);
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(sx + 27, sy + 18, 2, 7);
+    ctx.fillRect(sx + 43, sy + 18, 2, 7);
+
+    // 4. Dua Tiang Layar Utama & Layar Putih Samudra
+    // Tiang 1 (Tengah)
     ctx.fillStyle = '#78350f';
-    ctx.fillRect(sx + 50, sy - 38, 6, 63);
+    ctx.fillRect(sx + 85, sy - 46, 7, 76);
+    // Tiang 2 (Kanan)
+    ctx.fillRect(sx + 138, sy - 36, 6, 66);
+
+    // Palang Tiang Kayu Horisontal
+    ctx.fillRect(sx + 62, sy - 32, 54, 4);
+    ctx.fillRect(sx + 120, sy - 24, 42, 3.5);
+
+    // Layar Samudra Putih Megah
     ctx.fillStyle = '#f8fafc';
     ctx.beginPath();
-    ctx.moveTo(sx + 53, sy - 32);
-    ctx.lineTo(sx + 85, sy - 10);
-    ctx.lineTo(sx + 53, sy + 18);
+    ctx.moveTo(sx + 64, sy - 28);
+    ctx.quadraticCurveTo(sx + 88, sy - 4, sx + 64, sy + 22);
+    ctx.lineTo(sx + 114, sy + 22);
+    ctx.quadraticCurveTo(sx + 110, sy - 4, sx + 114, sy - 28);
     ctx.closePath();
     ctx.fill();
     ctx.strokeStyle = '#cbd5e1';
-    ctx.lineWidth = 1.5;
+    ctx.lineWidth = 1.8;
     ctx.stroke();
 
-    // Bendera Ekspedisi Samudra
-    ctx.fillStyle = '#38bdf8';
-    ctx.fillRect(sx + 53, sy - 38, 16, 8);
+    // Layar Belakang
+    ctx.beginPath();
+    ctx.moveTo(sx + 122, sy - 21);
+    ctx.quadraticCurveTo(sx + 140, sy - 2, sx + 122, sy + 18);
+    ctx.lineTo(sx + 160, sy + 18);
+    ctx.quadraticCurveTo(sx + 156, sy - 2, sx + 160, sy - 21);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
 
-    // Teks info kapal & Nakhoda
+    // Bendera Ekspedisi Samudra Biru Langit di Puncak Tiang
+    ctx.fillStyle = '#38bdf8';
+    ctx.beginPath();
+    ctx.moveTo(sx + 92, sy - 46);
+    ctx.lineTo(sx + 118, sy - 40);
+    ctx.lineTo(sx + 92, sy - 34);
+    ctx.closePath();
+    ctx.fill();
+
+    // 5. Jembatan Titian Kayu (Boarding Gangway Plank)
+    // Menghubungkan geladak kapal (sx + 155) ke dermaga kayu (32*ts)
+    const pierEdgeX = 32 * ts;
+    const gangwayY = sy + 34;
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(sx + 155, gangwayY, pierEdgeX - (sx + 155) + 12, 12);
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 1.2;
+    ctx.strokeRect(sx + 155, gangwayY, pierEdgeX - (sx + 155) + 12, 12);
+
+    // Garis anak tangga kayu di gangway
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 1;
+    for (let gx = sx + 160; gx <= pierEdgeX + 8; gx += 6) {
+      ctx.beginPath();
+      ctx.moveTo(gx, gangwayY);
+      ctx.lineTo(gx, gangwayY + 12);
+      ctx.stroke();
+    }
+
+    // Tali Tambat Tambang (Mooring Ropes) dari Kapal ke Tiang Dermaga
+    ctx.strokeStyle = '#ca8a04';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(sx + 172, sy + 30);
+    ctx.quadraticCurveTo(sx + 195, sy + 36, pierEdgeX + 4, sy + 26);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(sx + 150, sy + 60);
+    ctx.quadraticCurveTo(sx + 185, sy + 66, pierEdgeX + 4, sy + 56);
+    ctx.stroke();
+
+    // Tiang Pancang Kayu Tambatan di Dermaga
+    ctx.fillStyle = '#3b1d06';
+    ctx.fillRect(pierEdgeX + 2, sy + 22, 6, 12);
+    ctx.fillRect(pierEdgeX + 2, sy + 52, 6, 12);
+
+    // Lentera Kuning Hangat di Ujung Titian Dermaga
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(pierEdgeX + 3, gangwayY - 14, 5, 8);
+    ctx.fillStyle = 'rgba(254, 240, 138, 0.35)';
+    ctx.beginPath();
+    ctx.arc(pierEdgeX + 5, gangwayY - 10, 10, 0, Math.PI * 2);
+    ctx.fill();
+
+    // 6. Plang Informasi Kapal
     ctx.fillStyle = '#fef08a';
-    ctx.font = 'bold 9.5px sans-serif';
+    ctx.font = 'bold 10px sans-serif';
     ctx.textAlign = 'center';
-    ctx.fillText('⛵ Ekspedisi Benua Valoria', sx + 55, sy + 70);
+    ctx.fillText('⛵ KAPAL EKSPEDISI SAMUDRA', sx + 95, sy + 80);
+
     ctx.restore();
   }
 
@@ -2399,6 +2508,14 @@ export class Game {
         const cey = this.caveEntrance.y;
         if (box.x < cex + 16 && box.x + box.width > cex && box.y < cey + 60 && box.y + box.height > cey + 24) return true;
         if (box.x < cex + 64 && box.x + box.width > cex + 48 && box.y < cey + 60 && box.y + box.height > cey + 24) return true;
+        // Kapal Ekspedisi Samudra Tirta Kencana (Solid Ship Hull - Tidak Tembus)
+        const shipX = 25.5 * CONSTANTS.TILE_SIZE;
+        const shipY = 72 * CONSTANTS.TILE_SIZE;
+        const shipW = 5.8 * CONSTANTS.TILE_SIZE; // dari x: 25.5..31.3
+        const shipH = 4.2 * CONSTANTS.TILE_SIZE; // dari y: 72..76.2
+        if (box.x < shipX + shipW && box.x + box.width > shipX && box.y < shipY + shipH && box.y + box.height > shipY) {
+          return true;
+        }
       } else if (this.currentMap === 'CONTINENT_VALORIA') {
         // Valoria Chests
         for (const chest of this.valoriaChests) {
@@ -2406,6 +2523,14 @@ export class Game {
           if (box.x < cb.x + cb.width && box.x + box.width > cb.x && box.y < cb.y + cb.height && box.y + box.height > cb.y) {
             return true;
           }
+        }
+        // Kapal Layar Samudra Queen of Waves Port Valoria (Solid Ship Hull)
+        const qX = 11 * CONSTANTS.TILE_SIZE;
+        const qY = 89.5 * CONSTANTS.TILE_SIZE;
+        const qW = 6.6 * CONSTANTS.TILE_SIZE; // dari x: 11..17.6
+        const qH = 4.5 * CONSTANTS.TILE_SIZE; // dari y: 89.5..94
+        if (box.x < qX + qW && box.x + box.width > qX && box.y < qY + qH && box.y + box.height > qY) {
+          return true;
         }
       } else if (this.currentMap === 'DUNGEON') {
         // Dungeon Floor 1 Chests
@@ -2573,6 +2698,16 @@ export class Game {
         return;
       }
 
+      // 3.9 Kapal Ekspedisi Samudra (Dermaga Dusun Tirta Kencana -> Berlayar ke Benua Baru Valoria)
+      const tirtaShipDist = Math.hypot(32.5 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 73.5 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
+      if (tirtaShipDist < 52) {
+        if (this.input.isActionJustPressed || this.input.state.isAction) {
+          this.input.consumeAction();
+          this.sailToValoria();
+          return;
+        }
+      }
+
       // 4. Memancing di Danau Azure / Dusun Tirta Kencana
       if (this.lifeSkillSystem.isNearFishingSpot(this.player.x, this.player.y, this.currentMap)) {
         if (this.input.isActionJustPressed || this.input.state.isAction) {
@@ -2663,16 +2798,6 @@ export class Game {
             AudioEngine.playPlayerHurt();
             this.floatingText.spawn(playerCenterX, playerCenterY - 24, '🔒 Gerbang Terkunci! Pecahkan teka-teki Kapten Borin di Stonewatch.', '#f59e0b', 3.0);
           }
-        }
-      }
-
-      // 5.3 Kapal Ekspedisi Samudra (Dermaga Dusun Tirta Kencana -> Berlayar ke Benua Baru Valoria)
-      const tirtaShipDist = Math.hypot(33 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 73 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
-      if (tirtaShipDist < 48) {
-        if (this.input.isActionJustPressed || this.input.state.isAction) {
-          this.input.consumeAction();
-          this.sailToValoria();
-          return;
         }
       }
     }
@@ -2833,8 +2958,8 @@ export class Game {
       // --- BENUA VALORIA SPECIFIC INTERACTION & COMBAT ---
       if (!this.isAnyModalOpen()) {
         // 1. Kapal Samudra di Port Valoria (Berlayar Kembali ke Benua Aethelgard)
-        const valoriaShipDist = Math.hypot(22 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 92 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
-        if (valoriaShipDist < 48) {
+        const valoriaShipDist = Math.hypot(18.5 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 92 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
+        if (valoriaShipDist < 52) {
           if (this.input.isActionJustPressed || this.input.state.isAction) {
             this.input.consumeAction();
             this.sailToOverworld();
@@ -4714,6 +4839,8 @@ export class Game {
             } else if (node.type === 'MILL') {
               this.renderBottomActionPrompt(ctx, '[A] Giling 2 Gandum jadi Tepung ⚙️', '#f8fafc', '#facc15');
             }
+          } else if (Math.hypot(32.5 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 73.5 * CONSTANTS.TILE_SIZE + 16 - playerCenterY) < 52) {
+            this.renderBottomActionPrompt(ctx, '⛵ [A] Naik Kapal Ekspedisi ke Benua Valoria', '#38bdf8', '#93c5fd');
           } else if (this.lifeSkillSystem.isNearFishingSpot(this.player.x, this.player.y, this.currentMap)) {
             if (this.lifeSkillSystem.isFishing) {
               if (this.lifeSkillSystem.hasBite) {
@@ -4724,15 +4851,13 @@ export class Game {
             } else {
               this.renderBottomActionPrompt(ctx, '🎣 [A] Lempar Kail Pancing ke Danau', '#06b6d4', '#67e8f9');
             }
-          } else if (Math.hypot(33 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 73 * CONSTANTS.TILE_SIZE + 16 - playerCenterY) < 48) {
-            this.renderBottomActionPrompt(ctx, '⛵ [A] Berlayar ke Benua Baru Valoria', '#38bdf8', '#93c5fd');
           }
         } else if (this.currentMap === 'CONTINENT_VALORIA') {
-          const dockDist = Math.hypot(22 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 92 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
+          const dockDist = Math.hypot(18.5 * CONSTANTS.TILE_SIZE + 16 - playerCenterX, 92 * CONSTANTS.TILE_SIZE + 16 - playerCenterY);
           const nearValoriaNPC = this.continentValoria.getNearbyNPC(playerCenterX, playerCenterY);
           const nearWaystone = this.waystoneSystem.getNearbyWaystone(this.player.x, this.player.y, this.currentMap);
 
-          if (dockDist < 48) {
+          if (dockDist < 52) {
             this.renderBottomActionPrompt(ctx, '⛵ [A] Berlayar Pulang ke Benua Aethelgard', '#38bdf8', '#93c5fd');
           } else if (nearWaystone) {
             this.renderBottomActionPrompt(ctx, `[A] Prasasti Teleportasi (${nearWaystone.name}) ⚡`, nearWaystone.color, '#f8fafc');

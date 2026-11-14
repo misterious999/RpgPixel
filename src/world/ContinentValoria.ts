@@ -154,9 +154,18 @@ export class ContinentValoria {
         }
       }
     }
-    // Dermaga Kayu menjorok ke Samudra (x: 14..22, y: 91..94)
+    // Teluk Samudra tempat Kapal Queen of Waves bersandar (x: 10..17, y: 88..96)
+    for (let py = 88; py <= 96; py++) {
+      for (let px = 10; px <= 17; px++) {
+        if (this.tiles[py] && this.tiles[py][px] !== undefined) {
+          this.tiles[py][px] = ValoriaTileType.WATER;
+        }
+      }
+    }
+
+    // Dermaga Kayu & Batu menjorok ke Samudra (x: 18..24, y: 91..94)
     for (let py = 91; py <= 94; py++) {
-      for (let px = 14; px <= 22; px++) {
+      for (let px = 18; px <= 24; px++) {
         if (this.tiles[py] && this.tiles[py][px] !== undefined) {
           this.tiles[py][px] = ValoriaTileType.COBBLESTONE;
         }
@@ -440,6 +449,15 @@ export class ContinentValoria {
   }
 
   public checkCollision(rect: { x: number; y: number; width: number; height: number }, canSwim: boolean = false): boolean {
+    // 1. Kapal Layar Samudra Queen of Waves (Solid Ship Hull - Tidak Tembus)
+    const galleonX = 10.5 * this.tileSize;
+    const galleonY = 89.5 * this.tileSize;
+    const galleonW = 7.0 * this.tileSize; // x: 10.5..17.5
+    const galleonH = 4.5 * this.tileSize; // y: 89.5..94.0
+    if (rect.x < galleonX + galleonW && rect.x + rect.width > galleonX && rect.y < galleonY + galleonH && rect.y + rect.height > galleonY) {
+      return true;
+    }
+
     const leftTile = Math.floor(rect.x / this.tileSize);
     const rightTile = Math.floor((rect.x + rect.width - 0.01) / this.tileSize);
     const topTile = Math.floor(rect.y / this.tileSize);
@@ -515,7 +533,7 @@ export class ContinentValoria {
     }
 
     // 2. Render Kapal Layar Samudra Ekspedisi Megah di Pelabuhan Port Valoria (x: 10..18, y: 90..95)
-    this.renderPortGalleon(ctx, 12 * ts, 89 * ts);
+    this.renderPortGalleon(ctx, 11 * ts, 89 * ts);
 
     // 3. Render Mercusuar Port Valoria (x: 21 * ts, y: 84 * ts)
     this.renderLighthouse(ctx, 22 * ts, 84 * ts);
@@ -707,7 +725,23 @@ export class ContinentValoria {
    */
   private renderPortGalleon(ctx: CanvasRenderingContext2D, x: number, y: number): void {
     ctx.save();
-    // Lambung Kapal Kayu Jati Tua
+    const ts = this.tileSize;
+    const pierEdgeX = 18 * ts;
+
+    // 1. Bayangan Lambung Kapal di Samudra & Riak Ombak
+    ctx.fillStyle = 'rgba(15, 23, 42, 0.45)';
+    ctx.beginPath();
+    ctx.ellipse(x + 95, y + 88, 95, 16, 0, 0, Math.PI * 2);
+    ctx.fill();
+
+    const waveBob = Math.sin(this.animTimer * 2) * 1.8;
+    ctx.strokeStyle = 'rgba(186, 230, 253, 0.65)';
+    ctx.lineWidth = 1.5;
+    ctx.beginPath();
+    ctx.ellipse(x + 95, y + 86 + waveBob, 100, 9, 0, 0, Math.PI * 2);
+    ctx.stroke();
+
+    // 2. Lambung Kapal Kayu Jati Tua Megah
     ctx.fillStyle = '#451a03';
     ctx.beginPath();
     ctx.moveTo(x, y + 40);
@@ -716,7 +750,7 @@ export class ContinentValoria {
     ctx.lineTo(x + 30, y + 90);
     ctx.closePath();
     ctx.fill();
-    ctx.strokeStyle = '#b45309';
+    ctx.strokeStyle = '#78350f';
     ctx.lineWidth = 3;
     ctx.stroke();
 
@@ -724,7 +758,7 @@ export class ContinentValoria {
     ctx.fillStyle = '#f59e0b';
     ctx.fillRect(x + 20, y + 50, 140, 5);
 
-    // Tiang Layar Utama
+    // 3. Tiang Layar Utama
     ctx.fillStyle = '#78350f';
     ctx.fillRect(x + 60, y - 50, 8, 90);
     ctx.fillRect(x + 120, y - 40, 8, 80);
@@ -749,6 +783,51 @@ export class ContinentValoria {
     ctx.lineTo(x + 95, y - 44);
     ctx.lineTo(x + 68, y - 38);
     ctx.closePath();
+    ctx.fill();
+
+    // 4. Jembatan Titian Kayu (Boarding Gangway Plank)
+    // Menghubungkan geladak kapal (x + 160) ke dermaga pelabuhan (pierEdgeX)
+    const gangwayY = y + 50;
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(x + 160, gangwayY, pierEdgeX - (x + 160) + 12, 14);
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 1.4;
+    ctx.strokeRect(x + 160, gangwayY, pierEdgeX - (x + 160) + 12, 14);
+
+    // Anak tangga kayu di gangway
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 1;
+    for (let gx = x + 164; gx <= pierEdgeX + 8; gx += 7) {
+      ctx.beginPath();
+      ctx.moveTo(gx, gangwayY);
+      ctx.lineTo(gx, gangwayY + 14);
+      ctx.stroke();
+    }
+
+    // Tali Tambang Penambat Kapal ke Dermaga
+    ctx.strokeStyle = '#ca8a04';
+    ctx.lineWidth = 2.4;
+    ctx.beginPath();
+    ctx.moveTo(x + 175, y + 44);
+    ctx.quadraticCurveTo(x + 195, y + 48, pierEdgeX + 4, y + 38);
+    ctx.stroke();
+
+    ctx.beginPath();
+    ctx.moveTo(x + 148, y + 84);
+    ctx.quadraticCurveTo(x + 185, y + 88, pierEdgeX + 4, y + 78);
+    ctx.stroke();
+
+    // Tiang Pancang Tambatan di Dermaga
+    ctx.fillStyle = '#3b1d06';
+    ctx.fillRect(pierEdgeX + 2, y + 32, 6, 14);
+    ctx.fillRect(pierEdgeX + 2, y + 72, 6, 14);
+
+    // Lentera Pelabuhan di Ujung Titian
+    ctx.fillStyle = '#f59e0b';
+    ctx.fillRect(pierEdgeX + 3, gangwayY - 14, 5, 8);
+    ctx.fillStyle = 'rgba(254, 240, 138, 0.35)';
+    ctx.beginPath();
+    ctx.arc(pierEdgeX + 5, gangwayY - 10, 10, 0, Math.PI * 2);
     ctx.fill();
 
     // Teks Nama Kapal

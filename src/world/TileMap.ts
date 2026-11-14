@@ -10,7 +10,8 @@ export enum TileType {
   TREE = 5,  // Solid
   ROCK = 6,  // Solid
   CLIFF = 7, // Solid
-  COBBLESTONE = 8
+  COBBLESTONE = 8,
+  WOODEN_DOCK = 9 // Dermaga kayu pelabuhan (walkable, bukan air)
 }
 
 export class TileMap {
@@ -386,13 +387,30 @@ export class TileMap {
       }
     }
 
-    // Pelataran Dermaga Nelayan Berlapis Batu Ubin & Kayu (x=30..37, y=72..75)
-    for (let ny = 72; ny <= 75; ny++) {
-      for (let nx = 30; nx <= 37; nx++) {
+    // Pelataran Daratan Dusun Nelayan Tirta Kencana (x=30..40, y=70..72)
+    for (let ny = 70; ny <= 72; ny++) {
+      for (let nx = 30; nx <= 40; nx++) {
         if (this.tiles[ny] && this.tiles[ny][nx] !== undefined) {
-          if (this.tiles[ny][nx] !== TileType.WATER) {
-            this.tiles[ny][nx] = TileType.COBBLESTONE;
-          }
+          this.tiles[ny][nx] = TileType.COBBLESTONE;
+        }
+      }
+    }
+
+    // Dermaga Kayu Nelayan & Samudra yang Kokoh Menjorok ke Air (x=32..35, y=72..76)
+    // Menjadi ubin padat kayu (TileType.WOODEN_DOCK), BUKAN AIR, sehingga karakter berjalan normal tanpa berenang!
+    for (let ny = 72; ny <= 76; ny++) {
+      for (let nx = 32; nx <= 35; nx++) {
+        if (this.tiles[ny] && this.tiles[ny][nx] !== undefined) {
+          this.tiles[ny][nx] = TileType.WOODEN_DOCK;
+        }
+      }
+    }
+
+    // Area Teluk Perairan di sebelah barat dermaga tempat bersandarnya Kapal Samudra (x=26..31, y=72..77)
+    for (let ny = 72; ny <= 77; ny++) {
+      for (let nx = 26; nx <= 31; nx++) {
+        if (this.tiles[ny] && this.tiles[ny][nx] !== undefined) {
+          this.tiles[ny][nx] = TileType.WATER;
         }
       }
     }
@@ -401,14 +419,14 @@ export class TileMap {
     // Jalur selatan: dari (x=49..51, y=56..72) ke selatan, lalu belok ke barat (y=71..72, x=34..51)
     for (let ny = 56; ny <= 72; ny++) {
       for (let nx = 49; nx <= 51; nx++) {
-        if (this.tiles[ny] && this.tiles[ny][nx] !== undefined && this.tiles[ny][nx] !== TileType.WATER) {
+        if (this.tiles[ny] && this.tiles[ny][nx] !== undefined) {
           this.tiles[ny][nx] = TileType.DIRT_PATH;
         }
       }
     }
     for (let nx = 34; nx <= 51; nx++) {
       for (let ny = 71; ny <= 72; ny++) {
-        if (this.tiles[ny] && this.tiles[ny][nx] !== undefined && this.tiles[ny][nx] !== TileType.WATER) {
+        if (this.tiles[ny] && this.tiles[ny][nx] !== undefined) {
           this.tiles[ny][nx] = TileType.DIRT_PATH;
         }
       }
@@ -528,6 +546,9 @@ export class TileMap {
     const tile = this.getTileAt(tileX, tileY);
     if (tile === TileType.DIRT_PATH || tile === TileType.COBBLESTONE) {
       return 'Jalan Setapak Pedesaan';
+    }
+    if (tile === TileType.WOODEN_DOCK) {
+      return 'Dermaga Kayu Pelabuhan';
     }
     if (tile === TileType.WATER) {
       return 'Perairan Danau Sejuk Azure';
@@ -807,6 +828,32 @@ export class TileMap {
           ctx.fillRect(x + 20, y + 7, 4, 3);
           ctx.fillRect(x + 6, y + 23, 4, 3);
         }
+        break;
+      }
+      case TileType.WOODEN_DOCK: {
+        // Papan Kayu Jati Dermaga Pelabuhan Otentik
+        ctx.fillStyle = '#78350f'; // Warna dasar kayu jati cokelat
+        ctx.fillRect(x, y, size, size);
+
+        // Garis batas antar papan kayu (plank lines)
+        ctx.fillStyle = '#451a03';
+        ctx.fillRect(x, y, size, 1.5);
+        ctx.fillRect(x, y + 10.5, size, 1.5);
+        ctx.fillRect(x, y + 21, size, 1.5);
+
+        // Paku keling kuningan / baut tembaga di kedua ujung papan
+        ctx.fillStyle = '#f59e0b';
+        ctx.fillRect(x + 3, y + 4, 2, 2);
+        ctx.fillRect(x + size - 5, y + 4, 2, 2);
+        ctx.fillRect(x + 3, y + 14.5, 2, 2);
+        ctx.fillRect(x + size - 5, y + 14.5, 2, 2);
+        ctx.fillRect(x + 3, y + 25, 2, 2);
+        ctx.fillRect(x + size - 5, y + 25, 2, 2);
+
+        // Serat kayu alami
+        ctx.fillStyle = 'rgba(69, 26, 3, 0.35)';
+        ctx.fillRect(x + 7, y + 6, size - 14, 1);
+        ctx.fillRect(x + 10, y + 17, size - 18, 1);
         break;
       }
     }

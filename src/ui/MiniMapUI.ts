@@ -54,6 +54,7 @@ export class MiniMapUI {
         else if (t === TileType.CLIFF) color = '#334155';
         else if (t === TileType.GRASS_FLOWERS) color = '#22c55e';
         else if (t === TileType.COBBLESTONE) color = '#94a3b8';
+        else if (t === TileType.WOODEN_DOCK) color = '#78350f';
 
         ctx.fillStyle = color;
         ctx.fillRect(x, y, 1, 1);

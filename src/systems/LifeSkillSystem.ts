@@ -158,10 +158,14 @@ export class LifeSkillSystem {
   public isNearFishingSpot(playerX: number, playerY: number, currentMap: string): boolean {
     if (currentMap !== 'OVERWORLD') return false;
     const ts = CONSTANTS.TILE_SIZE;
+    // Jangan izinkan memancing di area dermaga kapal ekspedisi samudra (mencegah tombol tertimpa)
+    const isShipZone = Math.hypot(32.5 * ts + 16 - playerX, 73.5 * ts + 16 - playerY) < 55;
+    if (isShipZone) return false;
+
     const pTileX = Math.floor(playerX / ts);
     const pTileY = Math.floor(playerY / ts);
-    // Area Dermaga dan Pesisir Tirta Kencana (x: 28..40, y: 72..77)
-    return pTileX >= 28 && pTileX <= 40 && pTileY >= 72 && pTileY <= 77;
+    // Spot memancing khusus di anjungan pemancingan timur Tirta Kencana (x: 36..42, y: 72..78)
+    return pTileX >= 36 && pTileX <= 42 && pTileY >= 72 && pTileY <= 78;
   }
 
   public startFishing(player: Player): void {

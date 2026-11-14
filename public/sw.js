@@ -1,5 +1,5 @@
-// ServiceWorker Build Version 4 (Benua Baru Valoria)
-const CACHE_NAME = 'rpg2d-cache-v4';
+// ServiceWorker Build Version 5 (Dermaga Solid & Pemisahan Tombol Pancing)
+const CACHE_NAME = 'rpg2d-cache-v5';
 const STATIC_ASSETS = [
   '/',
   '/index.html',

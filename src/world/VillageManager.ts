@@ -425,7 +425,7 @@ export class VillageManager {
         name: 'Nelayan Aris',
         title: 'Tetua Pesisir Dusun Tirta Kencana',
         roleType: 'AMBIENT',
-        x: 33 * ts,
+        x: 37 * ts,
         y: 73 * ts,
         width: 32,
         height: 32,
@@ -1650,47 +1650,30 @@ export class VillageManager {
     ctx.stroke();
     ctx.restore();
 
-    // 2. DERMAGA KAYU MENJOROK KE AIR DANAU (Wooden Pier: x: 32*ts .. 36*ts, y: 74*ts .. 76.5*ts)
+    // 2. ORNAMEN & TIANG PANCANG DERMAGA KAYU (Tirta Kencana Pier Posts)
     const pierX = 32 * ts;
-    const pierY = 74.2 * ts;
+    const pierY = 76.5 * ts;
     const pierW = 4 * ts;
-    const pierH = 26;
 
-    // Tiang Kayu Penyangga Dermaga Menancap ke Air
+    // Tiang Kayu Penyangga Dermaga Menancap ke Air di Sisi Selatan
     ctx.fillStyle = '#3b1d06';
-    const pilings = [pierX + 6, pierX + pierW / 2, pierX + pierW - 6];
+    const pilings = [pierX + 4, pierX + pierW / 2, pierX + pierW - 6];
     for (const px of pilings) {
-      ctx.fillRect(px - 3, pierY + 12, 6, 18);
-      // Efek air mengitari tiang
-      ctx.fillStyle = 'rgba(125, 211, 252, 0.4)';
-      ctx.fillRect(px - 5, pierY + 28, 10, 2);
+      ctx.fillRect(px - 3, pierY, 6, 12);
+      // Efek riak air mengitari tiang
+      ctx.fillStyle = 'rgba(125, 211, 252, 0.45)';
+      ctx.fillRect(px - 5, pierY + 10, 10, 2);
       ctx.fillStyle = '#3b1d06';
     }
 
-    // Papan Lantai Kayu Dermaga
-    ctx.fillStyle = '#78350f';
-    ctx.fillRect(pierX, pierY, pierW, pierH);
-    ctx.strokeStyle = '#451a03';
-    ctx.lineWidth = 1;
-    for (let px = pierX + 8; px < pierX + pierW; px += 8) {
-      ctx.beginPath();
-      ctx.moveTo(px, pierY);
-      ctx.lineTo(px, pierY + pierH);
-      ctx.stroke();
-    }
-    // Lis tepi dermaga
-    ctx.fillStyle = '#92400e';
-    ctx.fillRect(pierX, pierY, pierW, 3);
-    ctx.fillRect(pierX, pierY + pierH - 3, pierW, 3);
-
-    // Tali & Tiang Tambatan Perahu
+    // Tiang Tambatan Tali di Ujung Dermaga
     ctx.fillStyle = '#1e293b';
-    ctx.fillRect(pierX + 4, pierY + pierH - 7, 5, 8);
-    ctx.fillRect(pierX + pierW - 8, pierY + pierH - 7, 5, 8);
+    ctx.fillRect(pierX + 6, pierY - 4, 5, 7);
+    ctx.fillRect(pierX + pierW - 10, pierY - 4, 5, 7);
 
-    // 3. PERAHU DAYUNG TRADISIONAL BERAYUN DI AIR
-    const boatX = pierX + pierW + 4;
-    const boatBaseY = pierY + 6;
+    // 3. PERAHU DAYUNG TRADISIONAL BERAYUN DI AIR (Di Sisi Timur Dermaga)
+    const boatX = 36 * ts + 8;
+    const boatBaseY = 74 * ts + 8;
     const boatBobY = Math.sin(this.animTimer * 1.5) * 2.2;
     const by = boatBaseY + boatBobY;
 
@@ -1743,7 +1726,7 @@ export class VillageManager {
     ctx.lineWidth = 1;
     ctx.beginPath();
     ctx.moveTo(boatX + 4, by + 6);
-    ctx.lineTo(pierX + pierW - 6, pierY + pierH - 4);
+    ctx.lineTo(36 * ts, by + 4);
     ctx.stroke();
 
     // 4. RAK PENJEMURAN IKAN ASIN (x: 35.5*ts, y: 71.5*ts)
